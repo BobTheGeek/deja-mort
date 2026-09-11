@@ -1,0 +1,31 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="DÉJÀ MORT"
+config/description="A die-and-retry room-survival puzzle game. You've died here before."
+config/version="0.0.1"
+run/main_scene=""
+config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.svg"
+
+[dotnet]
+
+project/assembly_name="deja-mort"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="gl_compatibility"
