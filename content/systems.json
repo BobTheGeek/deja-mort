@@ -1,0 +1,40 @@
+{
+  "tick_hz": 10,
+  "forever_s": 9999,
+
+  "player": { "walk_speed": 3.0, "durability": 1 },
+
+  "vulnerable_statuses": ["prone", "stunned", "blinded", "burning", "electrocuted", "pinned"],
+
+  "ranges": { "throw_cell": 5, "throw_actor": 4 },
+
+  "wet":   { "rate_tiles_per_s": 0.25 },
+  "fire":  { "spread_s": 4, "burn_actor_after_s": 3 },
+  "gas":   { "fill_s": 50 },
+  "lure":  { "interval_s": 2, "loudness": 3 },
+  "phone": { "charge_s": 30 },
+  "help":  { "delay_s": 75 },
+
+  "disable_hold_s": 10,
+
+  "status_s": {
+    "prone": 3,
+    "trip_prone": 2,
+    "stunned": 2,
+    "blinded": 4,
+    "electrocuted": 3,
+    "burning": 3,
+    "pinned": 9999,
+    "exposed": 2
+  },
+
+  "hazard_effects": {
+    "slippery": { "status": "prone", "for_system": "status_s.prone", "unless_status": "prone" },
+    "trip":     { "status": "prone", "for_system": "status_s.trip_prone", "unless_status": "prone" },
+    "shock":    { "status": "electrocuted", "for_system": "status_s.electrocuted", "damage": 1, "lethal_to": ["player"] },
+    "burning":  { "status": "burning", "for_system": "status_s.burning", "lethal_to": ["player"], "lethal_after_system": "fire.burn_actor_after_s" },
+    "gas_explosion": { "at_level": 1.0, "ignited_by": ["hot", "burning"] }
+  },
+
+  "hazard_path_cost": 50
+}

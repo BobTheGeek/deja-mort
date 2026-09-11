@@ -1,0 +1,978 @@
+{
+  "schema_version": 1,
+  "id": "room_01_studio",
+  "title": "Studio",
+  "fantasy": "A cramped studio apartment, 2 AM. In 90 seconds someone with a knife comes through the front door.",
+  "timer_s": 90,
+  "max_loop_s": 300,
+  "exits_locked": true,
+  "lit": true,
+  "player_start": [
+    6,
+    5
+  ],
+  "grid": {
+    "width": 12,
+    "height": 10,
+    "cells": [
+      "############",
+      "#.......#..#",
+      "#.......#..#",
+      "#.......#..#",
+      "#.......####",
+      "#..........#",
+      "#..........#",
+      "#..........#",
+      "#..........#",
+      "############"
+    ]
+  },
+  "zones": {
+    "kitchen": [
+      [
+        1,
+        1
+      ],
+      [
+        5,
+        3
+      ]
+    ],
+    "living": [
+      [
+        2,
+        4
+      ],
+      [
+        7,
+        8
+      ]
+    ],
+    "bath": [
+      [
+        9,
+        1
+      ],
+      [
+        10,
+        3
+      ]
+    ],
+    "bed": [
+      [
+        8,
+        5
+      ],
+      [
+        10,
+        8
+      ]
+    ],
+    "entry": [
+      [
+        1,
+        1
+      ],
+      [
+        5,
+        3
+      ]
+    ]
+  },
+  "attacker": "tenant_knife",
+  "objects": [
+    {
+      "id": "front_door",
+      "name": "Front door",
+      "tags": [
+        "entry",
+        "openable",
+        "lockable",
+        "chainable"
+      ],
+      "footprint": [
+        [
+          0,
+          2
+        ]
+      ],
+      "state": {
+        "open": false,
+        "locked": false,
+        "chained": false,
+        "braced_by": null
+      },
+      "passable_state": "open",
+      "inspect": "The only way in. A lock, a chain, and a landlord's idea of security."
+    },
+    {
+      "id": "light_switch",
+      "name": "Light switch",
+      "tags": [
+        "light-switch",
+        "toggleable"
+      ],
+      "footprint": [
+        [
+          0,
+          7
+        ]
+      ],
+      "state": {
+        "on": true
+      },
+      "inspect": "One switch for the whole room."
+    },
+    {
+      "id": "window",
+      "name": "Window",
+      "tags": [
+        "window",
+        "openable",
+        "breakable"
+      ],
+      "footprint": [
+        [
+          6,
+          0
+        ]
+      ],
+      "state": {
+        "open": false,
+        "broken": false
+      },
+      "inspect": "Painted shut, four floors up."
+    },
+    {
+      "id": "curtains",
+      "name": "Curtains",
+      "tags": [
+        "flammable",
+        "cuttable",
+        "hides-player"
+      ],
+      "footprint": [
+        [
+          6,
+          1
+        ]
+      ],
+      "state": {
+        "burning": false,
+        "cut": false
+      },
+      "walk_over": true,
+      "hide_cells": [
+        [
+          6,
+          1
+        ]
+      ],
+      "category": "curtains",
+      "inspect": "Thin, dry, and longer than they need to be."
+    },
+    {
+      "id": "stove",
+      "name": "Stove",
+      "tags": [
+        "toggleable",
+        "gas-source",
+        "ignites",
+        "hot"
+      ],
+      "footprint": [
+        [
+          1,
+          1
+        ]
+      ],
+      "state": {
+        "on": false,
+        "lit": false
+      },
+      "reach": 8,
+      "inspect": "Four burners. The clicker still works."
+    },
+    {
+      "id": "frying_pan",
+      "name": "Frying pan",
+      "tags": [
+        "carryable",
+        "blunt",
+        "weapon-improvised",
+        "throwable"
+      ],
+      "footprint": [
+        [
+          1,
+          1
+        ]
+      ],
+      "on": "stove",
+      "weight": 3,
+      "reach": 8,
+      "inspect": "Cast iron. Heavier than it looks."
+    },
+    {
+      "id": "counter_drawer",
+      "name": "Counter drawer",
+      "tags": [
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          2,
+          1
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "charger",
+        "cooking_oil"
+      ],
+      "reach": 8,
+      "inspect": "The drawer everything ends up in."
+    },
+    {
+      "id": "charger",
+      "name": "Phone charger",
+      "tags": [
+        "carryable",
+        "charger"
+      ],
+      "footprint": [
+        [
+          2,
+          1
+        ]
+      ],
+      "reach": 8,
+      "inspect": "A charger. The cable is not frayed, for once."
+    },
+    {
+      "id": "cooking_oil",
+      "name": "Cooking oil",
+      "tags": [
+        "carryable",
+        "pourable",
+        "slippery-source"
+      ],
+      "footprint": [
+        [
+          2,
+          1
+        ]
+      ],
+      "reach": 8,
+      "inspect": "Half a bottle of vegetable oil."
+    },
+    {
+      "id": "toaster",
+      "name": "Toaster",
+      "tags": [
+        "carryable",
+        "throwable",
+        "conductive",
+        "plug-in",
+        "blunt",
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          2,
+          1
+        ]
+      ],
+      "state": {
+        "plugged": true,
+        "broken": false,
+        "open": false,
+        "inspected": 0
+      },
+      "contains": [
+        "bubble_token"
+      ],
+      "outlet": [
+        2,
+        1
+      ],
+      "cord_range": 3,
+      "reach": 8,
+      "inspect": "A cheap two-slot toaster. The cord is fraying."
+    },
+    {
+      "id": "bubble_token",
+      "name": "Bubble token",
+      "tags": [
+        "collectible",
+        "carryable"
+      ],
+      "footprint": [
+        [
+          2,
+          1
+        ]
+      ],
+      "reach": 8,
+      "inspect": "A small glass bubble. It should not be in a toaster."
+    },
+    {
+      "id": "sink",
+      "name": "Sink",
+      "tags": [
+        "toggleable",
+        "wet-source"
+      ],
+      "footprint": [
+        [
+          3,
+          1
+        ]
+      ],
+      "state": {
+        "on": false
+      },
+      "reach": 8,
+      "inspect": "The tap drips even when it is off."
+    },
+    {
+      "id": "counter_knife",
+      "name": "Knife block",
+      "tags": [
+        "container"
+      ],
+      "footprint": [
+        [
+          4,
+          1
+        ]
+      ],
+      "state": {
+        "open": true
+      },
+      "contains": [
+        "kitchen_knife"
+      ],
+      "reach": 8,
+      "inspect": "Five slots. Four knives."
+    },
+    {
+      "id": "kitchen_knife",
+      "name": "Kitchen knife",
+      "tags": [
+        "carryable",
+        "sharp",
+        "weapon-improvised",
+        "throwable"
+      ],
+      "footprint": [
+        [
+          4,
+          1
+        ]
+      ],
+      "reach": 8,
+      "inspect": "Sharp. So is his."
+    },
+    {
+      "id": "cabinet",
+      "name": "Cabinet",
+      "tags": [
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          5,
+          1
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "glass_jar"
+      ],
+      "reach": 8,
+      "inspect": "Mugs, a jar, and dust."
+    },
+    {
+      "id": "glass_jar",
+      "name": "Glass jar",
+      "tags": [
+        "carryable",
+        "throwable",
+        "fragile",
+        "noisy"
+      ],
+      "footprint": [
+        [
+          5,
+          1
+        ]
+      ],
+      "state": {
+        "broken": false
+      },
+      "reach": 8,
+      "break_adds_tags": [
+        "sharp"
+      ],
+      "inspect": "An empty jar. It would make a lot of noise."
+    },
+    {
+      "id": "fridge",
+      "name": "Fridge",
+      "tags": [
+        "heavy",
+        "movable",
+        "blocks-door",
+        "blocks-sight",
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          2,
+          2
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "soda_cans"
+      ],
+      "push_axes": [
+        "W",
+        "E"
+      ],
+      "inspect": "Humming. Heavy. Exactly as wide as the doorway."
+    },
+    {
+      "id": "soda_cans",
+      "name": "Soda cans",
+      "tags": [
+        "carryable",
+        "throwable",
+        "noisy"
+      ],
+      "footprint": [
+        [
+          2,
+          2
+        ]
+      ],
+      "inspect": "Four cans, still in the plastic."
+    },
+    {
+      "id": "rug",
+      "name": "Rug",
+      "tags": [
+        "movable",
+        "light",
+        "hides-object"
+      ],
+      "footprint": [
+        [
+          2,
+          3
+        ]
+      ],
+      "walk_over": true,
+      "inspect": "A rug that hides whatever is under it."
+    },
+    {
+      "id": "bookshelf",
+      "name": "Bookshelf",
+      "tags": [
+        "heavy",
+        "movable",
+        "blocks-sight",
+        "tippable"
+      ],
+      "footprint": [
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          6
+        ]
+      ],
+      "state": {
+        "leaning": false,
+        "tipped": false
+      },
+      "tips": {
+        "dir": "N",
+        "onto": [
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            3
+          ]
+        ]
+      },
+      "inspect": "Overloaded and not fixed to the wall."
+    },
+    {
+      "id": "couch",
+      "name": "Couch",
+      "tags": [
+        "heavy",
+        "movable",
+        "blocks-door",
+        "hides-player"
+      ],
+      "footprint": [
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "hide_cells": [
+        [
+          3,
+          7
+        ],
+        [
+          4,
+          7
+        ]
+      ],
+      "category": "behind_furniture",
+      "inspect": "Too heavy to move fast. Big enough to hide behind."
+    },
+    {
+      "id": "coffee_table",
+      "name": "Coffee table",
+      "tags": [
+        "movable",
+        "fragile",
+        "breakable"
+      ],
+      "footprint": [
+        [
+          5,
+          6
+        ]
+      ],
+      "state": {
+        "broken": false
+      },
+      "break_adds_tags": [
+        "sharp"
+      ],
+      "inspect": "Glass top. One good hit."
+    },
+    {
+      "id": "tv",
+      "name": "Television",
+      "tags": [
+        "toggleable",
+        "lure",
+        "fragile",
+        "bright",
+        "breakable"
+      ],
+      "footprint": [
+        [
+          6,
+          7
+        ]
+      ],
+      "state": {
+        "on": false,
+        "broken": false
+      },
+      "lure_noise": 3,
+      "inspect": "Left on standby. The remote is gone."
+    },
+    {
+      "id": "floor_lamp",
+      "name": "Floor lamp",
+      "tags": [
+        "carryable",
+        "blunt",
+        "throwable",
+        "toggleable",
+        "plug-in"
+      ],
+      "footprint": [
+        [
+          7,
+          5
+        ]
+      ],
+      "state": {
+        "on": false,
+        "plugged": true
+      },
+      "weight": 2,
+      "outlet": [
+        7,
+        5
+      ],
+      "cord_range": 3,
+      "inspect": "A tall lamp with a long cord."
+    },
+    {
+      "id": "closet",
+      "name": "Closet",
+      "tags": [
+        "hides-player",
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          1,
+          8
+        ],
+        [
+          2,
+          8
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "umbrella"
+      ],
+      "hide_cells": [
+        [
+          1,
+          8
+        ]
+      ],
+      "category": "closet",
+      "inspect": "The obvious place."
+    },
+    {
+      "id": "umbrella",
+      "name": "Umbrella",
+      "tags": [
+        "carryable",
+        "blunt",
+        "throwable"
+      ],
+      "footprint": [
+        [
+          1,
+          8
+        ]
+      ],
+      "inspect": "An umbrella. It is not a weapon, whatever you are thinking."
+    },
+    {
+      "id": "laundry_basket",
+      "name": "Laundry basket",
+      "tags": [
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          5,
+          8
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "towel"
+      ],
+      "inspect": "Two weeks behind."
+    },
+    {
+      "id": "towel",
+      "name": "Towel",
+      "tags": [
+        "carryable",
+        "flammable"
+      ],
+      "footprint": [
+        [
+          5,
+          8
+        ]
+      ],
+      "state": {
+        "burning": false
+      },
+      "inspect": "A towel. Dry."
+    },
+    {
+      "id": "bed",
+      "name": "Bed",
+      "tags": [
+        "hides-player"
+      ],
+      "footprint": [
+        [
+          10,
+          6
+        ],
+        [
+          10,
+          7
+        ]
+      ],
+      "hide_cells": [
+        [
+          10,
+          6
+        ]
+      ],
+      "category": "bed",
+      "inspect": "Low enough to get under. Barely."
+    },
+    {
+      "id": "nightstand",
+      "name": "Nightstand",
+      "tags": [
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          10,
+          5
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "phone",
+        "lighter"
+      ],
+      "outlet": [
+        10,
+        5
+      ],
+      "inspect": "A drawer and a socket."
+    },
+    {
+      "id": "phone",
+      "name": "Phone",
+      "tags": [
+        "phone",
+        "carryable"
+      ],
+      "footprint": [
+        [
+          10,
+          5
+        ]
+      ],
+      "state": {
+        "charged": false,
+        "charging": false
+      },
+      "inspect": "Dead. Of course it is dead."
+    },
+    {
+      "id": "lighter",
+      "name": "Lighter",
+      "tags": [
+        "carryable",
+        "ignites"
+      ],
+      "footprint": [
+        [
+          10,
+          5
+        ]
+      ],
+      "inspect": "Almost out of fuel. Almost is enough."
+    },
+    {
+      "id": "bath_door",
+      "name": "Bathroom door",
+      "tags": [
+        "openable",
+        "lockable",
+        "flimsy"
+      ],
+      "footprint": [
+        [
+          8,
+          2
+        ]
+      ],
+      "state": {
+        "open": false,
+        "locked": false
+      },
+      "passable_state": "open",
+      "inspect": "Hollow. A lock that would embarrass a cupboard."
+    },
+    {
+      "id": "bathtub",
+      "name": "Bathtub",
+      "tags": [
+        "hides-player"
+      ],
+      "footprint": [
+        [
+          10,
+          1
+        ],
+        [
+          10,
+          2
+        ]
+      ],
+      "hide_cells": [
+        [
+          10,
+          1
+        ]
+      ],
+      "category": "bathroom",
+      "inspect": "Deep enough to lie in. He looks here last."
+    },
+    {
+      "id": "med_cabinet",
+      "name": "Medicine cabinet",
+      "tags": [
+        "container",
+        "openable"
+      ],
+      "footprint": [
+        [
+          9,
+          1
+        ]
+      ],
+      "state": {
+        "open": false
+      },
+      "contains": [
+        "hairspray",
+        "hair_dryer"
+      ],
+      "outlet": [
+        9,
+        1
+      ],
+      "inspect": "Mirror, painkillers, and worse ideas."
+    },
+    {
+      "id": "hairspray",
+      "name": "Hairspray",
+      "tags": [
+        "carryable",
+        "aerosol",
+        "flammable",
+        "throwable"
+      ],
+      "footprint": [
+        [
+          9,
+          1
+        ]
+      ],
+      "state": {
+        "burning": false
+      },
+      "inspect": "Pressurised. Flammable. It says so on the can."
+    },
+    {
+      "id": "hair_dryer",
+      "name": "Hair dryer",
+      "tags": [
+        "carryable",
+        "conductive",
+        "plug-in",
+        "throwable"
+      ],
+      "footprint": [
+        [
+          9,
+          1
+        ]
+      ],
+      "state": {
+        "plugged": true
+      },
+      "outlet": [
+        9,
+        1
+      ],
+      "cord_range": 3,
+      "inspect": "The cord does not reach the kitchen."
+    },
+    {
+      "id": "toilet",
+      "name": "Toilet",
+      "tags": [
+        "toggleable"
+      ],
+      "footprint": [
+        [
+          9,
+          3
+        ]
+      ],
+      "state": {
+        "on": false
+      },
+      "inspect": "It flushes. That is all it does."
+    }
+  ],
+  "systems": {
+    "wet": {
+      "rate_tiles_per_s": 0.25,
+      "zone": "kitchen"
+    },
+    "fire": {
+      "spread_s": 4,
+      "burn_actor_after_s": 3
+    },
+    "gas": {
+      "fill_s": 50
+    },
+    "phone": {
+      "charge_s": 30
+    },
+    "help": {
+      "delay_s": 75
+    },
+    "disable_hold_s": 10
+  },
+  "rubric": {
+    "three": "attacker.death_cause == 'shock' && player.never_seen"
+  },
+  "collectible": {
+    "id": "bubble_token",
+    "in": "toaster"
+  },
+  "meta": {
+    "attacker_archetype": "knife",
+    "tag_families": [
+      "water",
+      "electricity",
+      "fire",
+      "slip"
+    ],
+    "entries": 1,
+    "exits": 0
+  }
+}

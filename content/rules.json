@@ -1,0 +1,869 @@
+[
+  {
+    "id": "inspect",
+    "verb": "inspect",
+    "reach": "none",
+    "duration_s": 0.0,
+    "effects": [
+      {
+        "op": "reveal"
+      },
+      {
+        "op": "collect",
+        "from": "target",
+        "requires_state": {
+          "on": "target",
+          "conditions": {
+            "inspected": {
+              "gte": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "grab",
+    "verb": "grab",
+    "target_tags": [
+      "carryable"
+    ],
+    "actor_conditions": {
+      "hands_free": true
+    },
+    "requires_container_open": true,
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "grab"
+      }
+    ]
+  },
+  {
+    "id": "place_in_container",
+    "verb": "drop",
+    "target_tags": [
+      "container"
+    ],
+    "target_conditions": {
+      "open": true
+    },
+    "actor_conditions": {
+      "holding": true
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "place_in"
+      }
+    ]
+  },
+  {
+    "id": "drop",
+    "verb": "drop",
+    "target": {
+      "kind": "cell"
+    },
+    "actor_conditions": {
+      "holding": true
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "drop",
+        "where": "target_cell"
+      }
+    ]
+  },
+  {
+    "id": "tip_second",
+    "verb": "push",
+    "target_tags": [
+      "tippable"
+    ],
+    "target_conditions": {
+      "leaning": true
+    },
+    "duration_s": 1.5,
+    "noise": 5,
+    "discovery": "shelf_drop",
+    "effects": [
+      {
+        "op": "tip",
+        "stage": "fall"
+      },
+      {
+        "op": "status",
+        "who": "actors_in_cells",
+        "where": "tips_onto",
+        "effect": "pinned",
+        "for_system": "status_s.pinned"
+      }
+    ]
+  },
+  {
+    "id": "tip_first",
+    "verb": "push",
+    "target_tags": [
+      "tippable"
+    ],
+    "target_conditions": {
+      "leaning": false,
+      "tipped": false
+    },
+    "duration_s": 1.5,
+    "noise": 2,
+    "effects": [
+      {
+        "op": "tip",
+        "stage": "lean"
+      }
+    ]
+  },
+  {
+    "id": "push_heavy",
+    "verb": "push",
+    "target_tags": [
+      "movable",
+      "heavy"
+    ],
+    "duration_s": 2.0,
+    "noise": 3,
+    "effects": [
+      {
+        "op": "move",
+        "on": "target",
+        "dir": "away_from_actor",
+        "tiles": 1
+      }
+    ]
+  },
+  {
+    "id": "push",
+    "verb": "push",
+    "target_tags": [
+      "movable"
+    ],
+    "duration_s": 1.0,
+    "noise": 2,
+    "effects": [
+      {
+        "op": "move",
+        "on": "target",
+        "dir": "away_from_actor",
+        "tiles": 1
+      }
+    ]
+  },
+  {
+    "id": "push_to_brace",
+    "verb": "brace",
+    "trigger": "follow_up",
+    "subject_tags": [
+      "blocks-door"
+    ],
+    "subject_adjacent": true,
+    "target_tags": [
+      "entry"
+    ],
+    "target_conditions": {
+      "braced_by": null
+    },
+    "discovery": "brace_door",
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "braced_by",
+        "value_from": "subject.id"
+      }
+    ]
+  },
+  {
+    "id": "cover_hazard",
+    "verb": "cover",
+    "trigger": "follow_up",
+    "subject_tags": [
+      "hides-object"
+    ],
+    "target": {
+      "kind": "any",
+      "cell_hazard": "slippery",
+      "cell_no_hazard": "concealed"
+    },
+    "discovery": "oil_under_rug",
+    "effects": [
+      {
+        "op": "hazard",
+        "layer": "concealed",
+        "where": "subject_cells",
+        "for_system": "forever_s"
+      }
+    ]
+  },
+  {
+    "id": "plug_cord_trip",
+    "verb": "cord",
+    "trigger": "follow_up",
+    "subject_tags": [
+      "plug-in"
+    ],
+    "subject_conditions": {
+      "plugged": true
+    },
+    "target": {
+      "kind": "any"
+    },
+    "discovery": "cord_trip",
+    "effects": [
+      {
+        "op": "hazard",
+        "layer": "trip",
+        "where": "cord_line_chokepoints",
+        "for_system": "forever_s"
+      }
+    ]
+  },
+  {
+    "id": "unhide",
+    "verb": "unhide",
+    "trigger": "manual",
+    "target": {
+      "kind": "any"
+    },
+    "reach": "none",
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "unhide_actor"
+      }
+    ]
+  },
+  {
+    "id": "open_window",
+    "verb": "open",
+    "target_tags": [
+      "window"
+    ],
+    "target_conditions": {
+      "open": false
+    },
+    "duration_s": 0.5,
+    "noise": 1,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "open",
+        "value": true
+      },
+      {
+        "op": "set",
+        "on": "room",
+        "key": "hearing_mask",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "open_close",
+    "verb": "open",
+    "target_tags": [
+      "openable"
+    ],
+    "target_conditions": {
+      "locked": {
+        "not": true
+      }
+    },
+    "duration_s": 0.5,
+    "noise": 1,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "open",
+        "toggle": true
+      },
+      {
+        "op": "collect",
+        "from": "target"
+      }
+    ]
+  },
+  {
+    "id": "toggle_light_switch",
+    "verb": "toggle",
+    "target_tags": [
+      "light-switch"
+    ],
+    "duration_s": 0.3,
+    "discovery": "lights_out",
+    "effects": [
+      {
+        "op": "set",
+        "on": "room",
+        "key": "lit",
+        "toggle": true
+      }
+    ]
+  },
+  {
+    "id": "call_help",
+    "verb": "toggle",
+    "target_tags": [
+      "phone"
+    ],
+    "target_conditions": {
+      "charged": true
+    },
+    "duration_s": 0.5,
+    "discovery": "phone_help",
+    "effects": [
+      {
+        "op": "start_timer",
+        "name": "help_arrives",
+        "for_system": "help.delay_s"
+      }
+    ]
+  },
+  {
+    "id": "toggle_wet_source",
+    "verb": "toggle",
+    "target_tags": [
+      "wet-source"
+    ],
+    "target_conditions": {
+      "on": false
+    },
+    "duration_s": 0.5,
+    "noise": 1,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "on",
+        "value": true
+      },
+      {
+        "op": "start_spread",
+        "layer": "wet",
+        "source": "target",
+        "rate_system": "wet.rate_tiles_per_s"
+      }
+    ]
+  },
+  {
+    "id": "toggle_wet_source_off",
+    "verb": "toggle",
+    "target_tags": [
+      "wet-source"
+    ],
+    "target_conditions": {
+      "on": true
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "on",
+        "value": false
+      },
+      {
+        "op": "stop_spread",
+        "layer": "wet"
+      }
+    ]
+  },
+  {
+    "id": "toggle_stove_ignite",
+    "verb": "toggle",
+    "target_tags": [
+      "gas-source",
+      "ignites"
+    ],
+    "target_conditions": {
+      "on": true,
+      "lit": false
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "lit",
+        "value": true
+      },
+      {
+        "op": "hazard",
+        "layer": "hot",
+        "where": "object_cells",
+        "for_system": "forever_s"
+      }
+    ]
+  },
+  {
+    "id": "toggle_burner_off",
+    "verb": "toggle",
+    "target_tags": [
+      "gas-source"
+    ],
+    "target_conditions": {
+      "on": true,
+      "lit": true
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "on",
+        "value": false
+      },
+      {
+        "op": "set",
+        "on": "target",
+        "key": "lit",
+        "value": false
+      },
+      {
+        "op": "clear_hazard",
+        "layer": "hot",
+        "where": "object_cells"
+      }
+    ]
+  },
+  {
+    "id": "toggle_gas_source",
+    "verb": "toggle",
+    "target_tags": [
+      "gas-source"
+    ],
+    "target_conditions": {
+      "on": false
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "on",
+        "value": true
+      },
+      {
+        "op": "set",
+        "on": "target",
+        "key": "lit",
+        "value": false
+      }
+    ]
+  },
+  {
+    "id": "toggle_lock",
+    "verb": "toggle",
+    "target_tags": [
+      "lockable"
+    ],
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "locked",
+        "toggle": true
+      }
+    ]
+  },
+  {
+    "id": "toggle_chain",
+    "verb": "toggle",
+    "target_tags": [
+      "chainable"
+    ],
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "chained",
+        "toggle": true
+      }
+    ]
+  },
+  {
+    "id": "toggle_on",
+    "verb": "toggle",
+    "target_tags": [
+      "toggleable"
+    ],
+    "target_conditions": {
+      "on": false
+    },
+    "duration_s": 0.5,
+    "noise": 1,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "on",
+        "value": true
+      }
+    ]
+  },
+  {
+    "id": "toggle_off",
+    "verb": "toggle",
+    "target_tags": [
+      "toggleable"
+    ],
+    "target_conditions": {
+      "on": true
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "on",
+        "value": false
+      }
+    ]
+  },
+  {
+    "id": "hide",
+    "verb": "hide",
+    "target_tags": [
+      "hides-player"
+    ],
+    "duration_s": 1.0,
+    "noise": 1,
+    "effects": [
+      {
+        "op": "hide_actor"
+      }
+    ]
+  },
+  {
+    "id": "throw_conductive_into_wet",
+    "verb": "throw",
+    "held_tags": [
+      "conductive",
+      "plug-in"
+    ],
+    "held_conditions": {
+      "plugged": true
+    },
+    "target": {
+      "kind": "cell",
+      "cell_hazard": "wet"
+    },
+    "range_check": {
+      "from": "held_outlet",
+      "max_prop": "cord_range"
+    },
+    "reach": "none",
+    "duration_s": 0.5,
+    "noise": 4,
+    "discovery": "water_and_current",
+    "effects": [
+      {
+        "op": "hazard",
+        "layer": "shock",
+        "where": "connected:wet",
+        "for_system": "status_s.electrocuted"
+      },
+      {
+        "op": "throw_held"
+      }
+    ]
+  },
+  {
+    "id": "throw_fragile_at_cell",
+    "verb": "throw",
+    "held_tags": [
+      "throwable",
+      "fragile"
+    ],
+    "target": {
+      "kind": "cell"
+    },
+    "range_check": {
+      "from": "actor",
+      "max_system": "ranges.throw_cell"
+    },
+    "reach": "none",
+    "duration_s": 0.5,
+    "noise": 6,
+    "discovery": "lure_noise",
+    "effects": [
+      {
+        "op": "throw_held"
+      },
+      {
+        "op": "break",
+        "on": "held"
+      }
+    ]
+  },
+  {
+    "id": "throw_at_actor",
+    "verb": "throw",
+    "held_tags": [
+      "throwable",
+      "heavy"
+    ],
+    "target": {
+      "kind": "actor"
+    },
+    "range_check": {
+      "from": "actor",
+      "max_system": "ranges.throw_actor"
+    },
+    "reach": "none",
+    "duration_s": 0.5,
+    "noise": 4,
+    "effects": [
+      {
+        "op": "status",
+        "who": "target_actor",
+        "effect": "stunned",
+        "for_system": "status_s.stunned"
+      },
+      {
+        "op": "throw_held"
+      }
+    ]
+  },
+  {
+    "id": "throw_at_cell",
+    "verb": "throw",
+    "held_tags": [
+      "throwable"
+    ],
+    "target": {
+      "kind": "cell"
+    },
+    "range_check": {
+      "from": "actor",
+      "max_system": "ranges.throw_cell"
+    },
+    "reach": "none",
+    "duration_s": 0.5,
+    "noise": 3,
+    "effects": [
+      {
+        "op": "throw_held"
+      }
+    ]
+  },
+  {
+    "id": "strike_vulnerable",
+    "verb": "use-held-on",
+    "held_tags": [
+      "weapon-improvised"
+    ],
+    "target": {
+      "kind": "actor"
+    },
+    "target_actor_conditions": {
+      "vulnerable": true
+    },
+    "duration_s": 0.5,
+    "noise": 2,
+    "effects": [
+      {
+        "op": "damage",
+        "who": "target_actor",
+        "amount": 1,
+        "cause": "struck"
+      }
+    ]
+  },
+  {
+    "id": "strike_exposed",
+    "verb": "use-held-on",
+    "held_tags": [
+      "weapon-improvised"
+    ],
+    "target": {
+      "kind": "actor"
+    },
+    "target_actor_conditions": {
+      "vulnerable": false
+    },
+    "duration_s": 0.5,
+    "noise": 2,
+    "effects": [
+      {
+        "op": "status",
+        "who": "actor",
+        "effect": "exposed",
+        "for_system": "status_s.exposed"
+      }
+    ]
+  },
+  {
+    "id": "pour_slippery",
+    "verb": "use-held-on",
+    "held_tags": [
+      "pourable",
+      "slippery-source"
+    ],
+    "target": {
+      "kind": "cell"
+    },
+    "duration_s": 1.0,
+    "effects": [
+      {
+        "op": "hazard",
+        "layer": "slippery",
+        "where": "target_cell",
+        "for_system": "forever_s"
+      },
+      {
+        "op": "consume_held"
+      }
+    ]
+  },
+  {
+    "id": "ignite_flammable",
+    "verb": "use-held-on",
+    "held_tags": [
+      "ignites"
+    ],
+    "target_tags": [
+      "flammable"
+    ],
+    "target_conditions": {
+      "burning": false
+    },
+    "duration_s": 0.5,
+    "noise": 3,
+    "discovery": "curtain_fire",
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "burning",
+        "value": true
+      },
+      {
+        "op": "hazard",
+        "layer": "burning",
+        "where": "object_cells",
+        "for_system": "forever_s"
+      },
+      {
+        "op": "light",
+        "value": 3,
+        "where": "object_cells"
+      }
+    ]
+  },
+  {
+    "id": "aerosol_flash",
+    "verb": "use-held-on",
+    "held_tags": [
+      "aerosol"
+    ],
+    "target": {
+      "kind": "cell",
+      "cell_hazard": "hot"
+    },
+    "duration_s": 0.5,
+    "noise": 2,
+    "discovery": "aerosol_flash",
+    "effects": [
+      {
+        "op": "status",
+        "who": "actors_in_cells",
+        "where": "area:2",
+        "effect": "blinded",
+        "for_system": "status_s.blinded"
+      },
+      {
+        "op": "consume_held"
+      }
+    ]
+  },
+  {
+    "id": "cut",
+    "verb": "use-held-on",
+    "held_tags": [
+      "sharp"
+    ],
+    "target_tags": [
+      "cuttable"
+    ],
+    "target_conditions": {
+      "cut": false
+    },
+    "duration_s": 1.0,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "cut",
+        "value": true
+      }
+    ]
+  },
+  {
+    "id": "break_glass",
+    "verb": "use-held-on",
+    "held_tags": [
+      "blunt"
+    ],
+    "target_tags": [
+      "breakable"
+    ],
+    "target_conditions": {
+      "broken": false
+    },
+    "duration_s": 0.5,
+    "noise": 6,
+    "effects": [
+      {
+        "op": "break",
+        "on": "target"
+      }
+    ]
+  },
+  {
+    "id": "charge_phone",
+    "verb": "use-held-on",
+    "held_tags": [
+      "charger"
+    ],
+    "target_tags": [
+      "phone"
+    ],
+    "target_conditions": {
+      "charged": false
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "set",
+        "on": "target",
+        "key": "charging",
+        "value": true
+      },
+      {
+        "op": "start_timer",
+        "name": "charge",
+        "name_from": "target.id",
+        "for_system": "phone.charge_s",
+        "on_fire": [
+          {
+            "op": "set",
+            "on": "target",
+            "key": "charged",
+            "value": true
+          }
+        ]
+      }
+    ]
+  }
+]

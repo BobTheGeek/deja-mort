@@ -1,0 +1,11 @@
+[
+  { "id": "inspect",     "slot": "center", "label": "Inspect" },
+  { "id": "grab",        "slot": "N",  "label": "Grab" },
+  { "id": "push",        "slot": "NE", "label": "Push" },
+  { "id": "open",        "slot": "E",  "label": "Open/Close" },
+  { "id": "toggle",      "slot": "SE", "label": "Toggle" },
+  { "id": "hide",        "slot": "S",  "label": "Hide" },
+  { "id": "throw",       "slot": "SW", "label": "Throw" },
+  { "id": "use-held-on", "slot": "W",  "label": "Use held on" },
+  { "id": "drop",        "slot": "NW", "label": "Drop/Place" }
+]

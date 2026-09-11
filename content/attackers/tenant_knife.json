@@ -1,0 +1,35 @@
+{
+  "id": "tenant_knife",
+  "display": "the Tenant",
+  "entries": [
+    "front_door"
+  ],
+  "weapon": "knife",
+  "walk_speed": 2.5,
+  "sight_range": 6,
+  "hearing_sensitivity": 1.0,
+  "has_flashlight": false,
+  "patience_s": 40,
+  "memory": "none",
+  "memory_loops": 0,
+  "durability": 1,
+  "strength": 1,
+  "breach_costs": {
+    "locked": 4,
+    "chained": 3,
+    "braced_light": 6,
+    "braced_heavy": 10,
+    "flimsy_door": 5,
+    "window": 5
+  },
+  "search_order": [
+    "closet",
+    "behind_furniture",
+    "curtains",
+    "bed",
+    "bathroom"
+  ],
+  "search_duration_s": 3,
+  "attack_range": 1,
+  "attack_duration_s": 0.5
+}
