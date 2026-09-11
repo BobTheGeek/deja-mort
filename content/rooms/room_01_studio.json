@@ -77,6 +77,16 @@
         5,
         3
       ]
+    ],
+    "chokepoint": [
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ]
     ]
   },
   "attacker": "tenant_knife",

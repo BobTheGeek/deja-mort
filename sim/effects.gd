@@ -176,9 +176,15 @@ static func _cord_chokepoints(ctx: SimRuleContext) -> Array[Vector2i]:
 		return out
 	var from := Vector2i(int(outlet[0]), int(outlet[1]))
 	for c in world.grid.line(from, obj.origin()):
+		if out.has(c):
+			continue
+		if world.grid.zone_of(c) == "chokepoint":
+			out.append(c)
+			continue
 		for other in world.objects.at_cell(c):
-			if other.has_tag("chokepoint") and not out.has(c):
+			if other.has_tag("chokepoint"):
 				out.append(c)
+				break
 	return out
 
 
@@ -401,6 +407,8 @@ static func _op_start_spread(effect: Dictionary, rule: SimRule, ctx: SimRuleCont
 			if world.walkable(n) and not source_cells.has(n):
 				source_cells.append(n)
 	var zone_name := str(effect.get("zone", ""))
+	if zone_name.is_empty() and effect.has("zone_system"):
+		zone_name = str(world.system(str(effect["zone_system"]), ""))
 	if zone_name.is_empty():
 		zone_name = world.grid.zone_of(source.origin())
 	var rate := float(world.system(str(effect.get("rate_system", ""))))

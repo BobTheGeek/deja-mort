@@ -349,7 +349,8 @@
         "op": "start_spread",
         "layer": "wet",
         "source": "target",
-        "rate_system": "wet.rate_tiles_per_s"
+        "rate_system": "wet.rate_tiles_per_s",
+        "zone_system": "wet.zone"
       }
     ]
   },
@@ -610,8 +611,7 @@
     "id": "throw_at_actor",
     "verb": "throw",
     "held_tags": [
-      "throwable",
-      "heavy"
+      "throwable"
     ],
     "target": {
       "kind": "actor"

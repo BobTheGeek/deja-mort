@@ -76,7 +76,9 @@ docs/           this handoff
 godot --headless --import              # first run in a clean checkout
 godot --headless -s tools/lint_room.gd # content lint (all rooms, or pass paths after --)
 tools/run_tests.sh                     # gdUnit4 suite, headless
-godot --headless -s tools/verify_all.gd # solver over every room
+godot --headless -s tools/rule_coverage.gd # every rule id must have a passing test
+godot --headless -s tools/verify_all.gd    # solver over every room
+godot --headless -s tools/play_headless.gd -- room_01_studio all  # poke the sim
 ```
 
 Pinned engine: Godot **4.7.2-stable**. Test framework: gdUnit4 **6.2.1**, vendored at `addons/gdUnit4/`.

@@ -53,6 +53,9 @@ jobs:
       - name: Run tests
         run: tools/run_tests.sh
 
+      - name: Rule coverage
+        run: godot --headless -s tools/rule_coverage.gd
+
       - name: Verify all rooms
         run: godot --headless -s tools/verify_all.gd
 
