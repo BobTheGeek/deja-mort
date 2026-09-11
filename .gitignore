@@ -1,0 +1,18 @@
+# Godot 4
+.godot/
+/android/
+*.translation
+
+# Exports
+/build/
+/export_presets.cfg
+
+# Paid asset packs are never committed. Document them in assets/README.md.
+assets/paid/
+
+# gdUnit4 reports
+reports/
+
+# OS
+.DS_Store
+Thumbs.db
