@@ -112,6 +112,7 @@ func setup(table: GameVisuals, world: SimWorld) -> void:
 			"icon": load(icon_path % verb) as Texture2D,
 			"available": false,
 			"cost": 0.0,
+			"blocker": "",
 			"rule_ids": PackedStringArray(),
 		}
 		_order.append(verb)
@@ -297,6 +298,18 @@ func slot_style(verb: String) -> Dictionary:
 	}
 
 
+## What the game can tell you about a slot that is off. Empty when there is no
+## reason to give: no rule covers this verb on this thing, and "a rug is not a
+## switch" is the absence of a reason rather than one.
+func reason_for(verb: String) -> String:
+	if not _slots.has(verb) or slot_state(verb) != "unavailable":
+		return ""
+	var key := str(_slots[verb]["blocker"])
+	if key.is_empty():
+		return ""
+	return str((visuals.get_value("wheel.reasons", {}) as Dictionary).get(key, ""))
+
+
 func cost_of(verb: String) -> float:
 	return float(_slots[verb]["cost"]) if _slots.has(verb) else 0.0
 
@@ -402,6 +415,9 @@ func _refresh(world: SimWorld) -> void:
 		_slots[name]["available"] = bool(entry.get("available", false))
 		_slots[name]["cost"] = float(entry.get("duration_s", 0.0))
 		_slots[name]["rule_ids"] = entry.get("rule_ids", PackedStringArray())
+		# Why not, in the sim's words — which are keys; ours are in the table.
+		_slots[name]["blocker"] = "" if _slots[name]["available"] \
+			else SimVerbs.blocker(world, world.player, name, _target)
 
 
 ## Name, then which of the things under the cursor this is, then what the slot
@@ -417,9 +433,19 @@ func _compose_caption(world: SimWorld, target: Variant, index: int, count: int) 
 	if not _refused_verb.is_empty():
 		lines.append("%s — can't do that from here" % _label_of(_refused_verb))
 	elif not _hover.is_empty():
-		var cost := cost_label(_hover)
-		lines.append("%s · %s" % [_label_of(_hover), cost] if not cost.is_empty() else _label_of(_hover))
+		lines.append(_hover_line())
 	_caption = lines
+
+
+## Hovering a slot says what it would do and what it would cost — or, when it is
+## off, why. A dashed circle with no explanation is what cost Bob the knife.
+func _hover_line() -> String:
+	var label := _label_of(_hover)
+	var reason := reason_for(_hover)
+	if not reason.is_empty():
+		return "%s %s %s" % [label, str(visuals.get_value("wheel.reason_prefix", "—")), reason]
+	var cost := cost_label(_hover)
+	return "%s · %s" % [label, cost] if not cost.is_empty() else label
 
 
 func _label_of(verb: String) -> String:
