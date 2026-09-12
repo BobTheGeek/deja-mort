@@ -14,6 +14,15 @@ const BRAND := preload("res://game/theme/brand.gd")
 
 var data: Dictionary = {}
 
+## Where the screen will not let us draw: a notch, an island, a home bar. Filled
+## in from the real device by UiScale.apply(); zero everywhere else, including
+## every test that does not set it.
+var safe: Dictionary = {"left": 0.0, "top": 0.0, "right": 0.0, "bottom": 0.0}
+
+
+func inset(edge: String) -> float:
+	return float(safe.get(edge, 0.0))
+
 
 static func load_table() -> GameVisuals:
 	var v := GameVisuals.new()

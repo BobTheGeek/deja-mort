@@ -3,7 +3,10 @@
   "ui": {
     "_comment": "The canvas the UI was designed against. project.godot stretches canvas items to it, so every px in the wheel/hud/notebook blocks is literal at any window size.",
     "design_width": 1920,
-    "design_height": 1080
+    "design_height": 1080,
+    "min_touch_mm": 7.6,
+    "max_touch_scale": 1.8,
+    "_touch_comment": "7.6mm clears both platform minimums: Apple's 44pt is 6.9mm, Google's 48dp is 7.6mm. game/ui_scale.gd derives the UI scale from this and the screen's own DPI, on handhelds only."
   },
   "camera": {
     "size": 11.0,

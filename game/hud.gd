@@ -34,12 +34,14 @@ func setup(table: GameVisuals) -> void:
 	# The timer is the loudest thing on screen and it owns the top centre.
 	_timer = _make_label(big, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_timer.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_timer.offset_top = visuals.number("hud.timer_top", 36.0)
+	_timer.offset_top = visuals.number("hud.timer_top", 36.0) + visuals.inset("top")
 	_timer.offset_bottom = _timer.offset_top + float(big) * 1.3
 	add_child(_timer)
 
 	_lines = VBoxContainer.new()
-	_lines.position = Vector2(visuals.number("hud.margin_x", 48.0), visuals.number("hud.margin_top", 44.0))
+	_lines.position = Vector2(
+		visuals.number("hud.margin_x", 48.0) + visuals.inset("left"),
+		visuals.number("hud.margin_top", 44.0) + visuals.inset("top"))
 	_lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_lines)
 
@@ -130,9 +132,14 @@ func _place_inspect() -> void:
 		visuals.number("ui.design_width", 1920.0), visuals.number("ui.design_height", 1080.0))
 	_inspect.size = metrics["size"]
 	_inspect.position = Vector2((box.x - _inspect.size.x) * 0.5,
-		box.y - visuals.number("hud.margin_bottom", 56.0) - _inspect.size.y)
+		box.y - visuals.number("hud.margin_bottom", 56.0) - visuals.inset("bottom") - _inspect.size.y)
 	_inspect_text.position = metrics["padding"]
 	_inspect_text.size = metrics["inner"]
+
+
+## Where the left-hand column starts, notch included.
+func lines_position() -> Vector2:
+	return _lines.position if _lines != null else Vector2.ZERO
 
 
 func inspect_rect() -> Rect2:

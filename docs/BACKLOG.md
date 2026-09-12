@@ -20,3 +20,14 @@ Ideas outside the current milestone. One line each, dated, with who raised it. N
 Claude Design's turn-1 notebook (`docs/ui/SPEC.md`) has a fourth tab: Achievements, earned per profile, stamped with the death number they were earned on, locked ones listed as silhouettes "the same way the endings row is the pitch". It reads well and it is not built on anything — there is no achievement in the docs, the sim, the content or the save file.
 
 Either it becomes a real system (a list in `content/`, evaluated by `sim/outcome.gd` alongside the star rubric, banked in the save) or the tab comes out of the notebook design. Not a UI decision; flagged rather than quietly implemented.
+
+## Portrait on mobile
+
+`docs/06` used to say portrait rotates the room 90° rather than shrinking it. Mobile is landscape-locked as of 12 Sept 2026, so that plan is parked rather than built: a 12×10 room in portrait is either tiny or sideways, the wheel wants the middle of a wide screen, and it is a second layout to test forever on a demo with one room.
+
+Claude Design's turn-1 delivery already contains portrait layouts for the HUD, notebook and win screen (`hud_portrait`, `notebook_portrait`, `win_portrait` in `docs/ui/ui-tokens.json`). If portrait comes back, the design is done and the work is the layout code plus a rotation for the room.
+
+## The wheel on a controller
+
+Steam desktop is a mouse, and the Steam Deck is sticks, trackpads and a touchscreen. Eight fixed compass slots are a gift for a stick — push a direction, release to commit — and Inspect is the face button. None of it is wired: the wheel currently takes a pointer only. The Deck deliberately does not get the phone's thumb-size scale-up, because a trackpad is not a thumb.
+

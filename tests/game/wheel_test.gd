@@ -250,3 +250,30 @@ func test_closing_forgets_the_target() -> void:
 	wheel.close()
 	assert_bool(wheel.is_open()).is_false()
 	assert_object(wheel.target()).is_null()
+
+
+## The vignette dims the room. It is not there to dim the timer the player is
+## racing, so it is a separate node the game parents below the HUD.
+func test_the_pause_vignette_is_not_part_of_the_wheel() -> void:
+	var world := F.world()
+	var wheel := _wheel(world)
+	var backdrop: Control = auto_free(wheel.backdrop())
+	assert_object(backdrop).is_not_null()
+	assert_object(backdrop.get_parent()).override_failure_message(
+		"the vignette is inside the wheel, so it can only ever draw over the HUD").is_null()
+	assert_bool(backdrop.visible).is_false()
+	wheel.open_at(world, "fridge", Vector2(960, 540))
+	assert_bool(backdrop.visible).override_failure_message(
+		"the wheel opened and its backdrop did not").is_true()
+	wheel.close()
+	assert_bool(backdrop.visible).override_failure_message(
+		"the room is still dimmed after the wheel closed").is_false()
+
+
+func test_the_game_puts_the_vignette_under_the_hud() -> void:
+	var source := FileAccess.get_file_as_string("res://game/main.gd")
+	var backdrop := source.find("_wheel.backdrop()")
+	var hud := source.find("_hud = GameHud.new()")
+	assert_int(backdrop).override_failure_message("nothing adds the backdrop").is_greater(-1)
+	assert_int(backdrop).override_failure_message(
+		"the backdrop is added after the HUD, so it draws over it").is_less(hud)

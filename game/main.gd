@@ -41,8 +41,17 @@ func _ready() -> void:
 		for e in content.errors:
 			push_error("content: %s" % e)
 		return
+	# Before anything is built: a phone needs the UI bigger than the design and
+	# out from under its own notch, and both are read from the device.
+	UiScale.apply(get_window(), visuals)
+	get_window().size_changed.connect(_on_window_resized)
 	_build_nodes()
 	_start_loop()
+
+
+## A window that moves to another screen can change DPI under us.
+func _on_window_resized() -> void:
+	UiScale.apply(get_window(), visuals)
 
 
 func _build_nodes() -> void:
@@ -71,13 +80,17 @@ func _build_nodes() -> void:
 	_vignette.material = _vignette_material()
 	layer.add_child(_vignette)
 
+	# The wheel's pause vignette goes below the HUD: it is there to dim the room,
+	# not the timer the player is racing.
+	_wheel = ActionWheel.new()
+	_wheel.name = "Wheel"
+	layer.add_child(_wheel.backdrop())
+
 	_hud = GameHud.new()
 	_hud.name = "Hud"
 	layer.add_child(_hud)
 	_hud.setup(visuals)
 
-	_wheel = ActionWheel.new()
-	_wheel.name = "Wheel"
 	layer.add_child(_wheel)
 
 	_notebook = Notebook.new()
