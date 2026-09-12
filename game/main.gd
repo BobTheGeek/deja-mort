@@ -183,6 +183,8 @@ func _process(delta: float) -> void:
 				break
 
 	_wheel.advance(delta)
+	_notebook.advance(delta)
+	_win.advance(delta)
 	if not _is_paused():
 		_audio.tick_metronome(world)
 	_renderer.sync(world, delta, _accumulator / _tick_seconds)
