@@ -24,31 +24,84 @@ func _rendered(world: SimWorld) -> RoomRenderer:
 
 # --- the mechanism ------------------------------------------------------------
 
-## No character pack has been chosen yet: the CC0 options are either chibi or
-## need animation retargeting. The role-keyed indirection is in place so picking
-## one is a data change, and any mesh a role does name must actually be there.
-func test_a_role_that_names_a_mesh_names_a_real_one() -> void:
+## Keyed on role, never on id, so a new attacker profile needs no code and no
+## new art. Packs ship as .glb or .gltf; the resolver takes either.
+func test_both_roles_name_a_model_that_exists() -> void:
 	var v := _visuals()
 	for role in ["player", "attacker"]:
 		var mesh := str(v.get_value("actor.%s.mesh" % role, ""))
-		if mesh.is_empty():
-			continue
-		assert_bool(ResourceLoader.exists("res://assets/models/%s.glb" % mesh)) \
-			.override_failure_message("%s names a missing model: %s" % [role, mesh]).is_true()
+		assert_str(mesh).override_failure_message("role %s names no mesh" % role).is_not_empty()
+		assert_str(RoomRenderer.model_path(mesh)) \
+			.override_failure_message("%s names a missing model: %s" % [role, mesh]).is_not_empty()
 
 
 func test_the_two_roles_are_never_the_same_figure() -> void:
 	var v := _visuals()
-	var player := str(v.get_value("actor.player.mesh", ""))
-	if player.is_empty():
-		return
-	assert_str(player).override_failure_message("you and he must not look alike") \
+	assert_str(str(v.get_value("actor.player.mesh", ""))) \
+		.override_failure_message("you and he must not look alike") \
 		.is_not_equal(str(v.get_value("actor.attacker.mesh", "")))
+
+
+func test_the_character_pack_ships_with_its_licence() -> void:
+	var licence := "res://assets/models/quaternius/LICENSE.txt"
+	assert_bool(FileAccess.file_exists(licence)).is_true()
+	assert_str(FileAccess.get_file_as_string(licence)).contains("CC0")
+
+
+# --- it moves ----------------------------------------------------------------
+
+## The pack is rigged with 24 clips. docs/06 asks for pose swaps and a stylised
+## death; this is where those come from.
+func test_a_figure_carries_its_animations() -> void:
+	var world := F.world()
+	var node: Node3D = _rendered(world).actor_node(world.player.id)
+	var player := _animation_player(node)
+	assert_object(player).override_failure_message("figure has no AnimationPlayer").is_not_null()
+	for clip in ["Idle", "Walk", "Death"]:
+		assert_bool(player.has_animation(clip)) \
+			.override_failure_message("no %s clip" % clip).is_true()
+
+
+func test_a_standing_figure_idles() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	renderer.sync(world, 0.1)
+	var node: Node3D = renderer.actor_node(world.player.id)
+	assert_str(_animation_player(node).current_animation) \
+		.is_equal(str(_visuals().get_value("actor.clips.idle", "Idle")))
+
+
+func test_a_walking_figure_walks() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	world.walk_to(Vector2i(3, 5))
+	world.step()
+	renderer.sync(world, 0.1)
+	var node: Node3D = renderer.actor_node(world.player.id)
+	assert_str(_animation_player(node).current_animation) \
+		.is_equal(str(_visuals().get_value("actor.clips.walk", "Walk")))
+
+
+func test_a_dead_figure_plays_its_death() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	world.kill_actor(world.player, "test", "test")
+	renderer.sync(world, 0.1)
+	var node: Node3D = renderer.actor_node(world.player.id)
+	assert_str(_animation_player(node).current_animation) \
+		.is_equal(str(_visuals().get_value("actor.clips.death", "Death")))
+
+
+func _animation_player(node: Node) -> AnimationPlayer:
+	for child in _all(node):
+		if child is AnimationPlayer:
+			return child
+	return null
 
 
 # --- the renderer ------------------------------------------------------------
 
-func test_every_actor_gets_a_body_of_some_kind() -> void:
+func test_every_actor_gets_a_body() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
 	for actor in world.actors():
