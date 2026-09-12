@@ -375,6 +375,7 @@ func _sync_objects(world: SimWorld) -> void:
 				0.0, float(look.get("yaw_deg", 0.0)), float(look.get("roll_deg", 0.0)))
 			var emission := float(look.get("emission", 0.0))
 			_override_model(node, look, emission)
+			_sync_object_light(node, look)
 			continue
 		node.position = Vector3(
 			float(obj.cells[0].x) + float(extent.x) * 0.5,
@@ -387,6 +388,22 @@ func _sync_objects(world: SimWorld) -> void:
 			visuals.to_colour(look.get("color", null)),
 			float(look.get("emission", 0.0)),
 		)
+		_sync_object_light(node, look)
+
+
+## An object whose state says it glows carries its own light, and loses it the
+## moment the state ends.
+func _sync_object_light(node: Node3D, look: Dictionary) -> void:
+	var existing: OmniLight3D = node.get_node_or_null("StateLight") as OmniLight3D
+	if not look.has("light"):
+		if existing != null:
+			existing.free()
+		return
+	if existing != null:
+		return
+	var light := _make_light(look["light"])
+	light.name = "StateLight"
+	node.add_child(light)
 
 
 ## Burning and broken repaint a model; everything else leaves its own materials.
@@ -413,17 +430,57 @@ func _sync_hazards(world: SimWorld) -> void:
 				_hazard_root, cell, Vector2i.ONE, height,
 				visuals.to_colour(spec.get("color", null)), height,
 			)
+			patch.name = "hazard:%s" % key
 			patch.material_override = _material(
 				visuals.to_colour(spec.get("color", null)),
 				float(spec.get("emission", 0.0)),
 				float(spec.get("alpha", 0.5)),
 			)
+			if spec.has("particles"):
+				patch.add_child(_make_particles(spec["particles"]))
+			if spec.has("light"):
+				patch.add_child(_make_light(spec["light"]))
 			_hazard_nodes[key] = patch
 	for key in _hazard_nodes.keys():
 		if live.has(key):
 			continue
-		(_hazard_nodes[key] as Node).queue_free()
+		# Freed outright rather than queued: queue_free only takes effect at the
+		# end of the frame, and a hazard that has gone out must leave the scene
+		# the moment the sim says so. free() takes the particles and light with it.
+		(_hazard_nodes[key] as Node).free()
 		_hazard_nodes.erase(key)
+
+
+## CPU particles on purpose: the project falls back to GL Compatibility on mobile,
+## where GPU particles are not dependable.
+func _make_particles(spec: Dictionary) -> CPUParticles3D:
+	var particles := CPUParticles3D.new()
+	particles.amount = int(spec.get("amount", 8))
+	particles.lifetime = float(spec.get("lifetime", 1.0))
+	particles.direction = Vector3.UP
+	particles.spread = float(spec.get("spread", 15.0))
+	particles.initial_velocity_min = float(spec.get("velocity", 1.0)) * 0.6
+	particles.initial_velocity_max = float(spec.get("velocity", 1.0))
+	particles.gravity = Vector3(0.0, float(spec.get("gravity", 0.0)), 0.0)
+	particles.scale_amount_min = float(spec.get("scale", 0.1)) * 0.6
+	particles.scale_amount_max = float(spec.get("scale", 0.1))
+	particles.color = visuals.to_colour(spec.get("color", null))
+	particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	particles.emission_box_extents = Vector3(CELL * 0.45, 0.02, CELL * 0.45)
+	particles.local_coords = false
+	particles.emitting = true
+	return particles
+
+
+## A thing in the room glowing. The room still has exactly one bulb.
+func _make_light(spec: Dictionary) -> OmniLight3D:
+	var light := OmniLight3D.new()
+	light.light_color = visuals.to_colour(spec.get("color", null))
+	light.light_energy = float(spec.get("energy", 1.0))
+	light.omni_range = float(spec.get("range", 4.0))
+	light.position = Vector3(0.0, 0.6, 0.0)
+	light.shadow_enabled = false
+	return light
 
 
 func _sync_actors(world: SimWorld, delta: float) -> void:
@@ -446,22 +503,21 @@ func _sync_actors(world: SimWorld, delta: float) -> void:
 		for status in down_statuses:
 			if actor.has_status(str(status)):
 				down = true
-		node.rotation_degrees = Vector3(
-			0.0, node.rotation_degrees.y,
-			visuals.number("actor.down_roll_deg", 90.0) if down else 0.0)
-		_drive_animation(node, actor)
+		_drive_animation(node, actor, down)
 		_fade_actor(node, key, hidden_alpha if actor.is_hidden() else 1.0)
 
 
 ## Idle, walk, death. The rig has twenty-four clips; these are the three the sim
 ## can already tell the difference between.
-func _drive_animation(node: Node3D, actor: SimActor) -> void:
+func _drive_animation(node: Node3D, actor: SimActor, down: bool = false) -> void:
 	var player := _animation_player(node)
 	if player == null:
 		return
 	var clip := str(visuals.get_value("actor.clips.idle", "Idle"))
 	if not actor.alive:
 		clip = str(visuals.get_value("actor.clips.death", "Death"))
+	elif down:
+		clip = str(visuals.get_value("actor.clips.down", "HitRecieve"))
 	elif not actor.path.is_empty():
 		clip = str(visuals.get_value("actor.clips.walk", "Walk"))
 	if not player.has_animation(clip) or player.current_animation == clip:
