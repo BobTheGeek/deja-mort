@@ -29,7 +29,7 @@ var _tick_seconds: float = 0.1
 var _reset_at: float = -1.0
 var _banner_at: float = 0.0
 var _elapsed: float = 0.0
-var _cycle: Dictionary = {}   # cell key -> which overlapping object to offer next
+var _target := ClickTarget.new()
 var _finished: bool = false
 
 
@@ -146,7 +146,7 @@ func _start_loop() -> void:
 	_tick_seconds = 1.0 / float(world.system("tick_hz"))
 	_accumulator = 0.0
 	_reset_at = -1.0
-	_cycle.clear()
+	_target.reset()
 
 	_finished = false
 	_camera.setup(visuals, world.grid.width, world.grid.height)
@@ -292,30 +292,22 @@ func _on_notebook_pressed() -> void:
 	_notebook.toggle(world, _save.room(room_id))
 
 
+## What the player meant. The ray goes at what is drawn first, because the floor
+## square under the cursor is the wrong answer for anything tall: from this
+## camera the middle of the fridge sits over the square behind it.
 func _click_world(screen_point: Vector2) -> void:
-	var cell := _camera.cell_under(screen_point)
+	var picked := _renderer.pick(_camera.project_ray_origin(screen_point),
+		_camera.project_ray_normal(screen_point))
+	var on_screen := world.objects.by_id(picked) if not picked.is_empty() else null
+	var cell := on_screen.origin() if on_screen != null else _camera.cell_under(screen_point)
 	if not world.grid.in_bounds(cell):
 		return
-	var target: Variant = _pick_target(cell)
+	var target: Variant = _target.choose(world, cell, picked)
 	if target != null:
-		var here := world.objects.at_cell(cell)
-		_wheel.open_at(world, target, screen_point, int(_cycle.get("%d,%d" % [cell.x, cell.y], 0)) + 1, here.size())
+		var at := _target.position_on(world, cell)
+		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]))
 		return
 	world.walk_to(cell)
-
-
-## Objects stack on a cell — a toaster sits on a drawer. Clicking the same cell
-## again offers the next one rather than always picking the first.
-func _pick_target(cell: Vector2i) -> Variant:
-	var here := world.objects.at_cell(cell)
-	if here.is_empty():
-		return null
-	var key := "%d,%d" % [cell.x, cell.y]
-	var index := int(_cycle.get(key, -1)) + 1
-	if index >= here.size():
-		index = 0
-	_cycle[key] = index
-	return here[index].id
 
 
 ## A refusal keeps the wheel open and says so. Closing silently was
