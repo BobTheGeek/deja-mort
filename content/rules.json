@@ -56,6 +56,9 @@
       {
         "op": "place_in"
       }
+    ],
+    "shadows": [
+      "drop"
     ]
   },
   {
@@ -99,6 +102,11 @@
         "effect": "pinned",
         "for_system": "status_s.pinned"
       }
+    ],
+    "shadows": [
+      "push_heavy",
+      "push",
+      "tip_first"
     ]
   },
   {
@@ -118,6 +126,10 @@
         "op": "tip",
         "stage": "lean"
       }
+    ],
+    "shadows": [
+      "push_heavy",
+      "push"
     ]
   },
   {
@@ -136,6 +148,9 @@
         "dir": "away_from_actor",
         "tiles": 1
       }
+    ],
+    "shadows": [
+      "push"
     ]
   },
   {
@@ -263,6 +278,9 @@
         "key": "hearing_mask",
         "value": 1
       }
+    ],
+    "shadows": [
+      "open_close"
     ]
   },
   {
@@ -306,6 +324,10 @@
         "key": "lit",
         "toggle": true
       }
+    ],
+    "shadows": [
+      "toggle_on",
+      "toggle_off"
     ]
   },
   {
@@ -325,6 +347,10 @@
         "name": "help_arrives",
         "for_system": "help.delay_s"
       }
+    ],
+    "shadows": [
+      "toggle_on",
+      "toggle_off"
     ]
   },
   {
@@ -352,6 +378,9 @@
         "rate_system": "wet.rate_tiles_per_s",
         "zone_system": "wet.zone"
       }
+    ],
+    "shadows": [
+      "toggle_on"
     ]
   },
   {
@@ -375,6 +404,9 @@
         "op": "stop_spread",
         "layer": "wet"
       }
+    ],
+    "shadows": [
+      "toggle_off"
     ]
   },
   {
@@ -402,6 +434,10 @@
         "where": "object_cells",
         "for_system": "forever_s"
       }
+    ],
+    "shadows": [
+      "toggle_on",
+      "toggle_off"
     ]
   },
   {
@@ -433,6 +469,9 @@
         "layer": "hot",
         "where": "object_cells"
       }
+    ],
+    "shadows": [
+      "toggle_off"
     ]
   },
   {
@@ -458,6 +497,9 @@
         "key": "lit",
         "value": false
       }
+    ],
+    "shadows": [
+      "toggle_on"
     ]
   },
   {
@@ -577,6 +619,9 @@
       {
         "op": "throw_held"
       }
+    ],
+    "shadows": [
+      "throw_at_cell"
     ]
   },
   {
@@ -605,6 +650,9 @@
         "op": "break",
         "on": "held"
       }
+    ],
+    "shadows": [
+      "throw_at_cell"
     ]
   },
   {

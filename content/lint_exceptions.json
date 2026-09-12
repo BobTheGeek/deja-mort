@@ -1,0 +1,15 @@
+{
+  "_comment": "Overlaps the ambiguity lint is allowed to find. Every entry needs a reason and a way out. An entry that no longer overlaps fails the suite, so these cannot rot.",
+  "ambiguous_pairs": [
+    {
+      "verb": "toggle",
+      "object": "front_door",
+      "rules": [
+        "toggle_lock",
+        "toggle_chain"
+      ],
+      "reason": "Locking the door and chaining it are two intentions on one object, so no shadowing relationship is honest here. The fix is to give the chain its own object.",
+      "fixed_by": "docs/M1-PLAN.md section 1, Proposal B"
+    }
+  ]
+}

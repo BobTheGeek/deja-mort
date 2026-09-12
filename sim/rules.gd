@@ -14,6 +14,10 @@ var subject_conditions: Dictionary = {}
 var reach: String = "adjacent"      # adjacent | none
 var trigger: String = "verb"        # verb (wheel) | follow_up (auto) | manual
 var subject_adjacent: bool = false
+## Rules this one outranks. When both match, this is what the player meant, so
+## the wheel never has to ask. A specific rule sitting above a general one is
+## the rule table working, not ambiguity.
+var shadows: PackedStringArray = []
 var requires_container_open: bool = false
 var target_actor_conditions: Dictionary = {}
 var target_tags: Array = []
@@ -43,6 +47,8 @@ static func from_json(data: Dictionary) -> SimRule:
 	r.reach = str(data.get("reach", "adjacent"))
 	r.trigger = str(data.get("trigger", "verb"))
 	r.subject_adjacent = bool(data.get("subject_adjacent", false))
+	for victim in data.get("shadows", []):
+		r.shadows.append(str(victim))
 	r.requires_container_open = bool(data.get("requires_container_open", false))
 	r.target_actor_conditions = data.get("target_actor_conditions", {})
 	r.actor_conditions = data.get("actor_conditions", {})
