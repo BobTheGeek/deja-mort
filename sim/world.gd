@@ -399,6 +399,7 @@ func step() -> void:
 	_step_timers()
 	_step_actor(player)
 	_step_attacker()
+	_carry_held()
 	_step_object_systems()
 	_step_hazard_spread()
 	_step_hazards_on_actors()
@@ -587,6 +588,21 @@ func _step_attacker() -> void:
 		if not next_action.is_empty():
 			SimAttackerActions.begin(self, attacker, next_action)
 	_step_actor(attacker)
+
+
+## Whatever an actor is holding travels with them. Without this you can "pick up"
+## a lamp, walk to the other side of the room, and leave it exactly where it was.
+func _carry_held() -> void:
+	for a in actors():
+		if a.holding.is_empty():
+			continue
+		var held := objects.by_id(a.holding)
+		if held == null:
+			continue
+		if held.cells.size() == 1 and held.cells[0] == a.pos:
+			continue
+		var carried: Array[Vector2i] = [a.pos]
+		objects.move_to(held, carried)
 
 
 func _check_outcome() -> void:

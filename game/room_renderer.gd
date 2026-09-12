@@ -128,6 +128,11 @@ func _build_grid(world: SimWorld) -> void:
 				SimGrid.FLOOR:
 					_add_box(_floor_root, cell, Vector2i.ONE, floor_height, floor_colour, -floor_height * 0.5)
 				SimGrid.WALL:
+					# A doorway stands in for the wall it sits in. Drawing both
+					# means the wall swallows the door, which is why Room 1 never
+					# showed the way he comes in.
+					if _has_opening(world, cell):
+						continue
 					var height := _wall_height(world, cell)
 					if height <= 0.0:
 						continue
@@ -138,6 +143,14 @@ func _build_grid(world: SimWorld) -> void:
 ## The two standing walls take different values. A corner is only legible when
 ## its two planes are different, which is the first thing the style reference
 ## does and the first thing a single flat grey loses.
+## True when something on this cell is a way through rather than a barrier.
+func _has_opening(world: SimWorld, cell: Vector2i) -> bool:
+	for obj in world.objects.at_cell(cell):
+		if not str(obj.prop("passable_state", "")).is_empty():
+			return true
+	return false
+
+
 func _wall_colour(world: SimWorld, cell: Vector2i, fallback: Color) -> Color:
 	var yaw := deg_to_rad(visuals.number("camera.yaw_deg", 45.0))
 	var far_x: int = 0 if sin(yaw) > 0.0 else world.grid.width - 1
@@ -394,8 +407,7 @@ func _sync_objects(world: SimWorld) -> void:
 			# A model carries its own flat materials. Only state that genuinely
 			# changes the look — burning, broken — overrides them.
 			node.position = _footprint_centre(obj, extent)
-			node.rotation_degrees = Vector3(
-				0.0, float(look.get("yaw_deg", 0.0)), float(look.get("roll_deg", 0.0)))
+			node.rotation_degrees = _object_rotation(obj, look)
 			var emission := float(look.get("emission", 0.0))
 			_override_model(node, look, emission)
 			_sync_object_light(node, look)
@@ -405,13 +417,30 @@ func _sync_objects(world: SimWorld) -> void:
 			height * 0.5,
 			float(obj.cells[0].y) + float(extent.y) * 0.5,
 		)
-		node.rotation_degrees = Vector3(0.0, float(look.get("yaw_deg", 0.0)), float(look.get("roll_deg", 0.0)))
+		node.rotation_degrees = _object_rotation(obj, look)
 		node.scale = Vector3(1.0, float(look.get("scale_y", 1.0)), 1.0)
 		(node as MeshInstance3D).material_override = _material(
 			visuals.to_colour(look.get("color", null)),
 			float(look.get("emission", 0.0)),
 		)
 		_sync_object_light(node, look)
+
+
+## A falling object lies down along the way it fell. The tip direction is already
+## in the object's own `tips.dir`, and ignoring it — rolling everything about Z —
+## is what sent the bookshelf sideways through the wall.
+func _object_rotation(obj: SimObject, look: Dictionary) -> Vector3:
+	var yaw := float(look.get("yaw_deg", 0.0)) + float(obj.prop("mesh_yaw", 0.0)) * 0.0
+	var angle := float(look.get("roll_deg", 0.0))
+	if is_zero_approx(angle):
+		return Vector3(0.0, yaw, 0.0)
+	var tips: Variant = obj.prop("tips", null)
+	var direction := str((tips as Dictionary).get("dir", "E")) if tips is Dictionary else "E"
+	match direction:
+		"N": return Vector3(-angle, yaw, 0.0)
+		"S": return Vector3(angle, yaw, 0.0)
+		"W": return Vector3(0.0, yaw, angle)
+		_:   return Vector3(0.0, yaw, -angle)
 
 
 ## An object whose state says it glows carries its own light, and loses it the
