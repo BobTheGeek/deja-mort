@@ -352,11 +352,14 @@ func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> Stan
 
 # --- per-frame sync ----------------------------------------------------------
 
-func sync(world: SimWorld, delta: float) -> void:
+## `tick_alpha` is how far through the current sim tick we are, 0 to 1. The sim
+## runs at 10 Hz and the screen at whatever it likes, so without it a figure can
+## only ever be in one of ten places a second.
+func sync(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
 	_sync_lighting(world)
 	_sync_objects(world)
 	_sync_hazards(world)
-	_sync_actors(world, delta)
+	_sync_actors(world, delta, tick_alpha)
 
 
 func _sync_lighting(world: SimWorld) -> void:
@@ -503,9 +506,10 @@ func _make_light(spec: Dictionary) -> OmniLight3D:
 	return light
 
 
-func _sync_actors(world: SimWorld, delta: float) -> void:
-	var rate := visuals.number("loop.walk_lerp_per_s", 12.0)
+func _sync_actors(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
+	var turn_rate := visuals.number("actor.turn_per_s", 14.0)
 	var hidden_alpha := visuals.number("actor.hidden_alpha", 0.25)
+	var tick_seconds := 1.0 / maxf(float(world.system("tick_hz", 10.0)), 1.0)
 	var down_statuses: Array = visuals.get_value("actor.down_statuses", [])
 	for actor in world.actors():
 		var node: Node3D = _actor_nodes.get(actor.id, null)
@@ -514,9 +518,8 @@ func _sync_actors(world: SimWorld, delta: float) -> void:
 			_actor_nodes[actor.id] = node
 		var key := "actor.%s" % actor.role
 		node.visible = actor.alive and _actor_is_present(actor)
-		# Interpolation between ticks: the sim jumps a whole cell, the figure slides.
-		var target := IsoCamera.cell_to_world(actor.pos, 0.0)
-		node.position = node.position.lerp(target, clampf(rate * delta, 0.0, 1.0))
+		node.position = _actor_position(actor, tick_seconds, tick_alpha)
+		_face_travel(node, actor, turn_rate, delta)
 		# No rig in the pack, so being knocked down is the figure laid flat. From an
 		# isometric camera that is the whole of the read.
 		var down := false
@@ -550,6 +553,28 @@ func _animation_player(node: Node) -> AnimationPlayer:
 		if child is AnimationPlayer:
 			return child
 	return null
+
+
+## Where the figure actually is: between the cell it left and the cell it is
+## walking into, at the fraction the sim reports, plus however far through the
+## current tick the frame happens to be. Constant speed, no easing, no jump.
+func _actor_position(actor: SimActor, tick_seconds: float, tick_alpha: float) -> Vector3:
+	var here := IsoCamera.cell_to_world(actor.pos, 0.0)
+	if actor.path.is_empty():
+		return here
+	var progress := actor.walk_progress + actor.walk_speed * tick_seconds * clampf(tick_alpha, 0.0, 1.0)
+	return here.lerp(IsoCamera.cell_to_world(actor.path[0], 0.0), clampf(progress, 0.0, 1.0))
+
+
+## Turn to face the way you are walking, and turn at a rate rather than snapping.
+func _face_travel(node: Node3D, actor: SimActor, turn_rate: float, delta: float) -> void:
+	if actor.facing == Vector2i.ZERO:
+		return
+	var wanted := rad_to_deg(atan2(float(actor.facing.x), float(actor.facing.y))) \
+		+ visuals.number("actor.mesh_yaw", 0.0)
+	var current := node.rotation_degrees.y
+	var step := wrapf(wanted - current, -180.0, 180.0) * clampf(turn_rate * delta, 0.0, 1.0)
+	node.rotation_degrees = Vector3(0.0, current + step, 0.0)
 
 
 ## Figures keep their own materials at full opacity; hiding fades them.

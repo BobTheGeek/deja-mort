@@ -151,7 +151,7 @@ func _process(delta: float) -> void:
 		if _elapsed >= _reset_at:
 			loop_index += 1
 			_start_loop()
-		_renderer.sync(world, delta)
+		_renderer.sync(world, delta, _accumulator / _tick_seconds)
 		_hud.sync(world, loop_index, false)
 		return
 
@@ -166,7 +166,7 @@ func _process(delta: float) -> void:
 
 	if not _is_paused():
 		_audio.tick_metronome(world)
-	_renderer.sync(world, delta)
+	_renderer.sync(world, delta, _accumulator / _tick_seconds)
 	_hud.sync(world, loop_index, _win.is_open() or _notebook.is_open())
 
 
