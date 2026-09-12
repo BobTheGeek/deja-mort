@@ -244,7 +244,8 @@ func _click_world(screen_point: Vector2) -> void:
 		return
 	var target: Variant = _pick_target(cell)
 	if target != null:
-		_wheel.open_at(world, target, screen_point)
+		var here := world.objects.at_cell(cell)
+		_wheel.open_at(world, target, screen_point, int(_cycle.get("%d,%d" % [cell.x, cell.y], 0)) + 1, here.size())
 		return
 	world.walk_to(cell)
 
@@ -263,7 +264,13 @@ func _pick_target(cell: Vector2i) -> Variant:
 	return here[index].id
 
 
+## A refusal keeps the wheel open and says so. Closing silently was
+## indistinguishable from a character who would not move.
 func _on_verb_chosen(verb: String, target: Variant, rule_id: String) -> void:
-	_wheel.close()
-	if world.ending.is_empty():
-		world.verb_on(verb, target, rule_id)
+	if not world.ending.is_empty():
+		_wheel.close()
+		return
+	if world.verb_on(verb, target, rule_id):
+		_wheel.close()
+		return
+	_wheel.report_refused(verb)

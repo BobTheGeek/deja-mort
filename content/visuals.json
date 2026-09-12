@@ -411,7 +411,10 @@
       0.02,
       0.03
     ],
-    "backdrop_alpha": 0.45
+    "backdrop_alpha": 0.45,
+    "caption_size": 20.0,
+    "caption_color": "$FG_DARK",
+    "refused_color": "$ACCENT"
   },
   "hud": {
     "timer_size": 64,

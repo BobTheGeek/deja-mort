@@ -239,6 +239,8 @@ static func _op_grab(effect: Dictionary, rule: SimRule, ctx: SimRuleContext) -> 
 	world.objects.take_from_container(ctx.target.id)
 	ctx.target.on = ""
 	ctx.actor.holding = ctx.target.id
+	var into_hand: Array[Vector2i] = [ctx.actor.pos]
+	world.objects.move_to(ctx.target, into_hand)
 	world.emit(SimEvent.TYPE_STATE_CHANGE, {
 		"cell": ctx.actor.pos, "object": ctx.target.id, "actor": ctx.actor.id,
 		"rule_id": rule.id, "meta": {"held": true},
