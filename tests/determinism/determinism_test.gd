@@ -43,6 +43,6 @@ func test_pathing_and_spread_do_not_drift_over_a_long_run() -> void:
 	var b := F.world("room_01_studio", 7)
 	for w in [a, b]:
 		F.act(w, "toggle", "sink", "toggle_wet_source")
-		w.step_seconds(90.0)
+		w.step_seconds(float(w.room["timer_s"]))
 	assert_array(a.hazards.cells("wet")).is_equal(b.hazards.cells("wet"))
 	assert_int(a.snapshot_hash()).is_equal(b.snapshot_hash())

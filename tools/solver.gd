@@ -111,9 +111,9 @@ func run_actions(actions: Array, seed_value: int = DEFAULT_SEED, max_s: float = 
 	while world.ending.is_empty() and world.tick < guard:
 		if next < actions.size() and world.player.action == null:
 			var step: Dictionary = actions[next]
-			if world.time_s() + 0.0001 >= float(step.get("t", 0)):
+			if world.time_s() + 0.0001 >= _due(step):
 				if not _issue(world, step):
-					rejected.append("%s@%s" % [step.get("intent", "?"), step.get("t", 0)])
+					rejected.append("%s@%.1f" % [step.get("intent", "?"), _due(step)])
 					if abort_on_reject:
 						return {"world": world, "rejected": rejected, "issued": next, "busy_s": 0.0}
 				next += 1
@@ -122,6 +122,15 @@ func run_actions(actions: Array, seed_value: int = DEFAULT_SEED, max_s: float = 
 		world.step()
 	return {"world": world, "rejected": rejected, "issued": next,
 		"busy_s": float(busy_ticks) / float(world.system("tick_hz"))}
+
+
+## When an intent becomes issuable. `t` is absolute; `t_after_arrival` is measured
+## from the countdown hitting zero, so tuning timer_s does not silently break
+## every action that is a reaction to him walking in.
+func _due(step: Dictionary) -> float:
+	if step.has("t_after_arrival"):
+		return float(room.get("timer_s", 0)) + float(step["t_after_arrival"])
+	return float(step.get("t", 0))
 
 
 func _issue(world: SimWorld, step: Dictionary) -> bool:

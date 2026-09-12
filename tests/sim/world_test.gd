@@ -44,9 +44,10 @@ func test_an_intent_with_no_matching_rule_is_refused() -> void:
 
 func test_the_loop_timer_counts_down() -> void:
 	var w := F.world()
-	assert_float(w.timer_remaining_s()).is_equal(90.0)
+	var authored := float(w.room["timer_s"])
+	assert_float(w.timer_remaining_s()).is_equal(authored)
 	w.step_seconds(10.0)
-	assert_float(w.timer_remaining_s()).is_equal_approx(80.0, 0.001)
+	assert_float(w.timer_remaining_s()).is_equal_approx(authored - 10.0, 0.001)
 
 
 func test_oil_puts_an_actor_on_the_floor() -> void:

@@ -10,8 +10,8 @@
       "passed": true,
       "rejected": [],
       "stars": 1,
-      "tightness_s": 62.1,
-      "time_s": 121.1
+      "tightness_s": 47.1,
+      "time_s": 122.1
     },
     {
       "action_count": 10,
@@ -23,8 +23,8 @@
       "passed": true,
       "rejected": [],
       "stars": 2,
-      "tightness_s": 77.0,
-      "time_s": 104.6
+      "tightness_s": 62.0,
+      "time_s": 89.6
     },
     {
       "action_count": 7,
@@ -36,8 +36,8 @@
       "passed": true,
       "rejected": [],
       "stars": 3,
-      "tightness_s": 81.0,
-      "time_s": 92.6
+      "tightness_s": 66.0,
+      "time_s": 77.6
     }
   ],
   "budget": {
@@ -69,55 +69,55 @@
         "cause": "stabbed@bathroom",
         "notebook": "Hid in the tub. He had time.",
         "scenario": "hide_in_bathtub",
-        "time_s": 119.6
+        "time_s": 104.6
       },
       {
         "cause": "stabbed@bed",
         "notebook": "Hid under the bed. He knelt down.",
         "scenario": "hide_in_bed",
-        "time_s": 113.4
+        "time_s": 98.4
       },
       {
         "cause": "stabbed@behind_furniture",
         "notebook": "Hid behind the couch. He walked around the couch.",
         "scenario": "hide_in_couch",
-        "time_s": 101.4
+        "time_s": 86.4
       },
       {
         "cause": "stabbed@closet",
         "notebook": "Hid in the closet. He looked in the closet.",
         "scenario": "hide_in_closet",
-        "time_s": 98.0
+        "time_s": 83.0
       },
       {
         "cause": "stabbed@curtains",
         "notebook": "Hid behind the curtains. Feet.",
         "scenario": "hide_in_curtains",
-        "time_s": 107.6
+        "time_s": 92.6
       },
       {
         "cause": "stabbed@open",
-        "notebook": "He found me. It took him 95 seconds.",
+        "notebook": "He found me. It took him 80 seconds.",
         "scenario": "blind_self_hairspray",
-        "time_s": 95.3
+        "time_s": 80.3
       },
       {
         "cause": "stabbed@zone_bed",
         "notebook": "Was at the nightstand. The call did not finish.",
         "scenario": "caught_at_phone",
-        "time_s": 104.1
+        "time_s": 89.1
       },
       {
         "cause": "stabbed@zone_entry",
-        "notebook": "He found me. It took him 96 seconds.",
+        "notebook": "He found me. It took him 81 seconds.",
         "scenario": "slip_on_cooking_oil",
-        "time_s": 95.6
+        "time_s": 80.6
       },
       {
         "cause": "stabbed@zone_living",
         "notebook": "Stood in the middle of the room. Seventy seconds of planning.",
         "scenario": "stand_still",
-        "time_s": 95.3
+        "time_s": 80.3
       }
     ],
     "scenarios": 13
@@ -127,7 +127,7 @@
     "death_causes": 12,
     "min_actions_to_win": 4,
     "solutions_found": 2,
-    "tightness_s": 62.1
+    "tightness_s": 47.1
   },
   "explore": {
     "improvised": 2,
@@ -181,7 +181,7 @@
         "label": "toggle light_switch -> toggle sink -> push bookshelf -> push bookshelf",
         "matches_authored": false,
         "stars": 1,
-        "time_s": 133.8
+        "time_s": 118.8
       },
       {
         "actions": [
@@ -235,7 +235,7 @@
         "label": "toggle sink -> push fridge -> toggle light_switch -> push bookshelf -> push bookshelf",
         "matches_authored": false,
         "stars": 1,
-        "time_s": 143.9
+        "time_s": 128.9
       }
     ]
   },

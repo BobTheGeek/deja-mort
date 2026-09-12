@@ -24,7 +24,7 @@ func test_he_waits_outside_until_the_timer_runs_out() -> void:
 	assert_object(w.attacker).is_not_null()
 	assert_str(w.phase).is_equal(SimWorld.PHASE_PRE_ARRIVAL)
 	assert_bool(w.attacker.inside).is_false()
-	w.step_seconds(89.0)
+	w.step_seconds(w.timer_remaining_s() - 1.0)
 	assert_bool(w.attacker.inside).is_false()
 	_at_arrival(w)
 	assert_str(w.phase).is_not_equal(SimWorld.PHASE_PRE_ARRIVAL)
@@ -172,7 +172,7 @@ func test_patience_runs_out_and_he_leaves() -> void:
 	var w := F.world()
 	F.act(w, "hide", "bathtub")
 	_at_arrival(w)
-	w.step_seconds(float(w.room.get("max_loop_s", 300)) - 91.0)
+	w.step_seconds(float(w.room.get("max_loop_s", 300)) - w.time_s() - 1.0)
 	assert_bool(w.attacker.left or not w.player.alive).is_true()
 
 
