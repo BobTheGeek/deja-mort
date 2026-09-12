@@ -208,5 +208,8 @@ func _send_click(point: Vector2) -> void:
 		event.pressed = pressed
 		event.position = point
 		event.global_position = point
-		get_root().push_input(event)
+		# The canvas stretches to 1920x1080, and these coordinates are already in
+		# that space — unproject_position and Control input both work in it. Pushed
+		# as global they would be transformed a second time and land elsewhere.
+		get_root().push_input(event, true)
 	print("capture: clicked %s at t=%.2fs" % [point, _elapsed])

@@ -103,6 +103,27 @@ Self-contained `.gltf` — the buffer is base64 inside the file and there are no
 
 **Palette:** the kit is cheerful and `docs/06` wants desaturated. Rather than repaint 140 models and lose their flat shading, the mood is pulled globally by `post.saturation` in `content/visuals.json`. Keep the bones, change the mood.
 
+## UI
+
+`assets/ui/` — Claude Design turn 1, delivered 12 Sept 2026 against `docs/brand/UI-BRIEF.md`. Owned by the project; not licensed from a third party. The full delivery, including the `svg/` sources and `SPEC.md`, is kept at `docs/ui/` the way `docs/brand/` keeps the brand originals.
+
+| Group | Files | Notes |
+|---|---|---|
+| Verb icons | `icons/verbs/<verb>-{1x,2x,3x,master-128}.png` | One per verb in `content/verbs.json`. `tests/game/wheel_test.gd` fails if a verb has none. |
+| Ending icons | `icons/endings/{evade,disable,kill,escape}-*.png` | For the win screen's endings row. |
+| UI icons | `icons/ui/{star,close,notebook,collectible-found,collectible-missing}-*.png` | |
+| Wheel backdrop | `wheel/wheel-vignette.png` | Radial, `BG_DARK` to alpha 0.6. |
+| Notebook | `notebook/scroll-fade-*.png` | 4px-wide vertical gradient, stretched. |
+| Title | `title/door-{frame,leaf,edge}-*.png` | The door beat. Not built yet. |
+
+**Every PNG is white on transparent** so the engine tints it to a brand token; `modulate` multiplies, and a black source would stay black. The delivered SVGs are black geometry sources — read them, do not ship them.
+
+**Naming:** the delivery uses `-1x` rather than `@1x` (the filesystem it was built on rejects `@`). Kept as delivered; Godot does not care, and renaming would only break the link back to `SPEC.md`.
+
+**The wheel vignette was re-encoded** from the delivered 2160² (4.6 MB of dithered gradient) down to 540², which is 30 KB and indistinguishable — a smooth radial gradient survives any scale.
+
+**Not delivered, and deliberately not invented:** the design's notebook includes an Achievements tab. There is no achievements system in the game. See `docs/BACKLOG.md`.
+
 ## Audio
 
 | Cue / file | Source | License | Notes |

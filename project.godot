@@ -21,6 +21,18 @@ config/icon="res://assets/brand/app-icon-1024.png"
 
 Brand="*res://game/theme/brand.gd"
 
+[display]
+
+; The UI is designed at 1920x1080 (docs/ui/SPEC.md) and the canvas stretches to
+; it, so every number in visuals.json is literal at any window size. The window
+; still opens at 1152x648; only the units change.
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1152
+window/size/window_height_override=648
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
 [dotnet]
 
 project/assembly_name="deja-mort"

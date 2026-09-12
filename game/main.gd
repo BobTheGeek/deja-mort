@@ -168,6 +168,7 @@ func _process(delta: float) -> void:
 			if not world.ending.is_empty():
 				break
 
+	_wheel.advance(delta)
 	if not _is_paused():
 		_audio.tick_metronome(world)
 	_renderer.sync(world, delta, _accumulator / _tick_seconds)

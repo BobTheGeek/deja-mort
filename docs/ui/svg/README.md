@@ -1,0 +1,1 @@
+All delivered SVGs are geometry only (no <text>), so live/ and outlined/ are identical. Every string in the UI is engine-rendered type per SPEC.md; the wordmark comes from the brand kit's own outlined lockups and is not re-set here.
