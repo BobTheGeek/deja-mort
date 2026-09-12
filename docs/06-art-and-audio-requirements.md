@@ -9,7 +9,7 @@
 **The mood is a lighting rig, not an art skill.**
 
 - **One light source** per room (bare bulb, desk lamp, streetlight through blinds) with real shadows. Minimal ambient. Dark corners are gameplay (they affect his sight) and they're the look.
-- **Palette:** desaturated — grays, cold blues, muted wood — with one warm accent from the light. No mint greens, no patterned rugs, no showroom brightness.
+- **Palette:** desaturated — grays, cold blues, muted wood — with one warm accent from the light. The warm accent is the brand amber `#D9A05B` (see `brand/BRAND.md`); the void is `#0B0C0F`. No mint greens, no patterned rugs, no showroom brightness.
 - **Flat shading, no textures.** Vertex color or a single material with a color ramp.
 - **Post:** vignette and slight grain so it reads as a diorama, not a render. Optional tilt-shift if it's cheap.
 - **Sparse dressing.** Every visible object is interactable. Decorative clutter thins out or becomes an object with tags.

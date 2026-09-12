@@ -108,3 +108,16 @@ Use these for fast visual exploration; they're not a substitute for Section A's 
 3. Pick two directions. Take them back to the conversational assistant for refinement (stacked, inline, mark).
 4. Final production should be vector. If the assistant can't output SVG, have it specify the construction precisely (font, weights, angles, proportions, colors as hex) and hand that to a designer or a vector tool.
 5. Test the mark at 32 px on a dark background before calling anything final. If the accents vanish, go back to step 3.
+
+---
+
+## D. Revision round (after the first treatment was approved — Sept 12, 2026)
+
+Direction approved: door mark, ember sliver, stacked + inline lockups, palette #111111 / #F0F0F0 / #E65C00. Three fixes and one deliverable change:
+
+1. **Remove the glow.** No shadow, bloom, or gradient behind the wordmark on dark. Only the ember is luminous.
+2. **Redraw the accents.** É and À get custom marks echoing the door leaf's swing angle, weighted like the letter stems, legible at 128 px, designed as a mirrored pair. Not a knife or clock hand — angled strokes from the same drawing as the door. Approve at 100% and 128 px before applying to lockups.
+3. **Resolve the typeface.** Deliver a complete Inter Bold / Inter Light set (−0.03 em tracking on the wordmark); keep the Univers set labeled "requires license."
+4. **Vector deliverables.** SVG for every asset, plus outlined-text copies; PNG icons from the mark only at 1024/512/256/128/64/32/16.
+
+Checks: 32 px and 16 px icons still read as a door with a light sliver on #111111; monochrome loses nothing; accents don't merge at 128 px; no red; no glow.

@@ -30,3 +30,7 @@ Decisions already made, with the reasoning, so nobody relitigates them by accide
 | 24 | Knife in Room 1, gun from Room 3 | Knife makes distance/obstacles matter — the tutorial's lesson; gun re-breaks habits later | Tutorial design | — |
 | 25 | Room 1's front door opens into the kitchen | The wet floor becomes the natural chokepoint for the signature kill | Room 1 signature | Solver shows it trivializes evade |
 | 26 | Phone starts dead; charger in the kitchen | Evade needs a find; two more interactions | Evade isn't free | — |
+| 27 | Logo: clock mark at 1:30, accents as hands (grave = minute hand, accent color); door mark superseded | Only concept where the pun, motif, and accents are one idea; monochrome loses nothing; reads at 16 px. Door lost its idea in mono | Brand system | — |
+| 28 | Brand palette: #0B0C0F / #D7DAE0 / #D9A05B (dark), #ECEDEF / #151619 / #C2853E (light); replaces #111111 / #F0F0F0 / #E65C00 | Cool blue-black + muted amber matches the cold-room-warm-bulb art direction; in-game accent uses the same amber | Logo and game feel like one world | — |
+| 29 | Type: Archivo Medium for the wordmark only; Inter for tagline and all UI. Both SIL OFL. Univers rejected (commercial) | Free to ship; Medium weight seats the custom accents; two faces with strict roles | Licensing; UI consistency | Archivo appearing anywhere but the wordmark is a bug |
+| 30 | The door survives as the title-screen opening element, not the logo | It is the right first image of the game; it was the wrong mark | Title screen | — |

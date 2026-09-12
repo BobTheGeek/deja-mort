@@ -29,6 +29,8 @@ Conventions: display title is always **DÉJÀ MORT** with the accents. ASCII slu
 | `10-glossary-and-voice.md` | Canonical vocabulary for code/content/UI, and the notebook voice guide with pass/fail examples | Every agent; anyone writing templates |
 | `11-decision-log.md` | Every settled decision with its rationale and revisit conditions | Anyone tempted to change something |
 | `12-playtest-protocol.md` | How to run and log playtests from M3 on, and which observations change which numbers | Bob, observers |
+| `13-autonomous-runs.md` | How to run each milestone unattended with `/goal` — ready-made conditions per milestone | Bob |
+| `brand/` | Vector mark and lockups, icon PNGs, `BRAND.md` with tokens, Godot constants, and export targets | Presentation agents; Bob for store art |
 | `stubs/` | Templates for `BACKLOG.md`, `TUNING.md`, `BLOCKERS.md`, `assets/README.md` — copy into the repo at M0 | M0 agent |
 
 ## The three rules that keep this project buildable
