@@ -57,6 +57,19 @@ static func to_colour(raw: Variant, fallback := Color(1, 0, 1)) -> Color:
 	return fallback
 
 
+## One opaque panel style for every overlay, so nothing shows the room through it.
+func panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = colour("panel.color", Color(0.06, 0.06, 0.08))
+	var border := int(number("panel.border_width", 2.0))
+	style.set_border_width_all(border)
+	style.border_color = colour("panel.border_color", Color(0.3, 0.3, 0.3))
+	style.set_corner_radius_all(int(number("panel.corner_radius", 4.0)))
+	var padding := int(number("panel.padding", 18.0))
+	style.set_content_margin_all(padding)
+	return style
+
+
 ## Merges the default object look with every `by_tag` entry this object matches.
 ## Later tags win on each key, and tag order comes from the JSON, so two objects
 ## with the same tags always resolve to the same look.

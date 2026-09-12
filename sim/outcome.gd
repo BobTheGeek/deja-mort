@@ -243,6 +243,49 @@ static func _fill(template: String, world: SimWorld, ending: String, cause: Stri
 	return out
 
 
+## What the loop showed you about him, in his own order. Derived from the event
+## log through templates — no room and no attacker profile is named here.
+static func attacker_observations(world: SimWorld) -> PackedStringArray:
+	var templates := _templates()
+	var out := PackedStringArray()
+	var add := func(key: String, fields: Dictionary) -> void:
+		if not templates.has(key):
+			return
+		var line := str(templates[key])
+		for field in fields:
+			line = line.replace("{%s}" % field, str(fields[field]))
+		if not out.has(line):
+			out.append(line)
+
+	var attacker_id := world.attacker.id if world.attacker != null else ""
+	if attacker_id.is_empty():
+		return out
+	for e in world.events.log_all():
+		if e.actor != attacker_id:
+			continue
+		match e.type:
+			SimEvent.TYPE_ACTOR_MOVE:
+				if e.meta.has("entered"):
+					add.call("attacker.entered", {"what": _name_of(world, e.object)})
+			SimEvent.TYPE_STATE_CHANGE:
+				if e.meta.has("breached"):
+					add.call("attacker.breached", {"what": _name_of(world, e.object)})
+			SimEvent.TYPE_INTERACTION:
+				if e.meta.has("searched"):
+					add.call("attacker.searched", {"what": _name_of(world, str(e.meta["searched"]))})
+			SimEvent.TYPE_ACTOR_STATUS:
+				if e.meta.has("left"):
+					add.call("attacker.left", {})
+				elif e.meta.has("found"):
+					add.call("attacker.found", {"what": _name_of(world, e.object)})
+	return out
+
+
+static func _name_of(world: SimWorld, object_id: String) -> String:
+	var obj := world.objects.by_id(object_id)
+	return obj.name.to_lower() if obj != null else object_id
+
+
 static func _templates() -> Dictionary:
 	var path := "res://content/notebook_templates.json"
 	if not FileAccess.file_exists(path):

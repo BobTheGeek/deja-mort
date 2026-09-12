@@ -343,5 +343,20 @@
   "vignette": {
     "strength": 0.6,
     "softness": 0.6
+  },
+  "panel": {
+    "color": [
+      0.06,
+      0.06,
+      0.08
+    ],
+    "border_color": [
+      0.3,
+      0.29,
+      0.27
+    ],
+    "border_width": 2,
+    "corner_radius": 4,
+    "padding": 18
   }
 }

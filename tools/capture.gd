@@ -14,6 +14,10 @@ const OUT_DIR := "user://shots"
 var _name := "shot"
 var _capture_at := 1.5
 var _clicks: Array = []
+var _keys: Array = []
+var _solution := ""
+var _pending: Array = []
+var _next := 0
 var _elapsed := 0.0
 var _done := false
 
@@ -34,6 +38,12 @@ func _initialize() -> void:
 				"cell": Vector2i(-1, -1),
 				"done": false,
 			})
+			i += 2
+		elif str(args[i]) == "--key" and i + 1 < args.size():
+			_keys.append({"at": _capture_at * 0.7, "keycode": OS.find_keycode_from_string(str(args[i + 1])), "done": false})
+			i += 2
+		elif str(args[i]) == "--solution" and i + 1 < args.size():
+			_solution = str(args[i + 1])
 			i += 2
 		elif str(args[i]) == "--speed" and i + 1 < args.size():
 			# Run the clock fast so a whole 75-second loop fits in a short capture.
@@ -77,6 +87,12 @@ func _process(delta: float) -> bool:
 				continue
 		_send_click(point)
 
+	for key in _keys:
+		if bool(key["done"]) or _elapsed < float(key["at"]):
+			continue
+		key["done"] = true
+		_send_key(int(key["keycode"]))
+	_drive_solution()
 	if _elapsed < _capture_at:
 		return false
 	var image := get_root().get_texture().get_image()
@@ -108,6 +124,9 @@ func _report_state() -> void:
 		attacker_at, world.player.alive,
 		world.ending if not world.ending.is_empty() else "-",
 	])
+	var audio := main.find_child("AudioDirector", true, false)
+	if audio != null:
+		print("audio: %d cues played, %d synthesised" % [audio.get("played"), (audio.get("map").get("cues", {}) as Dictionary).size()])
 
 
 ## Clicking a grid cell is far steadier than clicking a pixel guess.
@@ -117,6 +136,59 @@ func _cell_to_screen(cell: Vector2i) -> Vector2:
 	if camera == null:
 		return Vector2.ZERO
 	return camera.unproject_position(IsoCamera.cell_to_world(cell, 0.3))
+
+
+## Plays one of the room's authored solutions through the live game, using the
+## same intent API the wheel uses. Proves the loop can actually reach an ending.
+func _drive_solution() -> void:
+	if _solution.is_empty():
+		return
+	var main := get_root().get_child(get_root().get_child_count() - 1)
+	var world: SimWorld = main.get("world")
+	if world == null:
+		return
+	if _pending.is_empty():
+		for entry in world.room.get("authored_solutions", []):
+			if str((entry as Dictionary).get("id", "")) == _solution:
+				_pending = (entry as Dictionary).get("actions", [])
+		if _pending.is_empty():
+			printerr("capture: no authored solution '%s'" % _solution)
+			_solution = ""
+			return
+		print("capture: driving %s (%d actions)" % [_solution, _pending.size()])
+	if _next >= _pending.size() or world.player.action != null:
+		return
+	var step: Dictionary = _pending[_next]
+	var due := float(step.get("t", 0))
+	if step.has("t_after_arrival"):
+		due = float(world.room.get("timer_s", 0)) + float(step["t_after_arrival"])
+	if world.time_s() + 0.0001 < due:
+		return
+	var args: Array = step.get("args", [])
+	var ok := false
+	match str(step.get("intent", "")):
+		"walk_to":
+			ok = world.walk_to(Vector2i(int(args[0]), int(args[1])))
+		"wait":
+			ok = world.wait(float(args[0]))
+		"verb_on":
+			var target: Variant = args[1]
+			if target is Array:
+				target = Vector2i(int(target[0]), int(target[1]))
+			ok = world.verb_on(str(args[0]), target, str(args[2]) if args.size() > 2 else "")
+	if not ok:
+		printerr("capture: rejected %s %s at %.1fs" % [step.get("intent"), args, world.time_s()])
+	_next += 1
+
+
+func _send_key(keycode: int) -> void:
+	for pressed in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = keycode
+		event.physical_keycode = keycode
+		event.pressed = pressed
+		get_root().push_input(event)
+	print("capture: key %s at t=%.2fs" % [OS.get_keycode_string(keycode), _elapsed])
 
 
 func _send_click(point: Vector2) -> void:

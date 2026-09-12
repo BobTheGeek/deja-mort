@@ -66,7 +66,7 @@ func _make_label(font_size: int, align: int = HORIZONTAL_ALIGNMENT_LEFT) -> Labe
 	return label
 
 
-func sync(world: SimWorld, loop_index: int) -> void:
+func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
 	var remaining := world.timer_remaining_s()
 	_timer.text = "%0.1f" % remaining
 	var urgent := remaining <= visuals.number("hud.urgent_below_s", 10.0)
@@ -77,7 +77,7 @@ func sync(world: SimWorld, loop_index: int) -> void:
 	_held.text = "Holding: %s" % (world.player.holding if not world.player.holding.is_empty() else "—")
 	_hidden.text = "Hidden in: %s" % world.player.hidden_in if world.player.is_hidden() else ""
 
-	if world.ending.is_empty():
+	if world.ending.is_empty() or panel_open:
 		_banner.visible = false
 		return
 	_banner.visible = true

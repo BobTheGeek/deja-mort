@@ -21,5 +21,10 @@
   "death.stabbed@zone_kitchen": "Stood in the kitchen. The door opens into the kitchen.",
   "death.stabbed@zone_living": "Stood in the middle of the room. Seventy seconds of planning.",
   "death.stabbed@zone_bed": "Was at the nightstand. The call did not finish.",
-  "death.stabbed@zone_bath": "Was in the bathroom, not in the tub. A distinction he did not make."
+  "death.stabbed@zone_bath": "Was in the bathroom, not in the tub. A distinction he did not make.",
+  "attacker.entered": "He came in through the {what}.",
+  "attacker.breached": "The {what} slowed him down. It did not stop him.",
+  "attacker.searched": "He looked in the {what}.",
+  "attacker.found": "He found me in the {what}.",
+  "attacker.left": "He gave up and left."
 }

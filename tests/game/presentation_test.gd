@@ -49,7 +49,7 @@ func test_no_object_id_appears_in_the_visual_table_or_in_game_code() -> void:
 		if not id.is_empty() and not tags.has(id):
 			ids.append(id)
 	var offenders := PackedStringArray()
-	var sources := PackedStringArray([GameVisuals.PATH])
+	var sources := PackedStringArray([GameVisuals.PATH, AudioDirector.MAP_PATH])
 	sources.append_array(_gd_files(GAME_DIR))
 	for path in sources:
 		var text := FileAccess.get_file_as_string(path)

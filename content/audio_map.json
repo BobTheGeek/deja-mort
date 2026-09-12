@@ -1,0 +1,42 @@
+{
+  "_comment": "Placeholder greybox audio. Cues are synthesised in code so no asset files ship before M4. Matching is first-match, top to bottom, on event fields only - never on an object id.",
+
+  "bus_gain_db": -4.0,
+  "voices": 12,
+  "unit_size": 9.0,
+  "max_distance": 24.0,
+
+  "cues": {
+    "footstep":  { "kind": "noise", "hz": 150, "ms": 70,  "gain": 0.45, "decay": 5.0 },
+    "door":      { "kind": "tone",  "hz": 70,  "ms": 320, "gain": 0.9,  "decay": 3.0 },
+    "breach":    { "kind": "noise", "hz": 90,  "ms": 260, "gain": 0.9,  "decay": 3.5 },
+    "search":    { "kind": "noise", "hz": 320, "ms": 160, "gain": 0.55, "decay": 6.0 },
+    "thud":      { "kind": "tone",  "hz": 120, "ms": 140, "gain": 0.7,  "decay": 7.0 },
+    "shatter":   { "kind": "noise", "hz": 900, "ms": 220, "gain": 0.8,  "decay": 9.0 },
+    "water":     { "kind": "noise", "hz": 600, "ms": 200, "gain": 0.35, "decay": 4.0 },
+    "spark":     { "kind": "tone",  "hz": 1400, "ms": 180, "gain": 0.8, "decay": 12.0 },
+    "fire":      { "kind": "noise", "hz": 220, "ms": 300, "gain": 0.5,  "decay": 2.5 },
+    "click":     { "kind": "tone",  "hz": 520, "ms": 45,  "gain": 0.4,  "decay": 14.0 },
+    "death":     { "kind": "tone",  "hz": 55,  "ms": 520, "gain": 1.0,  "decay": 2.0 },
+    "win":       { "kind": "tone",  "hz": 330, "ms": 420, "gain": 0.8,  "decay": 3.0 },
+    "tick":      { "kind": "tone",  "hz": 880, "ms": 35,  "gain": 0.22, "decay": 18.0 },
+    "tick_loud": { "kind": "tone",  "hz": 990, "ms": 45,  "gain": 0.4,  "decay": 16.0 }
+  },
+
+  "events": [
+    { "type": "timer",        "meta": "arrival",  "cue": "door",    "global": true },
+    { "type": "death",                             "cue": "death",  "global": true },
+    { "type": "ending",                            "cue": "win",    "global": true },
+    { "type": "actor_move",   "role": "attacker", "cue": "footstep" },
+    { "type": "state_change", "meta": "breached", "cue": "breach" },
+    { "type": "interaction",  "meta": "searched", "cue": "search" },
+    { "type": "hazard_spawn", "layer": "shock",   "cue": "spark" },
+    { "type": "hazard_spawn", "layer": "burning", "cue": "fire" },
+    { "type": "hazard_spawn", "layer": "wet",     "cue": "water" },
+    { "type": "noise",        "min_loudness": 6.0, "cue": "shatter", "scale_by_loudness": true },
+    { "type": "noise",        "min_loudness": 3.0, "cue": "thud",    "scale_by_loudness": true },
+    { "type": "noise",                             "cue": "click" }
+  ],
+
+  "metronome": { "cue": "tick", "interval_s": 1.0, "urgent_below_s": 10.0, "urgent_cue": "tick_loud", "urgent_interval_s": 0.5 }
+}

@@ -19,17 +19,23 @@ var _camera: IsoCamera = null
 var _wheel: ActionWheel = null
 var _hud: GameHud = null
 var _vignette: ColorRect = null
+var _notebook: Notebook = null
+var _win: WinScreen = null
+var _save: SaveData = null
+var _audio: AudioDirector = null
 
 var _accumulator: float = 0.0
 var _tick_seconds: float = 0.1
 var _reset_at: float = -1.0
 var _elapsed: float = 0.0
 var _cycle: Dictionary = {}   # cell key -> which overlapping object to offer next
+var _finished: bool = false
 
 
 func _ready() -> void:
 	content = SimContent.load_from()
 	visuals = GameVisuals.load_table()
+	_save = SaveData.load_or_new()
 	if not content.errors.is_empty():
 		for e in content.errors:
 			push_error("content: %s" % e)
@@ -47,6 +53,11 @@ func _build_nodes() -> void:
 	_camera.name = "IsoCamera"
 	_camera.current = true
 	add_child(_camera)
+
+	_audio = AudioDirector.new()
+	_audio.name = "AudioDirector"
+	add_child(_audio)
+	_audio.setup()
 
 	var layer := CanvasLayer.new()
 	layer.name = "UI"
@@ -67,6 +78,17 @@ func _build_nodes() -> void:
 	_wheel = ActionWheel.new()
 	_wheel.name = "Wheel"
 	layer.add_child(_wheel)
+
+	_notebook = Notebook.new()
+	_notebook.name = "Notebook"
+	layer.add_child(_notebook)
+	_notebook.setup(visuals)
+
+	_win = WinScreen.new()
+	_win.name = "WinScreen"
+	layer.add_child(_win)
+	_win.setup(visuals)
+	_win.replay_pressed.connect(_on_replay)
 
 
 func _vignette_material() -> ShaderMaterial:
@@ -98,11 +120,13 @@ func _start_loop() -> void:
 	# A fresh seed per loop: the room resets completely, only knowledge persists.
 	world = SimWorld.create(json.data, content, SimRng.new(loop_index))
 	world.events.subscribe(_on_sim_event)
+	_audio.listen(world)
 	_tick_seconds = 1.0 / float(world.system("tick_hz"))
 	_accumulator = 0.0
 	_reset_at = -1.0
 	_cycle.clear()
 
+	_finished = false
 	_camera.setup(visuals, world.grid.width, world.grid.height)
 	_renderer.build(world, visuals)
 	_wheel.setup(visuals, world)
@@ -121,11 +145,11 @@ func _process(delta: float) -> void:
 			loop_index += 1
 			_start_loop()
 		_renderer.sync(world, delta)
-		_hud.sync(world, loop_index)
+		_hud.sync(world, loop_index, false)
 		return
 
-	# Wheel open = sim paused. Presentation simply stops calling step().
-	if not _wheel.is_open() and world.ending.is_empty():
+	# Any panel open = sim paused. Thinking is free; doing costs seconds.
+	if not _is_paused() and world.ending.is_empty():
 		_accumulator += delta
 		while _accumulator >= _tick_seconds:
 			_accumulator -= _tick_seconds
@@ -133,16 +157,42 @@ func _process(delta: float) -> void:
 			if not world.ending.is_empty():
 				break
 
+	if not _is_paused():
+		_audio.tick_metronome(world)
 	_renderer.sync(world, delta)
-	_hud.sync(world, loop_index)
+	_hud.sync(world, loop_index, _win.is_open() or _notebook.is_open())
+
+
+func _is_paused() -> bool:
+	return _wheel.is_open() or _notebook.is_open() or _win.is_open()
 
 
 func _on_sim_event(event: SimEvent) -> void:
 	if event.type == SimEvent.TYPE_DEATH and event.actor == world.player.id:
 		_hud.flash("DEAD")
-		_schedule_reset()
-	elif event.type == SimEvent.TYPE_ENDING and not SimOutcome.won(str(event.meta.get("ending", ""))):
-		_schedule_reset()
+	elif event.type == SimEvent.TYPE_ENDING:
+		_finish_loop(str(event.meta.get("ending", "")))
+
+
+## One place where a finished loop is banked. The sim decided the ending; this
+## only records it and chooses what the player sees next.
+func _finish_loop(ending: String) -> void:
+	if _finished:
+		return
+	_finished = true
+	_wheel.close()
+	var report := SimOutcome.evaluate(world, loop_index)
+	_save.record_loop(room_id, world, report, loop_index)
+	_save.save()
+	if SimOutcome.won(ending):
+		_win.show_result(report, _save.room(room_id), loop_index)
+		return
+	_schedule_reset()
+
+
+func _on_replay() -> void:
+	loop_index += 1
+	_start_loop()
 
 
 ## Death to control in under a second, from data. Slow deaths kill "one more try".
@@ -158,8 +208,15 @@ func _schedule_reset() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if world == null or _reset_at >= 0.0:
 		return
+	if _win.is_open():
+		return
 	if event.is_action_pressed("ui_cancel"):
 		_wheel.close()
+		_notebook.hide_book()
+		return
+	if event is InputEventKey and (event as InputEventKey).pressed \
+			and (event as InputEventKey).keycode == KEY_TAB:
+		_notebook.toggle(world, _save.room(room_id))
 		return
 	if not (event is InputEventMouseButton):
 		return
@@ -169,7 +226,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if click.button_index == MOUSE_BUTTON_RIGHT:
 		_wheel.close()
 		return
-	if click.button_index != MOUSE_BUTTON_LEFT or _wheel.is_open():
+	if click.button_index != MOUSE_BUTTON_LEFT or _is_paused():
 		return
 	_click_world(click.position)
 
