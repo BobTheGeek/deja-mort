@@ -90,6 +90,7 @@ func _build_nodes() -> void:
 	_hud.name = "Hud"
 	layer.add_child(_hud)
 	_hud.setup(visuals)
+	_hud.notebook_pressed.connect(_on_notebook_pressed)
 
 	layer.add_child(_wheel)
 
@@ -266,6 +267,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			and (event as InputEventKey).keycode == KEY_TAB:
 		_notebook.toggle(world, _save.room(room_id))
 		return
+	if event is InputEventMouseMotion:
+		_hud.hover_at((event as InputEventMouseMotion).position)
+		return
 	if not (event is InputEventMouseButton):
 		return
 	var click := event as InputEventMouseButton
@@ -276,7 +280,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if click.button_index != MOUSE_BUTTON_LEFT or _is_paused():
 		return
+	# The notebook button is HUD, not room. A phone has no Tab key.
+	if _hud.press_at(click.position):
+		return
 	_click_world(click.position)
+
+
+func _on_notebook_pressed() -> void:
+	_notebook.toggle(world, _save.room(room_id))
 
 
 func _click_world(screen_point: Vector2) -> void:
