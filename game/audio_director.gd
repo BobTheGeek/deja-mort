@@ -42,22 +42,29 @@ func listen(world: SimWorld) -> void:
 	world.events.subscribe(_on_event)
 
 
-## The timer is the soundtrack: a tick under everything, faster at the end.
+## The timer is the soundtrack, and for most of the loop the soundtrack is
+## nothing. A cue only plays inside its window, so leaving `cue` out of the map
+## is what keeps the clock quiet until the last ten seconds.
 func tick_metronome(world: SimWorld) -> void:
 	var spec: Dictionary = map.get("metronome", {})
 	if spec.is_empty() or not world.ending.is_empty():
 		return
 	var remaining := world.timer_remaining_s()
 	var urgent := remaining <= float(spec.get("urgent_below_s", 10.0)) and remaining > 0.0
-	var interval := float(spec.get("urgent_interval_s", 0.5)) if urgent else float(spec.get("interval_s", 1.0))
+	var cue := str(spec.get("urgent_cue", "")) if urgent else str(spec.get("cue", ""))
+	if cue.is_empty():
+		return
+	var interval := float(spec.get("urgent_interval_s", 0.5)) if urgent \
+		else float(spec.get("interval_s", 1.0))
 	var elapsed := world.time_s()
 	if elapsed < _metronome_at:
 		_metronome_at = 0.0
+	# The clock has been silent, so _metronome_at is still back at zero and the
+	# first tick of the window lands the moment it opens.
 	if elapsed < _metronome_at + interval:
 		return
 	_metronome_at = elapsed
-	_play(str(spec.get("urgent_cue", spec.get("cue", ""))) if urgent else str(spec.get("cue", "")),
-		_listener_cell(world), 1.0)
+	_play(cue, _listener_cell(world), 1.0)
 
 
 func _on_event(event: SimEvent) -> void:
