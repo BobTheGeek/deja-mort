@@ -71,7 +71,13 @@
         0.22
       ]
     },
-    "hidden_alpha": 0.25
+    "hidden_alpha": 0.25,
+    "down_roll_deg": 90.0,
+    "down_statuses": [
+      "prone",
+      "pinned",
+      "electrocuted"
+    ]
   },
   "object": {
     "default": {
