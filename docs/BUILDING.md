@@ -82,3 +82,24 @@ godot --path . -s tools/capture.gd -- win_screen 85 --speed 10 --solution kill_t
 The capture tool is not headless — Godot's headless driver has no renderer, so
 it opens a window. It prints sim state alongside the image, because a screenshot
 on its own cannot prove the loop actually ran.
+
+## Reading a playtest
+
+A debug build records the session: every tap with what it resolved to, every
+action with whether the sim took it, every event off the bus, and how each loop
+ended. One JSON object per line, in `user://logs/session-<stamp>.jsonl`. A
+shipped build records nothing — `log.session` in `content/visuals.json` gates it
+and `OS.is_debug_build()` gates that.
+
+```bash
+godot --headless -s tools/session_report.gd            # the newest session
+godot --headless -s tools/session_report.gd -- --list  # what is there
+godot --headless -s tools/session_report.gd -- user://logs/session-20260912-170800.jsonl
+```
+
+The report counts taps, actions, refusals and endings per loop, and calls out the
+two things that mean something went wrong: **taps that resolved to nothing** —
+the player clicked and the game did not even offer a wheel — and **the same
+refusal three times or more**, which is a player fighting the game rather than
+learning it.
+

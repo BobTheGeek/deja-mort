@@ -6,7 +6,12 @@
     "design_height": 1080,
     "min_touch_mm": 7.6,
     "max_touch_scale": 1.8,
-    "_touch_comment": "7.6mm clears both platform minimums: Apple's 44pt is 6.9mm, Google's 48dp is 7.6mm. game/ui_scale.gd derives the UI scale from this and the screen's own DPI, on handhelds only."
+    "_touch_comment": "7.6mm clears both platform minimums: Apple's 44pt is 6.9mm, Google's 48dp is 7.6mm. game/ui_scale.gd derives the UI scale from this and the screen's own DPI, on handhelds only.",
+    "window_screen_fraction": 0.85
+  },
+  "log": {
+    "_comment": "game/session_log.gd. Debug builds only \u2014 a shipped build never writes a record of anyone's session.",
+    "session": true
   },
   "camera": {
     "size": 11.0,

@@ -68,6 +68,20 @@ static func _none() -> Dictionary:
 	return {"left": 0.0, "top": 0.0, "right": 0.0, "bottom": 0.0}
 
 
+## How big to open. The UI is drawn against a fixed canvas that stretches to the
+## window, so a small window renders every number at a fraction of itself — a
+## 1152-wide window is 60%, at which a tally of 3px scratches stops reading as
+## scratches. As much of the screen as the fraction allows, in the canvas's own
+## shape, and never larger than the canvas: past that it is only upscaling.
+static func window_size(usable: Vector2i, visuals: GameVisuals) -> Vector2i:
+	var base := Vector2(visuals.number("ui.design_width", 1920.0),
+		visuals.number("ui.design_height", 1080.0))
+	var fraction := visuals.number("ui.window_screen_fraction", 0.85)
+	var room := Vector2(float(usable.x), float(usable.y)) * fraction
+	var scale := minf(minf(room.x / base.x, room.y / base.y), 1.0)
+	return Vector2i(int(round(base.x * scale)), int(round(base.y * scale)))
+
+
 ## Reads the real device and applies both. Called once, from the game; the parts
 ## it depends on are the two functions above, which are tested without a device.
 static func apply(window: Window, visuals: GameVisuals) -> void:
