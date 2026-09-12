@@ -56,6 +56,20 @@ BT=$(ls -d "$HOME/Library/Android/sdk"/build-tools/* | sort -V | tail -1)
 "$BT/aapt2" dump badging build/android/deja-mort.apk | head -2
 ```
 
+## Icons
+
+The project icon, the macOS `.icns` and the Android legacy launcher icon are all
+`assets/brand/app-icon-1024.png`. Android's two adaptive layers are generated
+from the delivered art and the brand token:
+
+```bash
+godot --headless -s tools/make_icon_layers.gd
+```
+
+It rewrites `assets/brand/icon-adaptive-{foreground,background}-1024.png` and the
+composite preview in `docs/screenshots/`. Re-run it if the mark or `Brand.BG_DARK`
+ever changes.
+
 ## Screenshots
 
 `docs/screenshots/` holds the evidence for presentation changes, produced by:
