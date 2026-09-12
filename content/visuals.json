@@ -1,11 +1,11 @@
 {
   "_comment": "Greybox presentation table. game/ reads this and never hardcodes a look. Object identity never appears here - only tags and state keys.",
   "camera": {
-    "size": 13.0,
+    "size": 11.0,
     "height": 14.0,
     "pitch_deg": -35.264,
     "yaw_deg": 45.0,
-    "frame_margin": 0.5
+    "frame_margin": 0.0
   },
   "light": {
     "color": "$ACCENT",
@@ -16,11 +16,11 @@
     "shadow_bias": 0.04
   },
   "ambient": {
-    "energy": 0.55,
+    "energy": 0.85,
     "color": [
-      0.34,
       0.4,
-      0.52
+      0.46,
+      0.58
     ]
   },
   "dark": {
@@ -35,19 +35,30 @@
   "floor": {
     "height": 0.08,
     "color": [
-      0.34,
-      0.35,
-      0.38
+      0.52,
+      0.4,
+      0.3
     ]
   },
   "wall": {
-    "height": 2.6,
-    "near_height": 0.45,
+    "height": 3.0,
+    "near_height": 0.0,
+    "color_far_x": [
+      0.62,
+      0.63,
+      0.66
+    ],
+    "color_far_z": [
+      0.4,
+      0.42,
+      0.4
+    ],
     "color": [
-      0.27,
-      0.28,
-      0.32
-    ]
+      0.45,
+      0.46,
+      0.48
+    ],
+    "interior_height": 0.5
   },
   "void": {
     "color": "$BG_DARK"
@@ -413,9 +424,9 @@
     "label_gap": 26
   },
   "vignette": {
-    "strength": 0.72,
-    "softness": 0.52,
-    "grain": 0.035
+    "strength": 0.55,
+    "softness": 0.6,
+    "grain": 0.03
   },
   "panel": {
     "color": [
@@ -433,14 +444,14 @@
     "padding": 18
   },
   "base": {
-    "margin": 0.9,
-    "height": 0.45,
+    "margin": 0.55,
+    "height": 0.4,
     "color": [
-      0.17,
-      0.18,
-      0.22
+      0.72,
+      0.72,
+      0.7
     ],
-    "drop": 0.1
+    "drop": 0.08
   },
   "material": {
     "roughness": 1.0,
@@ -448,8 +459,8 @@
     "specular": 0.0
   },
   "post": {
-    "saturation": 0.42,
-    "contrast": 1.12,
+    "saturation": 0.62,
+    "contrast": 1.06,
     "brightness": 1.0
   }
 }
