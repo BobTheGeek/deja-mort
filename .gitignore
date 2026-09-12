@@ -3,9 +3,10 @@
 /android/
 *.translation
 
-# Exports
+# Exports. The presets are committed so a build is reproducible; they hold no
+# secrets — keystore path and password come from GODOT_ANDROID_KEYSTORE_DEBUG_*
+# at export time.
 /build/
-/export_presets.cfg
 
 # Paid asset packs are never committed. Document them in assets/README.md.
 assets/paid/
