@@ -74,7 +74,6 @@
       "mesh": "quaternius/Casual_2"
     },
     "hidden_alpha": 0.25,
-    "down_roll_deg": 90.0,
     "down_statuses": [
       "prone",
       "pinned"
@@ -83,7 +82,8 @@
       "idle": "Idle",
       "walk": "Walk",
       "death": "Death",
-      "blend_s": 0.15
+      "blend_s": 0.15,
+      "down": "HitRecieve"
     }
   },
   "object": {
@@ -181,7 +181,8 @@
       "collectible": {
         "height": 0.2,
         "color": "$ACCENT",
-        "inset": 0.36
+        "inset": 0.36,
+        "emission": 1.4
       },
       "light-switch": {
         "height": 0.3,
@@ -203,10 +204,20 @@
       "emission": 1.1
     },
     "on": {
-      "emission": 0.9
+      "emission": 0.9,
+      "light": {
+        "color": "$ACCENT",
+        "energy": 1.1,
+        "range": 4.0
+      }
     },
     "lit": {
-      "emission": 1.2
+      "emission": 1.2,
+      "light": {
+        "color": "$ACCENT",
+        "energy": 1.6,
+        "range": 5.0
+      }
     },
     "open": {
       "yaw_deg": 65.0
@@ -242,7 +253,20 @@
           0.42,
           0.6
         ],
-        "alpha": 0.55
+        "alpha": 0.55,
+        "particles": {
+          "amount": 4,
+          "lifetime": 2.4,
+          "velocity": 0.05,
+          "spread": 6.0,
+          "scale": 0.06,
+          "gravity": -0.02,
+          "color": [
+            0.45,
+            0.62,
+            0.8
+          ]
+        }
       },
       "slippery": {
         "color": [
@@ -259,7 +283,29 @@
           0.1
         ],
         "alpha": 0.8,
-        "emission": 1.0
+        "emission": 1.0,
+        "particles": {
+          "amount": 14,
+          "lifetime": 0.9,
+          "velocity": 1.1,
+          "spread": 14.0,
+          "scale": 0.16,
+          "gravity": 1.6,
+          "color": [
+            1.0,
+            0.55,
+            0.18
+          ]
+        },
+        "light": {
+          "color": [
+            1.0,
+            0.5,
+            0.15
+          ],
+          "energy": 2.2,
+          "range": 5.0
+        }
       },
       "shock": {
         "color": [
@@ -268,7 +314,29 @@
           1.0
         ],
         "alpha": 0.95,
-        "emission": 1.4
+        "emission": 1.4,
+        "particles": {
+          "amount": 18,
+          "lifetime": 0.25,
+          "velocity": 2.2,
+          "spread": 60.0,
+          "scale": 0.07,
+          "gravity": 0.0,
+          "color": [
+            0.85,
+            0.92,
+            1.0
+          ]
+        },
+        "light": {
+          "color": [
+            0.8,
+            0.9,
+            1.0
+          ],
+          "energy": 3.0,
+          "range": 5.0
+        }
       },
       "gas": {
         "color": [
@@ -276,7 +344,20 @@
           0.6,
           0.35
         ],
-        "alpha": 0.35
+        "alpha": 0.35,
+        "particles": {
+          "amount": 6,
+          "lifetime": 3.0,
+          "velocity": 0.12,
+          "spread": 20.0,
+          "scale": 0.22,
+          "gravity": 0.05,
+          "color": [
+            0.55,
+            0.66,
+            0.4
+          ]
+        }
       },
       "trip": {
         "color": [
@@ -294,14 +375,6 @@
         ],
         "alpha": 0.5,
         "emission": 0.6
-      },
-      "concealed": {
-        "color": [
-          0.38,
-          0.36,
-          0.34
-        ],
-        "alpha": 0.6
       }
     }
   },

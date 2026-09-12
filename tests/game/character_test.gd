@@ -129,20 +129,7 @@ func test_a_figure_stands_on_the_floor() -> void:
 		"figure floats or sinks: min.y = %.3f" % span.position.y).is_between(-0.06, 0.06)
 
 
-## No rig in this pack, so a body on the floor is a body laid flat. It reads from
-## an isometric camera, which is the only place anyone sees it.
-func test_a_downed_actor_lies_down() -> void:
-	var world := F.world()
-	var renderer := _rendered(world)
-	var standing: Node3D = renderer.actor_node(world.player.id)
-	var upright := standing.rotation_degrees
-	world.apply_status(world.player, "prone", 3.0, "test")
-	renderer.sync(world, 0.1)
-	var downed: Node3D = renderer.actor_node(world.player.id)
-	assert_vector(downed.rotation_degrees) \
-		.override_failure_message("a prone actor is still standing up").is_not_equal(upright)
-
-
+## Being knocked down is a pose now, not a rotation — see effects_test.gd.
 func test_a_standing_actor_stays_upright() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)

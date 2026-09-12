@@ -19,9 +19,15 @@ func test_the_visual_table_loads_and_covers_what_the_renderer_needs() -> void:
 			.override_failure_message("visuals.json is missing '%s'" % block).is_not_null()
 
 
-func test_every_hazard_layer_has_a_look() -> void:
+## Every layer has a look except `concealed`, whose documented visual is none —
+## a hazard hidden under a rug that still drew a marker would be no use at all.
+func test_every_hazard_layer_has_a_look_except_the_hidden_one() -> void:
 	var layers: Dictionary = _visuals().get_value("hazard.layers", {})
 	for layer in SimHazardField.LAYERS:
+		if layer == "concealed":
+			assert_bool(layers.has(layer)) \
+				.override_failure_message("concealed must draw nothing").is_false()
+			continue
 		assert_bool(layers.has(layer)) \
 			.override_failure_message("no visual for hazard layer '%s'" % layer).is_true()
 
