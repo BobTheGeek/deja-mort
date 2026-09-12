@@ -29,7 +29,6 @@
   },
   "loop": {
     "death_reset_s": 0.55,
-    "walk_lerp_per_s": 12.0,
     "hazard_fade_s": 0.25
   },
   "floor": {
@@ -95,7 +94,9 @@
       "death": "Death",
       "blend_s": 0.15,
       "down": "HitRecieve"
-    }
+    },
+    "turn_per_s": 14.0,
+    "mesh_yaw": 180.0
   },
   "object": {
     "default": {
