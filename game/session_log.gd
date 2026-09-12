@@ -138,6 +138,7 @@ static func parse(lines: PackedStringArray) -> Array:
 static func summarise(records: Array) -> Dictionary:
 	var taps := 0
 	var nothing := 0
+	var notebook := 0
 	var refused := 0
 	var accepted := 0
 	var walks := 0
@@ -153,9 +154,13 @@ static func summarise(records: Array) -> Dictionary:
 			"click":
 				taps += 1
 				if str(record.get("picked", "")).is_empty():
+					# Provisional: the walk that follows, if it happened, cancels it.
+					# A tap on bare floor that walks him there is the game working.
 					nothing += 1
 			"walk":
 				walks += 1
+				if bool(record.get("accepted", false)) and nothing > 0:
+					nothing -= 1
 			"intent":
 				var verb := str(record.get("verb", ""))
 				verbs[verb] = int(verbs.get(verb, 0)) + 1
@@ -168,6 +173,9 @@ static func summarise(records: Array) -> Dictionary:
 					refusals[key] = int(refusals.get(key, 0)) + 1
 			"loop_ended":
 				endings.append(str(record.get("ending", "")))
+			"panel":
+				if bool(record.get("open", false)):
+					notebook += 1
 	var repeated: Array = []
 	for key in refusals:
 		if int(refusals[key]) >= 3:
@@ -177,6 +185,7 @@ static func summarise(records: Array) -> Dictionary:
 		"loops": maxi(loops.size(), endings.size()),
 		"taps": taps,
 		"taps_on_nothing": nothing,
+		"notebook_opens": notebook,
 		"walks": walks,
 		"intents": accepted + refused,
 		"accepted": accepted,

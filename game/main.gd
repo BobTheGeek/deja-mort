@@ -269,6 +269,7 @@ func _finish_loop(ending: String) -> void:
 	_save.save()
 	if SimOutcome.won(ending):
 		_win.show_result(report, _save.room(room_id), loop_index)
+		_log.panel("win", true)
 		return
 	_schedule_reset()
 
@@ -308,6 +309,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and (event as InputEventKey).pressed \
 			and (event as InputEventKey).keycode == KEY_TAB:
 		_notebook.toggle(world, _save.room(room_id))
+		_log.panel("notebook", _notebook.is_open())
 		return
 	if event is InputEventMouseMotion:
 		_hud.hover_at((event as InputEventMouseMotion).position)
@@ -330,6 +332,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_notebook_pressed() -> void:
 	_notebook.toggle(world, _save.room(room_id))
+	_log.panel("notebook", _notebook.is_open())
 
 
 ## What the player meant. The ray goes at what is drawn first, because the floor
