@@ -60,7 +60,8 @@
         0.86,
         0.86,
         0.83
-      ]
+      ],
+      "mesh": "quaternius/Casual_Hoodie"
     },
     "attacker": {
       "radius": 0.32,
@@ -69,9 +70,21 @@
         0.45,
         0.22,
         0.22
-      ]
+      ],
+      "mesh": "quaternius/Casual_2"
     },
-    "hidden_alpha": 0.25
+    "hidden_alpha": 0.25,
+    "down_roll_deg": 90.0,
+    "down_statuses": [
+      "prone",
+      "pinned"
+    ],
+    "clips": {
+      "idle": "Idle",
+      "walk": "Walk",
+      "death": "Death",
+      "blend_s": 0.15
+    }
   },
   "object": {
     "default": {

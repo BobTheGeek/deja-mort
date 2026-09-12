@@ -85,6 +85,20 @@ Attribution is not required by CC0. Credited anyway: created and distributed by 
 
 **Scale:** the kit is not authored at 1 unit = 1 m. `game/room_renderer.gd` measures each model's own bounds and scales it uniformly into the footprint the sim already knows about, so nothing is stretched and the pack's proportions stay honest. Origins are already at floor level, which matches the `docs/06` import convention.
 
+### Characters
+
+| Pack | Source | License | Used for | Location |
+|---|---|---|---|---|
+| Quaternius Ultimate Modular Men | [quaternius.com](https://quaternius.com/packs/ultimatemodularcharacters.html) | **CC0 1.0** — `assets/models/quaternius/LICENSE.txt` | the player and the attacker | `assets/models/quaternius/` |
+
+Two of the pack's eleven characters are committed, 5.9 MB: `Casual_Hoodie` is the player, `Casual_2` is the Tenant. Both are ordinary people, which is the point — `docs/01` wants a faceless figure and a silent attacker, not a monster. Adding another is a copy from the same download plus one line in `content/visuals.json`; the rest were left out rather than commit 35 MB for characters no room uses yet.
+
+Self-contained `.gltf` — the buffer is base64 inside the file and there are no external textures. Each carries **24 animation clips** including `Idle`, `Walk`, `Death`, `HitRecieve` and `Interact`, which is where `docs/06`'s pose swaps and stylised death come from.
+
+**Scale:** rigged figures stand in a T-pose until their idle clip starts, so bind-pose *width* is arms-out and means nothing. `game/room_renderer.gd` scales them by **height** alone. Attribution is not required by CC0; credited anyway to @Quaternius.
+
+**Which figure belongs to whom is keyed on the actor's role**, never its id, so a new attacker profile needs no code and no new art.
+
 **Palette:** the kit is cheerful and `docs/06` wants desaturated. Rather than repaint 140 models and lose their flat shading, the mood is pulled globally by `post.saturation` in `content/visuals.json`. Keep the bones, change the mood.
 
 ## Audio

@@ -176,9 +176,9 @@ func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
 	var mesh_name := str(obj.prop("mesh", ""))
 	if mesh_name.is_empty():
 		return null
-	var path := "res://assets/models/%s.glb" % mesh_name
-	if not ResourceLoader.exists(path):
-		push_warning("RoomRenderer: %s names a missing model %s" % [obj.id, path])
+	var path := model_path(mesh_name)
+	if path.is_empty():
+		push_warning("RoomRenderer: %s names a missing model %s" % [obj.id, mesh_name])
 		return null
 
 	var root := Node3D.new()
@@ -195,7 +195,13 @@ func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
 		float(extent.x) * CELL - inset * 2.0,
 		float(extent.y) * CELL - inset * 2.0,
 	)
-	# Uniform, so nothing is stretched: fit the larger horizontal span.
+	# The model is fitted as it will finally sit, not as it was authored. A quarter
+	# turn swaps which way its length runs, and without this a two-cell bed turned
+	# across its own footprint and shrank to fit the short side.
+	var yaw := float(obj.prop("mesh_yaw", 0.0))
+	if int(round(absf(yaw) / 90.0)) % 2 == 1:
+		available = Vector2(available.y, available.x)
+	# Uniform, so nothing is stretched: fit whichever span runs out first.
 	var scale_factor := minf(available.x / bounds.size.x, available.y / bounds.size.z)
 	model.scale = Vector3.ONE * scale_factor
 	model.rotation_degrees = Vector3(0.0, float(obj.prop("mesh_yaw", 0.0)), 0.0)
@@ -239,20 +245,43 @@ func _build_actors(world: SimWorld) -> void:
 		_actor_nodes[actor.id] = _add_actor(actor)
 
 
+## A figure if the role names one, a capsule if it does not. Keyed on role, never
+## on id, so a new attacker profile needs no code and no new art.
 func _add_actor(actor: SimActor) -> Node3D:
 	var key := "actor.%s" % actor.role
-	var radius := visuals.number(key + ".radius", 0.3)
 	var height := visuals.number(key + ".height", 1.7)
-	var mesh := MeshInstance3D.new()
-	var capsule := CapsuleMesh.new()
-	capsule.radius = radius
-	capsule.height = height
-	mesh.mesh = capsule
-	mesh.material_override = _material(visuals.colour(key + ".color"))
-	mesh.position = IsoCamera.cell_to_world(actor.pos, height * 0.5)
-	mesh.name = actor.id
-	_actor_root.add_child(mesh)
-	return mesh
+	var root := Node3D.new()
+	root.name = actor.id
+	_actor_root.add_child(root)
+
+	var mesh_name := str(visuals.get_value(key + ".mesh", ""))
+	var path := model_path(mesh_name)
+	if not path.is_empty():
+		var model: Node3D = (load(path) as PackedScene).instantiate()
+		root.add_child(model)
+		var bounds := _local_bounds(model)
+		if bounds.size.y > 0.0:
+			# Height only. A rigged figure stands in a T-pose until its idle clip
+			# starts, so its bind-pose width is arms-out and means nothing.
+			var scale_factor := height / bounds.size.y
+			model.scale = Vector3.ONE * scale_factor
+			model.position = Vector3(
+				-(bounds.position.x + bounds.size.x * 0.5) * scale_factor,
+				-bounds.position.y * scale_factor,
+				-(bounds.position.z + bounds.size.z * 0.5) * scale_factor,
+			)
+	else:
+		var capsule := CapsuleMesh.new()
+		capsule.radius = visuals.number(key + ".radius", 0.3)
+		capsule.height = height
+		var mesh := MeshInstance3D.new()
+		mesh.mesh = capsule
+		mesh.position = Vector3(0.0, height * 0.5, 0.0)
+		mesh.material_override = _material(visuals.colour(key + ".color"))
+		root.add_child(mesh)
+
+	root.position = IsoCamera.cell_to_world(actor.pos, 0.0)
+	return root
 
 
 ## Footprint extent in cells, so a two-cell object renders as one long box.
@@ -292,7 +321,6 @@ func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> Stan
 	material.albedo_color = Color(colour.r, colour.g, colour.b, alpha)
 	material.roughness = visuals.number("material.roughness", 1.0)
 	material.metallic = visuals.number("material.metallic", 0.0)
-	material.specular = visuals.number("material.specular", 0.0)
 	if alpha < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if emission > 0.0:
@@ -401,19 +429,63 @@ func _sync_hazards(world: SimWorld) -> void:
 func _sync_actors(world: SimWorld, delta: float) -> void:
 	var rate := visuals.number("loop.walk_lerp_per_s", 12.0)
 	var hidden_alpha := visuals.number("actor.hidden_alpha", 0.25)
+	var down_statuses: Array = visuals.get_value("actor.down_statuses", [])
 	for actor in world.actors():
-		var node: MeshInstance3D = _actor_nodes.get(actor.id, null)
+		var node: Node3D = _actor_nodes.get(actor.id, null)
 		if node == null:
 			node = _add_actor(actor)
 			_actor_nodes[actor.id] = node
 		var key := "actor.%s" % actor.role
-		var height := visuals.number(key + ".height", 1.7)
 		node.visible = actor.alive and _actor_is_present(actor)
-		# Interpolation between ticks: the sim jumps a whole cell, the mesh slides.
-		var target := IsoCamera.cell_to_world(actor.pos, height * 0.5)
+		# Interpolation between ticks: the sim jumps a whole cell, the figure slides.
+		var target := IsoCamera.cell_to_world(actor.pos, 0.0)
 		node.position = node.position.lerp(target, clampf(rate * delta, 0.0, 1.0))
-		var alpha := hidden_alpha if actor.is_hidden() else 1.0
-		node.material_override = _material(visuals.colour(key + ".color"), 0.0, alpha)
+		# No rig in the pack, so being knocked down is the figure laid flat. From an
+		# isometric camera that is the whole of the read.
+		var down := false
+		for status in down_statuses:
+			if actor.has_status(str(status)):
+				down = true
+		node.rotation_degrees = Vector3(
+			0.0, node.rotation_degrees.y,
+			visuals.number("actor.down_roll_deg", 90.0) if down else 0.0)
+		_drive_animation(node, actor)
+		_fade_actor(node, key, hidden_alpha if actor.is_hidden() else 1.0)
+
+
+## Idle, walk, death. The rig has twenty-four clips; these are the three the sim
+## can already tell the difference between.
+func _drive_animation(node: Node3D, actor: SimActor) -> void:
+	var player := _animation_player(node)
+	if player == null:
+		return
+	var clip := str(visuals.get_value("actor.clips.idle", "Idle"))
+	if not actor.alive:
+		clip = str(visuals.get_value("actor.clips.death", "Death"))
+	elif not actor.path.is_empty():
+		clip = str(visuals.get_value("actor.clips.walk", "Walk"))
+	if not player.has_animation(clip) or player.current_animation == clip:
+		return
+	player.play(clip, visuals.number("actor.clips.blend_s", 0.15))
+
+
+func _animation_player(node: Node) -> AnimationPlayer:
+	for child in _descendants(node):
+		if child is AnimationPlayer:
+			return child
+	return null
+
+
+## Figures keep their own materials at full opacity; hiding fades them.
+func _fade_actor(node: Node3D, key: String, alpha: float) -> void:
+	for child in _descendants(node):
+		if not (child is MeshInstance3D):
+			continue
+		var mesh := child as MeshInstance3D
+		if is_equal_approx(alpha, 1.0) and not (mesh.mesh is CapsuleMesh):
+			mesh.material_override = null
+			continue
+		mesh.material_override = _material(visuals.colour(key + ".color"), 0.0, alpha)
 
 
 ## The attacker exists from tick zero but is standing outside. Drawing him in
@@ -425,5 +497,20 @@ func _actor_is_present(actor: SimActor) -> bool:
 	return attacker != null and attacker.inside and not attacker.left
 
 
+## Packs ship as .glb or .gltf. Returns the path that exists, or "".
+static func model_path(mesh_name: String) -> String:
+	if mesh_name.is_empty():
+		return ""
+	for extension in [".glb", ".gltf"]:
+		var path := "res://assets/models/%s%s" % [mesh_name, extension]
+		if ResourceLoader.exists(path):
+			return path
+	return ""
+
+
 func object_node(id: String) -> Node3D:
 	return _object_nodes.get(id, null)
+
+
+func actor_node(id: String) -> Node3D:
+	return _actor_nodes.get(id, null)
