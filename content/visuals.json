@@ -96,7 +96,8 @@
       "down": "HitRecieve"
     },
     "turn_per_s": 14.0,
-    "mesh_yaw": 180.0
+    "mesh_yaw": 0.0,
+    "_mesh_yaw_comment": "The Quaternius rigs are built facing +Z, which is south on this grid, so no offset. tests/game/facing_render_test.gd measures this from the mesh and fails if a pack that faces the other way is dropped in without changing it."
   },
   "death": {
     "_comment": "How each way of dying is staged. Clip names are the Quaternius rig's; hold_s is how long the loop waits before it resets, and a click skips it.",
