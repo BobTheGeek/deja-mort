@@ -1,8 +1,8 @@
 # `sim/` interface contracts
 
-**Status: awaiting approval.** This was written before M1 as a proposal, was never approved, and M1, M2 and M3 shipped against it anyway. It has been rewritten to describe what the code actually is, with every divergence from the original proposal listed in §6 so the review that never happened can happen now.
+**Status: approved 12 Sept 2026.** Written before M1 as a proposal, never approved, and M1, M2 and M3 shipped against it anyway. Rewritten to describe what the code actually is, reviewed, and approved. §6 is the ledger of what shipped without review.
 
-Per `CLAUDE.md`, a `/goal` is not an approval. Nothing in `sim/` changes until this document is approved in words.
+Proposals A, B and C in §1 are **implemented** — PR #3 (lint + shadowing) and PR #4 (the chain as its own object).
 
 Contracts are stated as they exist today. Where a signature is wrong and should change, it says so and nothing has been changed yet.
 
@@ -33,7 +33,7 @@ class SimWorld:
 
 > For any `(verb, object, object-state, held item)`, at most one rule may be **choosable**.
 
-Today `game/wheel.gd` violates this: when `SimVerbs.availability` returns more than one `rule_ids` entry it pops up a list of raw rule ids. That list should not exist.
+`game/wheel.gd` used to violate this — it popped up a list of raw rule ids whenever two rules matched. That list is gone; `SimVerbs.availability` now returns one choosable rule per verb.
 
 ### What the invariant costs, measured
 
@@ -120,7 +120,9 @@ The chain is a physical thing on the wall, not a mode of the door. Give it an ob
 
 This is the part that matters long-term. The front door is one instance; the lint is what stops the next room authoring another one, and it is cheap — 13,680 combinations took under a minute.
 
-**None of A, B or C is implemented.** They are the proposal this document is asking approval for.
+**All three are implemented.** PR #3 shipped C and A together — the lint would have failed on the thirteen shadowable pairs without the declarations, so they had to land in the same change. PR #4 shipped B, emptied `content/lint_exceptions.json`, and deleted the wheel's choice list.
+
+Measured outcome: **14 overlapping pairs → 13 → 0.** Shadowing resolved thirteen; splitting the chain removed the last one and the raw overlap along with it. Room 1's solver report did not change by a single line — same endings, same stars, same tightness, same two improvised wins, same twelve death causes. The valid `(verb, object)` pair count went 123 → 125, which is the chain being a thing you can look at and use.
 
 ---
 
@@ -293,8 +295,6 @@ Everything below shipped without review. Each row is a thing to accept or reject
 
 ## 7. What approval means
 
-Approving this accepts §1's `rule_id` decision, the eight contract changes in §6, and the additions listed there — as the contract for M4 onwards.
+Approved. §1's `rule_id` decision, the eight contract changes in §6 and the additions listed there are the contract for M4 onwards.
 
-It does **not** implement §1's Proposals A, B or C. Those are a separate PR, and they touch `sim/`, so they wait for the word.
-
-If any row in §6 should be reverted instead of accepted, say which. Reverting #1 means the evade ending needs a different answer. Reverting #7 changes attacker behaviour and the solver's numbers with it.
+`rule_id` stays in the intent API for the solver and for tests. The wheel never passes it, and `tools/lint_room.gd` fails the build if any room ever makes it necessary again.

@@ -182,18 +182,21 @@ static func _cheapest_entry_plan(world: SimWorld, att: SimAttacker, terminal: Di
 
 static func _barrier_steps(world: SimWorld, att: SimAttacker, entry: SimObject) -> Array:
 	var steps: Array = []
-	if bool(entry.get_state("locked", false)):
-		steps.append(SimAttackerActions.make(SimAttackerActions.BREACH_LOCK, {
-			"target_id": entry.id, "target_cell": entry.origin(),
-			"duration_s": att.profile.breach_cost("locked", 0.0),
-			"noise": world.system("attacker.breach_noise.locked"),
-		}))
-	if bool(entry.get_state("chained", false)):
-		steps.append(SimAttackerActions.make(SimAttackerActions.BREACH_CHAIN, {
-			"target_id": entry.id,
-			"duration_s": att.profile.breach_cost("chained", 0.0),
-			"noise": world.system("attacker.breach_noise.chained"),
-		}))
+	# Each barrier answers for its own state, so the action clears the thing that
+	# was actually in the way.
+	for barrier in world.barriers_for(entry):
+		if bool(barrier.get_state("locked", false)):
+			steps.append(SimAttackerActions.make(SimAttackerActions.BREACH_LOCK, {
+				"target_id": barrier.id, "target_cell": barrier.origin(),
+				"duration_s": att.profile.breach_cost("locked", 0.0),
+				"noise": world.system("attacker.breach_noise.locked"),
+			}))
+		if bool(barrier.get_state("chained", false)):
+			steps.append(SimAttackerActions.make(SimAttackerActions.BREACH_CHAIN, {
+				"target_id": barrier.id,
+				"duration_s": att.profile.breach_cost("chained", 0.0),
+				"noise": world.system("attacker.breach_noise.chained"),
+			}))
 	var brace_id := str(entry.get_state("braced_by", ""))
 	if not brace_id.is_empty() and brace_id != "<null>":
 		var brace := world.objects.by_id(brace_id)

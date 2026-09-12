@@ -64,12 +64,22 @@ func test_a_rule_never_shadows_itself() -> void:
 
 # --- the sweep ---------------------------------------------------------------
 
-func test_the_sweep_finds_the_front_door_before_it_is_fixed() -> void:
-	var found := SimVerbs.ambiguous_pairs(F.world())
+## The sweep has to be able to fail, or passing means nothing. Drop a shadow
+## declaration and the overlap it was hiding must come straight back.
+func test_the_sweep_finds_an_overlap_when_there_is_one() -> void:
+	var world := F.world()
+	assert_array(SimVerbs.ambiguous_pairs(world)).is_empty()
+
+	# The sweep builds its own scratch world from the loaded content, so the
+	# declaration has to be removed there, not on this world's rule table.
+	for raw in world.content.rules:
+		if str((raw as Dictionary).get("id", "")) == "toggle_wet_source":
+			(raw as Dictionary).erase("shadows")
 	var pairs := PackedStringArray()
-	for entry in found:
+	for entry in SimVerbs.ambiguous_pairs(world):
 		pairs.append("%s|%s" % [entry["verb"], entry["object"]])
-	assert_array(Array(pairs)).contains(["toggle|front_door"])
+	assert_array(Array(pairs)).override_failure_message(
+		"the sweep missed an overlap it should have caught").contains(["toggle|sink"])
 
 
 ## Everything except the pairs we have written down and explained.

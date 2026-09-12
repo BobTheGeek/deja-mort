@@ -15,7 +15,6 @@ var visuals: GameVisuals = null
 
 var _target: Variant = null
 var _slots: Dictionary = {}        # verb -> Button
-var _choice_box: VBoxContainer = null
 var _backdrop: ColorRect = null
 var _centre := Vector2.ZERO
 
@@ -54,10 +53,6 @@ func setup(table: GameVisuals, world: SimWorld) -> void:
 		add_child(button)
 		_slots[verb] = button
 
-	_choice_box = VBoxContainer.new()
-	_choice_box.visible = false
-	add_child(_choice_box)
-
 
 func is_open() -> bool:
 	return visible
@@ -68,7 +63,6 @@ func open_at(world: SimWorld, target: Variant, screen_point: Vector2) -> void:
 	_centre = screen_point
 	_layout()
 	_refresh(world)
-	_hide_choices()
 	visible = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
@@ -76,7 +70,6 @@ func open_at(world: SimWorld, target: Variant, screen_point: Vector2) -> void:
 func close() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hide_choices()
 	_target = null
 
 
@@ -99,7 +92,6 @@ func _layout() -> void:
 		var angle := deg_to_rad(float(button.get_meta("angle")))
 		var offset := Vector2(sin(angle), -cos(angle)) * radius
 		button.position = _centre + offset - box * 0.5
-	_choice_box.position = _centre + Vector2(radius + slot_size * 0.5, -slot_size)
 
 
 ## Availability for all nine verbs, available or not. The faded slots are the
@@ -119,30 +111,9 @@ func _refresh(world: SimWorld) -> void:
 		button.tooltip_text = "%s  %.1fs" % [verb, duration] if usable else "%s — no rule" % verb
 
 
+## Exactly one rule is choosable per verb — content/lint_exceptions.json is empty
+## and tools/lint_room.gd fails the build if that ever stops being true — so the
+## wheel picks and goes. It never asks which rule you meant.
 func _on_slot_pressed(verb: String) -> void:
-	var button: Button = _slots[verb]
-	var rule_ids: PackedStringArray = button.get_meta("rule_ids", PackedStringArray())
-	if rule_ids.size() <= 1:
-		var rule_id := rule_ids[0] if rule_ids.size() == 1 else ""
-		chosen.emit(verb, _target, rule_id)
-		return
-	# More than one rule matches this verb on this target — locking a door and
-	# chaining it are both `toggle`. Ask rather than silently picking the first.
-	_show_choices(verb, rule_ids)
-
-
-func _show_choices(verb: String, rule_ids: PackedStringArray) -> void:
-	_hide_choices()
-	for rule_id in rule_ids:
-		var button := Button.new()
-		button.text = rule_id.replace("_", " ")
-		button.focus_mode = Control.FOCUS_NONE
-		button.pressed.connect(func() -> void: chosen.emit(verb, _target, rule_id))
-		_choice_box.add_child(button)
-	_choice_box.visible = true
-
-
-func _hide_choices() -> void:
-	for child in _choice_box.get_children():
-		child.queue_free()
-	_choice_box.visible = false
+	var rule_ids: PackedStringArray = _slots[verb].get_meta("rule_ids", PackedStringArray())
+	chosen.emit(verb, _target, rule_ids[0] if rule_ids.size() == 1 else "")
