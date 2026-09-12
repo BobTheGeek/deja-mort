@@ -467,6 +467,12 @@ func _step_actor(a: SimActor) -> void:
 				emit(SimEvent.TYPE_ACTOR_MOVE, {"cell": a.pos, "actor": a.id})
 			if a.path.is_empty():
 				_begin_perform(a, act)
+			else:
+				# The leg being walked now, not the one just finished. Writing it
+				# after the step meant the figure was drawn walking into the next
+				# cell while facing the last one — a sideways slide on every turn,
+				# which is most of what he does.
+				a.facing = a.path[0] - a.pos
 	if a.action != null and act.phase == SimAction.PHASE_PERFORMING and tick >= act.ends_tick:
 		_complete(a, act)
 

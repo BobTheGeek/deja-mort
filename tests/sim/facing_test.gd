@@ -86,3 +86,52 @@ func _assert_faces(actor: SimActor, cell: Vector2i, what: String) -> void:
 	assert_str(str(actor.facing)).override_failure_message(
 		"stood at %s it should face %s towards %s, but faces %s" % [
 			actor.pos, wanted, what, actor.facing]).is_equal(str(wanted))
+
+
+# --- while actually walking --------------------------------------------------
+
+## Bob, on the attacker: "when he moves around he is sometimes walking backwards
+## or sideways."
+##
+## `facing` was written when a step *finished*, so it described the leg just
+## walked while the figure was already being drawn walking the next one. On a
+## straight line nobody can tell. On a corner — and he turns a lot — the figure
+## slides sideways through the turn. Facing is the leg being walked now.
+func test_you_face_the_step_you_are_taking_not_the_one_you_just_took() -> void:
+	var world := F.world()
+	assert_bool(world.walk_to(Vector2i(2, 7))).is_true()
+	var wrong := PackedStringArray()
+	while world.player.action != null and world.time_s() < 40.0:
+		world.step()
+		if world.player.path.is_empty():
+			continue
+		var leg: Vector2i = world.player.path[0] - world.player.pos
+		if world.player.facing != leg:
+			wrong.append("at %s walking to %s but facing %s" % [
+				world.player.pos, world.player.path[0], world.player.facing])
+	assert_array(Array(wrong)).override_failure_message(
+		"facing lags the walk:\n  %s" % "\n  ".join(wrong)).is_empty()
+
+
+func test_he_faces_the_step_he_is_taking_too() -> void:
+	var world := F.world()
+	var wrong := PackedStringArray()
+	while world.player.alive and world.time_s() < 120.0:
+		world.step()
+		var him := world.attacker
+		if him == null or not him.inside or him.path.is_empty():
+			continue
+		var leg: Vector2i = him.path[0] - him.pos
+		if him.facing != leg:
+			wrong.append("at %s walking to %s but facing %s" % [him.pos, him.path[0], him.facing])
+	assert_array(Array(wrong)).override_failure_message(
+		"he walks sideways:\n  %s" % "\n  ".join(wrong)).is_empty()
+
+
+## The turn happens before the first step, not after it.
+func test_the_very_first_tick_of_a_walk_already_faces_the_way() -> void:
+	var world := F.world()
+	assert_bool(world.walk_to(Vector2i(2, 5))).is_true()
+	world.step()
+	assert_str(str(world.player.facing)).override_failure_message(
+		"first step of a walk west, facing %s" % [world.player.facing]).is_equal(str(Vector2i(-1, 0)))
