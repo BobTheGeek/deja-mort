@@ -13,13 +13,14 @@ var _floor_root: Node3D = null
 var _object_root: Node3D = null
 var _hazard_root: Node3D = null
 var _actor_root: Node3D = null
-var _light: DirectionalLight3D = null
+var _bulb: OmniLight3D = null
 var _environment: WorldEnvironment = null
 
 var _object_nodes: Dictionary = {}   # object id -> MeshInstance3D
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
 var _lit_state: bool = true
+var _lit_energy: float = 1.0
 
 
 func build(world: SimWorld, table: GameVisuals) -> void:
@@ -36,9 +37,12 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	_actor_root = _add_root("Actors")
 
 	_build_environment()
+	_build_base(world)
+	_build_bulb(world)
 	_build_grid(world)
 	_build_objects(world)
 	_build_actors(world)
+	_lit_energy = _bulb.light_energy
 	_lit_state = bool(world.room_state.get("lit", true))
 	_apply_lighting(_lit_state)
 
@@ -61,15 +65,47 @@ func _build_environment() -> void:
 	_environment.environment = env
 	add_child(_environment)
 
-	_light = DirectionalLight3D.new()
-	_light.rotation_degrees = Vector3(
-		visuals.number("light.pitch_deg", -55.0),
-		visuals.number("light.yaw_deg", -40.0),
-		0.0,
+
+## One light. docs/06: "the mood is a lighting rig, not an art skill". Where it
+## hangs is the room's business, so it comes from the room's `lighting` block.
+func _build_bulb(world: SimWorld) -> void:
+	var bulb: Dictionary = (world.room.get("lighting", {}) as Dictionary).get("bulb", {})
+	var cell: Array = bulb.get("cell", [world.grid.width / 2, world.grid.height / 2])
+	_bulb = OmniLight3D.new()
+	_bulb.name = "Bulb"
+	_bulb.position = IsoCamera.cell_to_world(
+		Vector2i(int(cell[0]), int(cell[1])), float(bulb.get("height", 2.3)))
+	_bulb.light_color = visuals.colour("light.color")
+	_bulb.light_energy = float(bulb.get("energy", visuals.number("light.energy", 5.0)))
+	_bulb.omni_range = float(bulb.get("range", visuals.number("light.range", 16.0)))
+	_bulb.omni_attenuation = visuals.number("light.attenuation", 1.4)
+	_bulb.shadow_enabled = visuals.flag("light.shadow", true)
+	_bulb.shadow_bias = visuals.number("light.shadow_bias", 0.04)
+	add_child(_bulb)
+
+
+## The plinth the specimen case sits on. Without it the room has no edge and
+## stops reading as a diorama.
+func _build_base(world: SimWorld) -> void:
+	var margin := visuals.number("base.margin", 0.9)
+	var height := visuals.number("base.height", 0.45)
+	var drop := visuals.number("base.drop", 0.1)
+	var mesh := MeshInstance3D.new()
+	mesh.name = "Base"
+	var box := BoxMesh.new()
+	box.size = Vector3(
+		float(world.grid.width) + margin * 2.0,
+		height,
+		float(world.grid.height) + margin * 2.0,
 	)
-	_light.light_energy = visuals.number("light.energy", 1.15)
-	_light.shadow_enabled = visuals.flag("light.shadow", true)
-	add_child(_light)
+	mesh.mesh = box
+	mesh.material_override = _material(visuals.colour("base.color"))
+	mesh.position = Vector3(
+		float(world.grid.width) * 0.5,
+		-drop - height * 0.5,
+		float(world.grid.height) * 0.5,
+	)
+	add_child(mesh)
 
 
 func _build_grid(world: SimWorld) -> void:
@@ -112,7 +148,7 @@ func _build_objects(world: SimWorld) -> void:
 		var height := float(look.get("height", 0.5))
 		var mesh := _add_box(
 			_object_root, obj.cells[0], _extent(obj), height,
-			GameVisuals.to_colour(look.get("color", null)), height * 0.5,
+			visuals.to_colour(look.get("color", null)), height * 0.5,
 			float(look.get("inset", 0.08)),
 		)
 		mesh.name = obj.id
@@ -170,9 +206,14 @@ func _add_box(parent: Node3D, cell: Vector2i, extent: Vector2i, height: float,
 	return mesh
 
 
+## Flat shading, no textures — docs/06. One material per mesh, fully rough so
+## nothing reads as plastic under a single bulb.
 func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(colour.r, colour.g, colour.b, alpha)
+	material.roughness = visuals.number("material.roughness", 1.0)
+	material.metallic = visuals.number("material.metallic", 0.0)
+	material.specular = visuals.number("material.specular", 0.0)
 	if alpha < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if emission > 0.0:
@@ -200,12 +241,11 @@ func _sync_lighting(world: SimWorld) -> void:
 
 
 func _apply_lighting(lit: bool) -> void:
-	if _light == null or _environment == null:
+	if _bulb == null or _environment == null:
 		return
-	_light.light_energy = visuals.number("light.energy", 1.15) if lit \
-		else visuals.number("dark.light_energy", 0.16)
-	_environment.environment.ambient_light_energy = visuals.number("ambient.energy", 0.3) if lit \
-		else visuals.number("dark.ambient_energy", 0.06)
+	_bulb.light_energy = _lit_energy if lit else visuals.number("dark.light_energy", 0.5)
+	_environment.environment.ambient_light_energy = visuals.number("ambient.energy", 0.1) if lit \
+		else visuals.number("dark.ambient_energy", 0.035)
 
 
 func _sync_objects(world: SimWorld) -> void:
@@ -227,7 +267,7 @@ func _sync_objects(world: SimWorld) -> void:
 		node.rotation_degrees = Vector3(0.0, float(look.get("yaw_deg", 0.0)), float(look.get("roll_deg", 0.0)))
 		node.scale = Vector3(1.0, float(look.get("scale_y", 1.0)), 1.0)
 		node.material_override = _material(
-			GameVisuals.to_colour(look.get("color", null)),
+			visuals.to_colour(look.get("color", null)),
 			float(look.get("emission", 0.0)),
 		)
 
@@ -245,10 +285,10 @@ func _sync_hazards(world: SimWorld) -> void:
 			var spec: Dictionary = layers[layer]
 			var patch := _add_box(
 				_hazard_root, cell, Vector2i.ONE, height,
-				GameVisuals.to_colour(spec.get("color", null)), height,
+				visuals.to_colour(spec.get("color", null)), height,
 			)
 			patch.material_override = _material(
-				GameVisuals.to_colour(spec.get("color", null)),
+				visuals.to_colour(spec.get("color", null)),
 				float(spec.get("emission", 0.0)),
 				float(spec.get("alpha", 0.5)),
 			)

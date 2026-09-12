@@ -1357,5 +1357,16 @@
   ],
   "marker_zones": [
     "chokepoint"
-  ]
+  ],
+  "lighting": {
+    "bulb": {
+      "cell": [
+        5,
+        4
+      ],
+      "height": 2.35,
+      "energy": 5.5,
+      "range": 17.0
+    }
+  }
 }

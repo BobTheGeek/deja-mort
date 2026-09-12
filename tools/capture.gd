@@ -42,6 +42,16 @@ func _initialize() -> void:
 		elif str(args[i]) == "--key" and i + 1 < args.size():
 			_keys.append({"at": _capture_at * 0.7, "keycode": OS.find_keycode_from_string(str(args[i + 1])), "done": false})
 			i += 2
+		elif str(args[i]) == "--intents" and i + 1 < args.size():
+			# A JSON list of {t?, intent, args}, driven exactly like an authored
+			# solution. This is how the M4 sign-off screenshot set is produced.
+			var parsed := JSON.new()
+			if parsed.parse(str(args[i + 1])) == OK and parsed.data is Array:
+				_pending = parsed.data
+				_solution = "(inline)"
+			else:
+				printerr("capture: --intents is not a JSON array")
+			i += 2
 		elif str(args[i]) == "--solution" and i + 1 < args.size():
 			_solution = str(args[i + 1])
 			i += 2
@@ -147,7 +157,7 @@ func _drive_solution() -> void:
 	var world: SimWorld = main.get("world")
 	if world == null:
 		return
-	if _pending.is_empty():
+	if _pending.is_empty() and _solution != "(inline)":
 		for entry in world.room.get("authored_solutions", []):
 			if str((entry as Dictionary).get("id", "")) == _solution:
 				_pending = (entry as Dictionary).get("actions", [])

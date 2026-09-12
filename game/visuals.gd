@@ -6,6 +6,12 @@ extends RefCounted
 
 const PATH := "res://content/visuals.json"
 
+## Brand colours live in exactly one place. A visual value may name one with
+## "$TOKEN" instead of repeating its hex, so the palette cannot drift from the
+## brand. Loaded from the script rather than the autoload so this works in a test
+## with no scene tree.
+const BRAND := preload("res://game/theme/brand.gd")
+
 var data: Dictionary = {}
 
 
@@ -42,8 +48,15 @@ func flag(path: String, fallback: bool = false) -> bool:
 
 
 func colour(path: String, fallback := Color(1, 0, 1)) -> Color:
-	var raw: Variant = get_value(path, null)
-	return to_colour(raw, fallback)
+	return to_colour(get_value(path, null), fallback)
+
+
+## A brand constant by name, or null if there is no such token. The cast is
+## needed because GDScript will not call a Script method on a preloaded class
+## directly.
+func token(name: String) -> Variant:
+	var script: Script = BRAND
+	return script.get_script_constant_map().get(name, null)
 
 
 func colour_with_alpha(path: String, alpha_path: String, fallback := Color(1, 0, 1)) -> Color:
@@ -51,9 +64,14 @@ func colour_with_alpha(path: String, alpha_path: String, fallback := Color(1, 0,
 	return Color(base.r, base.g, base.b, number(alpha_path, 1.0))
 
 
-static func to_colour(raw: Variant, fallback := Color(1, 0, 1)) -> Color:
+func to_colour(raw: Variant, fallback := Color(1, 0, 1)) -> Color:
 	if raw is Array and (raw as Array).size() >= 3:
 		return Color(float(raw[0]), float(raw[1]), float(raw[2]))
+	if raw is String and (raw as String).begins_with("$"):
+		var value: Variant = token((raw as String).substr(1))
+		if value is Color:
+			return value
+		push_error("GameVisuals: no brand token named %s" % raw)
 	return fallback
 
 
