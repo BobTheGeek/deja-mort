@@ -16,7 +16,8 @@ var _actor_root: Node3D = null
 var _bulb: OmniLight3D = null
 var _environment: WorldEnvironment = null
 
-var _object_nodes: Dictionary = {}   # object id -> MeshInstance3D
+var _object_nodes: Dictionary = {}   # object id -> Node3D (a model root, or a greybox mesh)
+var _model_nodes: Dictionary = {}    # object ids drawn from a .glb rather than a box
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
 var _lit_state: bool = true
@@ -28,6 +29,7 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	for child in get_children():
 		child.queue_free()
 	_object_nodes.clear()
+	_model_nodes.clear()
 	_actor_nodes.clear()
 	_hazard_nodes.clear()
 
@@ -62,6 +64,13 @@ func _build_environment() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = visuals.colour("ambient.color", Color(0.4, 0.4, 0.5))
 	env.ambient_light_energy = visuals.number("ambient.energy", 0.3)
+	# The asset packs are cheerful. docs/06 wants desaturated greys and cold blues
+	# with one warm accent, so the mood is pulled globally rather than by
+	# repainting every model and losing its flat shading.
+	env.adjustment_enabled = true
+	env.adjustment_saturation = visuals.number("post.saturation", 1.0)
+	env.adjustment_contrast = visuals.number("post.contrast", 1.0)
+	env.adjustment_brightness = visuals.number("post.brightness", 1.0)
 	_environment.environment = env
 	add_child(_environment)
 
@@ -145,14 +154,84 @@ func _build_objects(world: SimWorld) -> void:
 		if obj.cells.is_empty():
 			continue
 		var look := visuals.object_look(obj.tags)
-		var height := float(look.get("height", 0.5))
-		var mesh := _add_box(
-			_object_root, obj.cells[0], _extent(obj), height,
-			visuals.to_colour(look.get("color", null)), height * 0.5,
-			float(look.get("inset", 0.08)),
-		)
-		mesh.name = obj.id
-		_object_nodes[obj.id] = mesh
+		var node := _add_model(obj, look)
+		if node == null:
+			var height := float(look.get("height", 0.5))
+			node = _add_box(
+				_object_root, obj.cells[0], _extent(obj), height,
+				visuals.to_colour(look.get("color", null)), height * 0.5,
+				float(look.get("inset", 0.08)),
+			)
+		else:
+			_model_nodes[obj.id] = true
+		node.name = obj.id
+		_object_nodes[obj.id] = node
+
+
+## Instantiates the object's model and normalises it into the footprint the sim
+## already knows about. Kenney's kit is not authored at 1 unit = 1 m, so the scale
+## is derived from the model's own bounds rather than trusted. Returns null when
+## the object names no mesh, and the caller falls back to a greybox box.
+func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
+	var mesh_name := str(obj.prop("mesh", ""))
+	if mesh_name.is_empty():
+		return null
+	var path := "res://assets/models/%s.glb" % mesh_name
+	if not ResourceLoader.exists(path):
+		push_warning("RoomRenderer: %s names a missing model %s" % [obj.id, path])
+		return null
+
+	var root := Node3D.new()
+	_object_root.add_child(root)
+	var model: Node3D = (load(path) as PackedScene).instantiate()
+	root.add_child(model)
+
+	var bounds := _local_bounds(model)
+	if bounds.size.x <= 0.0 or bounds.size.z <= 0.0:
+		return root
+	var extent := _extent(obj)
+	var inset := float(look.get("inset", 0.08))
+	var available := Vector2(
+		float(extent.x) * CELL - inset * 2.0,
+		float(extent.y) * CELL - inset * 2.0,
+	)
+	# Uniform, so nothing is stretched: fit the larger horizontal span.
+	var scale_factor := minf(available.x / bounds.size.x, available.y / bounds.size.z)
+	model.scale = Vector3.ONE * scale_factor
+	model.rotation_degrees = Vector3(0.0, float(obj.prop("mesh_yaw", 0.0)), 0.0)
+	# Origin at the footprint centre with the model's own floor at y = 0.
+	var centred := -(bounds.position + bounds.size * 0.5) * scale_factor
+	model.position = Vector3(centred.x, -bounds.position.y * scale_factor, centred.z) \
+		.rotated(Vector3.UP, deg_to_rad(float(obj.prop("mesh_yaw", 0.0))))
+	root.position = _footprint_centre(obj, extent)
+	return root
+
+
+func _footprint_centre(obj: SimObject, extent: Vector2i) -> Vector3:
+	return Vector3(
+		float(obj.cells[0].x) + float(extent.x) * 0.5,
+		0.0,
+		float(obj.cells[0].y) + float(extent.y) * 0.5,
+	)
+
+
+func _local_bounds(node: Node3D) -> AABB:
+	var out := AABB()
+	var first := true
+	for child in _descendants(node):
+		if child is MeshInstance3D and (child as MeshInstance3D).mesh != null:
+			var mi := child as MeshInstance3D
+			var box: AABB = mi.transform * mi.mesh.get_aabb()
+			out = box if first else out.merge(box)
+			first = false
+	return out
+
+
+func _descendants(node: Node) -> Array:
+	var out: Array = [node]
+	for child in node.get_children():
+		out.append_array(_descendants(child))
+	return out
 
 
 func _build_actors(world: SimWorld) -> void:
@@ -250,7 +329,7 @@ func _apply_lighting(lit: bool) -> void:
 
 func _sync_objects(world: SimWorld) -> void:
 	for obj in world.objects.all():
-		var node: MeshInstance3D = _object_nodes.get(obj.id, null)
+		var node: Node3D = _object_nodes.get(obj.id, null)
 		if node == null:
 			continue
 		if obj.cells.is_empty():
@@ -259,17 +338,36 @@ func _sync_objects(world: SimWorld) -> void:
 		node.visible = true
 		var look := visuals.apply_state(visuals.object_look(obj.tags), obj.state)
 		var height := float(look.get("height", 0.5)) * float(look.get("scale_y", 1.0))
+		var extent := _extent(obj)
+		if _model_nodes.has(obj.id):
+			# A model carries its own flat materials. Only state that genuinely
+			# changes the look — burning, broken — overrides them.
+			node.position = _footprint_centre(obj, extent)
+			node.rotation_degrees = Vector3(
+				0.0, float(look.get("yaw_deg", 0.0)), float(look.get("roll_deg", 0.0)))
+			var emission := float(look.get("emission", 0.0))
+			_override_model(node, look, emission)
+			continue
 		node.position = Vector3(
-			float(obj.cells[0].x) + float(_extent(obj).x) * 0.5,
+			float(obj.cells[0].x) + float(extent.x) * 0.5,
 			height * 0.5,
-			float(obj.cells[0].y) + float(_extent(obj).y) * 0.5,
+			float(obj.cells[0].y) + float(extent.y) * 0.5,
 		)
 		node.rotation_degrees = Vector3(0.0, float(look.get("yaw_deg", 0.0)), float(look.get("roll_deg", 0.0)))
 		node.scale = Vector3(1.0, float(look.get("scale_y", 1.0)), 1.0)
-		node.material_override = _material(
+		(node as MeshInstance3D).material_override = _material(
 			visuals.to_colour(look.get("color", null)),
 			float(look.get("emission", 0.0)),
 		)
+
+
+## Burning and broken repaint a model; everything else leaves its own materials.
+func _override_model(node: Node3D, look: Dictionary, emission: float) -> void:
+	var repaint := emission > 0.0
+	for child in _descendants(node):
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).material_override = _material(
+				visuals.to_colour(look.get("color", null)), emission) if repaint else null
 
 
 func _sync_hazards(world: SimWorld) -> void:

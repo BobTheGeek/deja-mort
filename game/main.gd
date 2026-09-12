@@ -97,16 +97,23 @@ func _vignette_material() -> ShaderMaterial:
 shader_type canvas_item;
 uniform float strength = 0.85;
 uniform float softness = 0.45;
+uniform float grain = 0.035;
+// docs/06: vignette and slight grain, so it reads as a diorama and not a render.
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
 void fragment() {
 	float d = distance(UV, vec2(0.5));
 	float v = smoothstep(softness, 0.85, d) * strength;
-	COLOR = vec4(0.0, 0.0, 0.0, v);
+	float g = (hash(FRAGCOORD.xy) - 0.5) * grain;
+	COLOR = vec4(vec3(max(g, 0.0)), clamp(v + abs(g), 0.0, 1.0));
 }
 """
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("strength", visuals.number("vignette.strength", 0.85))
 	material.set_shader_parameter("softness", visuals.number("vignette.softness", 0.45))
+	material.set_shader_parameter("grain", visuals.number("vignette.grain", 0.035))
 	return material
 
 
