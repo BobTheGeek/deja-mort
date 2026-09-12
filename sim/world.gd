@@ -4,6 +4,10 @@ extends RefCounted
 ## Room state and the 10 Hz clock. The intent API at the bottom is the only way
 ## in. Nothing here is a Node, and nothing here holds a tuning literal.
 
+const PHASE_PRE_ARRIVAL := "pre_arrival"
+const PHASE_ARRIVAL := "arrival"
+const PHASE_OVER := "over"
+
 var content: SimContent = null
 var grid: SimGrid = null
 var objects: SimObjectStore = null
@@ -17,6 +21,14 @@ var room: Dictionary = {}
 var room_state: Dictionary = {}
 var systems: Dictionary = {}
 var tick: int = 0
+
+var attacker: SimAttacker = null
+var phase: String = PHASE_PRE_ARRIVAL
+var fired_timers: PackedStringArray = []
+var ending: String = ""
+var ending_tick: int = -1
+var player_pos_at_arrival: Vector2i = SimEvent.NO_CELL
+var player_hidden_at_arrival: String = ""
 
 var discoveries: PackedStringArray = []
 var interactions: Array = []        # [{verb, object}] in order, deduplicated
@@ -37,7 +49,7 @@ static func create(room_data: Dictionary, c: SimContent, seeded: SimRng) -> SimW
 	w.systems = c.merged_systems(room_data.get("systems", {}))
 	w._tick_hz = int(w.system("tick_hz"))
 	w._dt = 1.0 / float(w._tick_hz)
-	w.grid = SimGrid.from_room(room_data.get("grid", {}), room_data.get("zones", {}))
+	w.grid = SimGrid.from_room(room_data.get("grid", {}), room_data.get("zones", {}), room_data.get("marker_zones", []))
 	w.objects = SimObjectStore.from_json(room_data.get("objects", []))
 	w.hazards = SimHazardField.new()
 	w.events = SimEventBus.new()
@@ -56,7 +68,29 @@ static func create(room_data: Dictionary, c: SimContent, seeded: SimRng) -> SimW
 		int(w.system("player.durability")),
 		w.vulnerable_statuses(),
 	)
+	w._spawn_attacker(str(room_data.get("attacker", "")), room_data.get("prior_loops", []))
 	return w
+
+
+## The attacker exists from tick 0 but waits outside until the timer runs out.
+func _spawn_attacker(attacker_id: String, prior_loops: Array) -> void:
+	if attacker_id.is_empty():
+		return
+	var profile := SimAttackerProfile.load_by_id(attacker_id)
+	if profile == null:
+		push_error("SimWorld: no attacker profile '%s'" % attacker_id)
+		return
+	var entry_id: String = profile.entries[0] if profile.entries.size() > 0 else ""
+	var entry := objects.by_id(entry_id)
+	attacker = SimAttacker.create(
+		profile,
+		entry.origin() if entry != null else Vector2i.ZERO,
+		vulnerable_statuses(),
+		prior_loops,
+	)
+	attacker.entry_id = entry_id
+	attacker.hazard_path_cost = float(system("hazard_path_cost"))
+	add_actor(attacker)
 
 
 # --- tuning access -----------------------------------------------------------
@@ -141,6 +175,29 @@ func actor_by_id(id: String) -> SimActor:
 		if a.id == id:
 			return a
 	return null
+
+
+## The walkable cell an entry opens onto. Doors sit on wall cells, so this is the
+## first walkable neighbour, row-major for determinism.
+func inside_cell_of(entry: SimObject) -> Vector2i:
+	if entry == null:
+		return SimEvent.NO_CELL
+	var candidates: Array[Vector2i] = []
+	for c in entry.cells:
+		for n in grid.neighbours(c, 4):
+			if grid.cell_type(n) == SimGrid.FLOOR and not candidates.has(n):
+				candidates.append(n)
+	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return a.y < b.y if a.y != b.y else a.x < b.x)
+	for c in candidates:
+		if walkable(c):
+			return c
+	return candidates[0] if not candidates.is_empty() else SimEvent.NO_CELL
+
+
+func death_cause_for_weapon(weapon: String) -> String:
+	var map: Dictionary = system("attacker.weapon_death_cause", {})
+	return str(map.get(weapon, weapon))
 
 
 func actor_at(cell: Vector2i) -> SimActor:
@@ -327,10 +384,11 @@ func step() -> void:
 	tick += 1
 	_step_timers()
 	_step_actor(player)
-	# attacker stepping lands in M2, between here and hazard spread.
+	_step_attacker()
 	_step_object_systems()
 	_step_hazard_spread()
 	_step_hazards_on_actors()
+	_check_outcome()
 
 
 func step_seconds(seconds: float) -> void:
@@ -354,6 +412,8 @@ func _step_timers() -> void:
 			fired.append(t)
 	for t in fired:
 		_timers.erase(t)
+		if not fired_timers.has(str(t["name"])):
+			fired_timers.append(str(t["name"]))
 		emit(SimEvent.TYPE_TIMER, {"rule_id": t["rule_id"], "meta": {"timer": t["name"], "fired": true}})
 		var on_fire: Array = t["on_fire"]
 		if on_fire.is_empty():
@@ -375,6 +435,8 @@ func _step_actor(a: SimActor) -> void:
 		return
 	var act: SimAction = a.action
 	if act.phase == SimAction.PHASE_WALKING:
+		if _immobilised(a):
+			return
 		if a.path.is_empty():
 			_begin_perform(a, act)
 		else:
@@ -394,6 +456,14 @@ func _step_actor(a: SimActor) -> void:
 		_complete(a, act)
 
 
+## On the floor is on the floor. The same list applies to the player and to him.
+func _immobilised(a: SimActor) -> bool:
+	for name in system("immobilising_statuses", []):
+		if a.has_status(str(name)):
+			return true
+	return false
+
+
 func _begin_perform(a: SimActor, act: SimAction) -> void:
 	if act.kind == SimAction.KIND_WALK:
 		act.phase = SimAction.PHASE_DONE
@@ -406,6 +476,9 @@ func _begin_perform(a: SimActor, act: SimAction) -> void:
 func _complete(a: SimActor, act: SimAction) -> void:
 	a.action = null
 	act.phase = SimAction.PHASE_DONE
+	if act.kind == SimAction.KIND_ATTACKER:
+		SimAttackerActions.complete(self, a as SimAttacker, act.meta)
+		return
 	if act.kind != SimAction.KIND_VERB:
 		return
 	var resolved := _resolve_target(act.target_id if not act.target_id.is_empty() else act.target_cell)
@@ -465,6 +538,57 @@ func fire_manual(verb: String, a: SimActor) -> bool:
 
 ## Sustained, tag-driven behaviour: gas filling a zone, lures making noise, fire
 ## catching on whatever it touches. Driven by tags, never by object id.
+## Arrival, perception, planning, then the same walk/perform machinery the player
+## uses. He is stepped here, between the player and the hazards, so a trap laid
+## this tick catches him on the same tick it would catch you.
+func _step_attacker() -> void:
+	if attacker == null:
+		return
+	if phase == PHASE_PRE_ARRIVAL:
+		if timer_remaining_s() > 0.0:
+			return
+		phase = PHASE_ARRIVAL
+		player_pos_at_arrival = player.pos
+		player_hidden_at_arrival = player.hidden_in
+		attacker.memory.on_arrival(self, attacker)
+		emit(SimEvent.TYPE_TIMER, {"cell": attacker.pos, "actor": attacker.id, "meta": {"arrival": true}})
+	if not attacker.alive or attacker.left:
+		return
+	attacker.perception.observe(self, attacker, attacker.profile)
+	if attacker.is_incapacitated():
+		if attacker.incapacitated_since < 0:
+			attacker.incapacitated_since = tick
+		attacker.cancel_action()
+		return
+	attacker.incapacitated_since = -1
+	if attacker.inside and not attacker.perception.target_visible:
+		attacker.search_elapsed_s += _dt
+	# Replan on new perception: a plan made while blind must not outlive the moment
+	# he spots you. Only a change counts, or he would restart the same plan forever.
+	if attacker.perception.consume_change() and attacker.action != null \
+			and str(attacker.action.verb) != SimAttackerActions.ATTACK:
+		attacker.cancel_action()
+	if attacker.action == null:
+		var next_action := SimAttackerPlanner.next_action(self, attacker)
+		if not next_action.is_empty():
+			SimAttackerActions.begin(self, attacker, next_action)
+	_step_actor(attacker)
+
+
+func _check_outcome() -> void:
+	if not ending.is_empty():
+		return
+	var found := SimOutcome.detect_ending(self)
+	if found.is_empty():
+		return
+	ending = found
+	ending_tick = tick
+	phase = PHASE_OVER
+	emit(SimEvent.TYPE_ENDING, {
+		"actor": player.id, "meta": {"ending": ending, "time_s": time_s()},
+	})
+
+
 func _step_object_systems() -> void:
 	var gas_fill_s := float(system("gas.fill_s"))
 	var lure_interval := ticks(float(system("lure.interval_s")))
@@ -507,29 +631,52 @@ func _step_hazards_on_actors() -> void:
 			continue
 		a.expire_statuses(tick)
 		for layer in SimHazardField.LAYERS:
-			if not effects.has(layer) or not hazards.has(layer, a.pos):
+			if not hazards.has(layer, a.pos):
+				a.hazard_since.erase(layer)
+				continue
+			if not a.hazard_since.has(layer):
+				a.hazard_since[layer] = tick
+			if not effects.has(layer):
 				continue
 			_apply_hazard_effect(a, layer, effects[layer] as Dictionary)
 	_check_gas(effects)
 
 
 func _apply_hazard_effect(a: SimActor, layer: String, spec: Dictionary) -> void:
+	# You slip when you step on it, not for as long as you stand on it. Without
+	# this an actor on an oiled cell is prone forever and can never leave.
+	if bool(spec.get("on_enter_only", false)) and int(a.hazard_since.get(layer, -1)) != tick:
+		return
 	var guard := str(spec.get("unless_status", ""))
 	if not guard.is_empty() and a.has_status(guard):
 		return
 	var status_name := str(spec.get("status", ""))
 	if not status_name.is_empty() and not a.has_status(status_name):
 		apply_status(a, status_name, float(system(str(spec.get("for_system", "")), 0.0)), "hazard:" + layer)
-	if spec.has("damage"):
+	if spec.has("damage") and _hazard_may_damage(a, layer, spec):
+		a.hazard_last_damage[layer] = tick
 		damage_actor(a, int(spec["damage"]), layer, "hazard:" + layer)
 	var lethal_to: Array = spec.get("lethal_to", [])
-	if not lethal_to.has(a.id):
+	if not lethal_to.has(a.role):
 		return
 	if spec.has("lethal_after_system"):
-		var since: int = int(a.status_since.get(status_name, tick))
+		# Measured from when he stepped into it, not from the status, which is
+		# re-applied every few seconds and would reset the clock forever.
+		var since: int = int(a.hazard_since.get(layer, tick))
 		if tick - since < ticks(float(system(str(spec["lethal_after_system"])))):
 			return
 	kill_actor(a, layer, "hazard:" + layer)
+
+
+## Roles, not ids: a hazard spec must work for any attacker profile.
+func _hazard_may_damage(a: SimActor, layer: String, spec: Dictionary) -> bool:
+	var damage_to: Array = spec.get("damage_to", [])
+	if not damage_to.is_empty() and not damage_to.has(a.role):
+		return false
+	if not spec.has("damage_every_s"):
+		return not a.hazard_last_damage.has(layer)
+	var gap := ticks(float(spec["damage_every_s"]))
+	return tick - int(a.hazard_last_damage.get(layer, -gap * 2)) >= gap
 
 
 func _check_gas(effects: Dictionary) -> void:
@@ -537,6 +684,8 @@ func _check_gas(effects: Dictionary) -> void:
 	if spec.is_empty():
 		return
 	for zone in grid.zone_names():
+		if grid.is_marker_zone(zone):
+			continue
 		if hazards.gas_level(zone) < float(spec.get("at_level", 1.0)):
 			continue
 		var ignited := false

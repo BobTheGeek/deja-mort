@@ -6,6 +6,7 @@ extends RefCounted
 const KIND_WALK := "walk"
 const KIND_VERB := "verb"
 const KIND_WAIT := "wait"
+const KIND_ATTACKER := "attacker"
 
 const PHASE_WALKING := "walking"
 const PHASE_PERFORMING := "performing"
@@ -20,6 +21,7 @@ var target_cell: Vector2i = SimEvent.NO_CELL
 var duration_ticks: int = 0
 var ends_tick: int = 0
 var issued_tick: int = 0
+var meta: Dictionary = {}
 
 
 func describe() -> String:

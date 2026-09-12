@@ -968,6 +968,7 @@
     "disable_hold_s": 10
   },
   "rubric": {
+    "two": "ending != 'evade'",
     "three": "attacker.death_cause == 'shock' && player.never_seen"
   },
   "collectible": {
@@ -984,5 +985,360 @@
     ],
     "entries": 1,
     "exits": 0
-  }
+  },
+  "authored_solutions": [
+    {
+      "id": "evade_phone",
+      "ending": "evade",
+      "stars": 1,
+      "note": "Buy seconds, hide where he looks last, let help arrive.",
+      "actions": [
+        {
+          "t": 0,
+          "intent": "walk_to",
+          "args": [
+            3,
+            2
+          ]
+        },
+        {
+          "t": 0,
+          "intent": "verb_on",
+          "args": [
+            "open",
+            "counter_drawer"
+          ]
+        },
+        {
+          "t": 0,
+          "intent": "verb_on",
+          "args": [
+            "grab",
+            "charger"
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "walk_to",
+          "args": [
+            9,
+            5
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "verb_on",
+          "args": [
+            "open",
+            "nightstand"
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "verb_on",
+          "args": [
+            "use-held-on",
+            "phone",
+            "charge_phone"
+          ]
+        },
+        {
+          "t": 9,
+          "intent": "walk_to",
+          "args": [
+            1,
+            2
+          ]
+        },
+        {
+          "t": 9,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "front_door",
+            "toggle_lock"
+          ]
+        },
+        {
+          "t": 9,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "front_door",
+            "toggle_chain"
+          ]
+        },
+        {
+          "t": 12,
+          "intent": "walk_to",
+          "args": [
+            3,
+            2
+          ]
+        },
+        {
+          "t": 12,
+          "intent": "verb_on",
+          "args": [
+            "push",
+            "fridge",
+            "push_heavy"
+          ]
+        },
+        {
+          "t": 15,
+          "intent": "walk_to",
+          "args": [
+            1,
+            7
+          ]
+        },
+        {
+          "t": 15,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "light_switch",
+            "toggle_light_switch"
+          ]
+        },
+        {
+          "t": 19,
+          "intent": "walk_to",
+          "args": [
+            9,
+            5
+          ]
+        },
+        {
+          "t": 40,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "phone",
+            "call_help"
+          ]
+        },
+        {
+          "t": 45,
+          "intent": "walk_to",
+          "args": [
+            7,
+            2
+          ]
+        },
+        {
+          "t": 45,
+          "intent": "verb_on",
+          "args": [
+            "open",
+            "bath_door",
+            "open_close"
+          ]
+        },
+        {
+          "t": 48,
+          "intent": "walk_to",
+          "args": [
+            9,
+            2
+          ]
+        },
+        {
+          "t": 48,
+          "intent": "verb_on",
+          "args": [
+            "open",
+            "bath_door",
+            "open_close"
+          ]
+        },
+        {
+          "t": 50,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "bath_door",
+            "toggle_lock"
+          ]
+        },
+        {
+          "t": 52,
+          "intent": "verb_on",
+          "args": [
+            "hide",
+            "bathtub"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "disable_shelf",
+      "ending": "disable",
+      "stars": 2,
+      "note": "Chain two setups: he slips, you drop the shelf.",
+      "actions": [
+        {
+          "t": 0,
+          "intent": "walk_to",
+          "args": [
+            3,
+            2
+          ]
+        },
+        {
+          "t": 0,
+          "intent": "verb_on",
+          "args": [
+            "open",
+            "counter_drawer"
+          ]
+        },
+        {
+          "t": 0,
+          "intent": "verb_on",
+          "args": [
+            "grab",
+            "cooking_oil"
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "walk_to",
+          "args": [
+            1,
+            4
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "verb_on",
+          "args": [
+            "use-held-on",
+            [
+              1,
+              3
+            ],
+            "pour_slippery"
+          ]
+        },
+        {
+          "t": 8,
+          "intent": "walk_to",
+          "args": [
+            3,
+            3
+          ]
+        },
+        {
+          "t": 8,
+          "intent": "verb_on",
+          "args": [
+            "push",
+            "rug",
+            "push"
+          ]
+        },
+        {
+          "t": 12,
+          "intent": "walk_to",
+          "args": [
+            1,
+            7
+          ]
+        },
+        {
+          "t": 12,
+          "intent": "verb_on",
+          "args": [
+            "push",
+            "bookshelf",
+            "tip_first"
+          ]
+        },
+        {
+          "t": 93,
+          "intent": "verb_on",
+          "args": [
+            "push",
+            "bookshelf",
+            "tip_second"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kill_toaster",
+      "ending": "kill",
+      "stars": 3,
+      "note": "Commit early, kill the lights, let the room do it.",
+      "actions": [
+        {
+          "t": 0,
+          "intent": "walk_to",
+          "args": [
+            3,
+            2
+          ]
+        },
+        {
+          "t": 0,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "sink",
+            "toggle_wet_source"
+          ]
+        },
+        {
+          "t": 0,
+          "intent": "verb_on",
+          "args": [
+            "grab",
+            "toaster"
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "walk_to",
+          "args": [
+            1,
+            7
+          ]
+        },
+        {
+          "t": 4,
+          "intent": "verb_on",
+          "args": [
+            "toggle",
+            "light_switch",
+            "toggle_light_switch"
+          ]
+        },
+        {
+          "t": 7,
+          "intent": "walk_to",
+          "args": [
+            5,
+            4
+          ]
+        },
+        {
+          "t": 92,
+          "intent": "verb_on",
+          "args": [
+            "throw",
+            [
+              3,
+              2
+            ],
+            "throw_conductive_into_wet"
+          ]
+        }
+      ]
+    }
+  ],
+  "marker_zones": [
+    "chokepoint"
+  ]
 }

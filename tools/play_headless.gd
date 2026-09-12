@@ -4,7 +4,7 @@ extends SceneTree
 ##
 ##   godot --headless -s tools/play_headless.gd -- [room_id] [command]
 ##
-## Commands: state (default) · pairs · flood · shock · all
+## Commands: state (default) · pairs · flood · shock · loop · all
 
 const ROOMS := "res://content/rooms/%s.json"
 
@@ -42,6 +42,8 @@ func _initialize() -> void:
 			ok = _flood(json.data, content)
 		"shock":
 			ok = _shock(json.data, content)
+		"loop":
+			ok = _loop(json.data, content)
 		"all":
 			ok = _state(json.data, content) and _pairs(json.data, content) \
 				and _flood(json.data, content) and _shock(json.data, content)
@@ -49,6 +51,23 @@ func _initialize() -> void:
 			printerr("unknown command: %s" % command)
 			ok = false
 	quit(0 if ok else 1)
+
+
+## One whole loop with no player input: he arrives and does his job.
+func _loop(room: Dictionary, content: SimContent) -> bool:
+	var w := _world(room, content)
+	print("-- loop: stand still and see what happens --")
+	var guard := w.ticks(float(room.get("max_loop_s", 300)))
+	while w.ending.is_empty() and w.tick < guard:
+		w.step()
+	var report := SimOutcome.evaluate(w)
+	for line in w.events.to_lines().slice(maxi(0, w.events.to_lines().size() - 18)):
+		print("  " + line)
+	print("ending=%s stars=%d death=%s t=%.1fs" % [
+		report["ending"], report["stars"], report["death_cause"], report["time_s"],
+	])
+	print("notebook: %s" % report["notebook"])
+	return not w.ending.is_empty()
 
 
 func _world(room: Dictionary, content: SimContent, seed_value: int = 1) -> SimWorld:

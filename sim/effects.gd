@@ -178,7 +178,7 @@ static func _cord_chokepoints(ctx: SimRuleContext) -> Array[Vector2i]:
 	for c in world.grid.line(from, obj.origin()):
 		if out.has(c):
 			continue
-		if world.grid.zone_of(c) == "chokepoint":
+		if world.grid.in_zone("chokepoint", c):
 			out.append(c)
 			continue
 		for other in world.objects.at_cell(c):

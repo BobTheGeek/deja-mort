@@ -20,9 +20,10 @@ var height: int = 0
 
 var _cells: Array[int] = []
 var _zones: Dictionary = {}   # name -> Rect2i
+var _markers: Dictionary = {} # zone names that tag cells but are not places
 
 
-static func from_room(grid_block: Dictionary, zones_block: Dictionary) -> SimGrid:
+static func from_room(grid_block: Dictionary, zones_block: Dictionary, marker_zones: Array = []) -> SimGrid:
 	var g := SimGrid.new()
 	g.width = int(grid_block.get("width", 0))
 	g.height = int(grid_block.get("height", 0))
@@ -38,6 +39,8 @@ static func from_room(grid_block: Dictionary, zones_block: Dictionary) -> SimGri
 		var a := Vector2i(int(pair[0][0]), int(pair[0][1]))
 		var b := Vector2i(int(pair[1][0]), int(pair[1][1]))
 		g._zones[str(name)] = Rect2i(a, b - a + Vector2i.ONE)
+	for m in marker_zones:
+		g._markers[str(m)] = true
 	return g
 
 
@@ -199,11 +202,23 @@ func zone_rect(name: String) -> Rect2i:
 	return _zones.get(name, Rect2i())
 
 
+## The zone a cell belongs to. Marker zones (a trap cell, a chokepoint) tag cells
+## without being places, so they never answer this question.
 func zone_of(c: Vector2i) -> String:
 	for name in zone_names():
+		if _markers.has(name):
+			continue
 		if (_zones[name] as Rect2i).has_point(c):
 			return name
 	return ""
+
+
+func is_marker_zone(name: String) -> bool:
+	return _markers.has(name)
+
+
+func in_zone(name: String, c: Vector2i) -> bool:
+	return _zones.has(name) and (_zones[name] as Rect2i).has_point(c)
 
 
 func zone_cells(name: String) -> Array[Vector2i]:

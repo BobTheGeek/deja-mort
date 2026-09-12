@@ -10,7 +10,7 @@ extends SceneTree
 ## a green build must never mean "we skipped the solver".
 
 const ROOMS_DIR := "res://content/rooms"
-const SOLVER := "res://tools/solve.gd"
+const SOLVER := "res://tools/solver.gd"
 
 
 func _initialize() -> void:
@@ -23,6 +23,7 @@ func _initialize() -> void:
 		return
 
 	var solver_present := FileAccess.file_exists(SOLVER)
+	var shared := SimContent.load_from()
 	var failures := 0
 	var unclaimed := 0
 	for room_path in rooms:
@@ -38,7 +39,7 @@ func _initialize() -> void:
 				% [room_path, claims, SOLVER])
 			failures += 1
 			continue
-		if not _verify_room(room_path):
+		if not _verify_room(room_path, shared):
 			failures += 1
 
 	if failures > 0:
@@ -75,7 +76,12 @@ func _authored_solution_count(room_path: String) -> int:
 	return 0
 
 
-## Mode A verification. Implemented in M2 alongside tools/solve.gd.
-func _verify_room(room_path: String) -> bool:
-	printerr("verify_all: %s — solver Mode A not implemented yet (M2)." % room_path)
-	return false
+## Mode A: every authored solution must still reach its declared ending and stars.
+func _verify_room(room_path: String, shared: SimContent) -> bool:
+	var solver := SimSolver.new()
+	if not solver.load_room(room_path, shared):
+		for e in solver.errors:
+			printerr("verify_all: %s" % e)
+		return false
+	var result := solver.mode_a()
+	return bool(result["ok"])

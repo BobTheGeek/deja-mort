@@ -4,12 +4,15 @@ extends RefCounted
 ## Shared actor state. The player and (from M2) the attacker are both this.
 
 var id: String = ""
+var role: String = "player"        # player | attacker — hazard specs key off this, not the id
 var pos: Vector2i = Vector2i.ZERO
 var facing: Vector2i = Vector2i(0, 1)
 var holding: String = ""
 var hidden_in: String = ""
 var status: Dictionary = {}          # effect name -> until_tick
 var status_since: Dictionary = {}    # effect name -> tick it was first applied
+var hazard_last_damage: Dictionary = {}  # layer -> tick it last hurt this actor
+var hazard_since: Dictionary = {}        # layer -> tick this actor first stood in it
 var durability: int = 1
 var walk_speed: float = 1.0          # tiles/s, from JSON
 var alive: bool = true

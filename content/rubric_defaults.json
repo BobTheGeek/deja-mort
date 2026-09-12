@@ -1,0 +1,4 @@
+{
+  "two": "loop.damage_taken == 0 || ending != 'kill' || loop.index <= 6",
+  "three": "player.never_seen"
+}
