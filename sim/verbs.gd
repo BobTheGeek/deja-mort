@@ -33,6 +33,20 @@ static func matching_rules(world: SimWorld, actor: SimActor, verb: String, targe
 	for r in world.rules.matches(ctx):
 		if r.trigger == "verb":
 			out.append(r)
+	return world.rules.choosable(out)
+
+
+## Every match for this verb, before shadowing is applied. Only the lint wants
+## this; everything else wants the choosable set above.
+static func all_matching_rules(world: SimWorld, actor: SimActor, verb: String, target: Variant) -> Array[SimRule]:
+	var resolved: Dictionary = world._resolve_target(target)
+	if resolved.is_empty():
+		return [] as Array[SimRule]
+	var ctx := world._context(verb, resolved, actor)
+	var out: Array[SimRule] = []
+	for r in world.rules.matches(ctx):
+		if r.trigger == "verb":
+			out.append(r)
 	return out
 
 
@@ -90,3 +104,90 @@ static func _room_has_holdable(world: SimWorld, required: Array) -> bool:
 		if o.has_tag("carryable") and o.has_all_tags(required):
 			return true
 	return false
+
+
+# --- ambiguity sweep ---------------------------------------------------------
+
+## Every (verb, object, object-state, held item) where more than one rule is
+## choosable. The wheel cannot pick between those without asking the player which
+## rule they meant, which is a content bug wearing a UI costume.
+##
+## Sweeps a scratch copy of the room, so the caller's world is untouched.
+## `apply_shadows = false` reports the raw overlap, which is how the lint shows
+## what declared shadowing is buying.
+static func ambiguous_pairs(world: SimWorld, apply_shadows: bool = true, max_state_keys: int = 4) -> Array:
+	var scratch := SimWorld.create(world.room.duplicate(true), world.content, SimRng.new(0))
+	var held_options: Array = [""]
+	for obj in scratch.objects.all():
+		if obj.has_tag("carryable"):
+			held_options.append(obj.id)
+
+	var found: Dictionary = {}
+	for obj in scratch.objects.all():
+		var keys := _condition_keys(scratch, obj, max_state_keys)
+		var original: Dictionary = obj.state.duplicate(true)
+		for combo in _state_combinations(scratch, keys):
+			for key in combo:
+				if combo[key] == null:
+					obj.state.erase(key)
+				else:
+					obj.state[key] = combo[key]
+			for held in held_options:
+				scratch.player.holding = held
+				for verb in verb_ids(scratch):
+					var hits := all_matching_rules(scratch, scratch.player, verb, obj.id)
+					if apply_shadows:
+						hits = scratch.rules.choosable(hits)
+					if hits.size() < 2:
+						continue
+					var ids := PackedStringArray()
+					for rule in hits:
+						ids.append(rule.id)
+					var key := "%s|%s|%s" % [verb, obj.id, ids]
+					if not found.has(key):
+						found[key] = {
+							"verb": verb, "object": obj.id, "rules": ids,
+							"state": combo.duplicate(), "held": held,
+						}
+			scratch.player.holding = ""
+		obj.state = original
+
+	var ordered := found.keys()
+	ordered.sort()
+	var out: Array = []
+	for key in ordered:
+		out.append(found[key])
+	return out
+
+
+## State keys any wheel rule tests on this object.
+static func _condition_keys(world: SimWorld, obj: SimObject, limit: int) -> PackedStringArray:
+	var keys := PackedStringArray()
+	for rule in world.rules.rules:
+		if rule.trigger != "verb" or not obj.has_all_tags(rule.target_tags):
+			continue
+		for key in rule.target_conditions:
+			if not keys.has(key):
+				keys.append(key)
+	keys.sort()
+	return keys.slice(0, limit)
+
+
+## Every assignment over those keys, from the literal values rules use plus absent.
+static func _state_combinations(world: SimWorld, keys: PackedStringArray) -> Array:
+	var out: Array = [{}]
+	for key in keys:
+		var values: Array = [null]
+		for rule in world.rules.rules:
+			var want: Variant = rule.target_conditions.get(key, null)
+			if want == null or want is Dictionary or values.has(want):
+				continue
+			values.append(want)
+		var grown: Array = []
+		for base in out:
+			for value in values:
+				var next: Dictionary = (base as Dictionary).duplicate()
+				next[key] = value
+				grown.append(next)
+		out = grown
+	return out

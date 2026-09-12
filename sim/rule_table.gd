@@ -37,6 +37,24 @@ func matches(ctx: SimRuleContext) -> Array[SimRule]:
 	return out
 
 
+## Reduces a match set to the rules a player could actually be choosing between,
+## by dropping every rule that another matching rule shadows. One pass is enough
+## for a chain: if A shadows B and B shadows C, C is removed by B and B by A,
+## whether or not B itself survives.
+func choosable(matches: Array[SimRule]) -> Array[SimRule]:
+	if matches.size() < 2:
+		return matches.duplicate()
+	var shadowed := {}
+	for rule in matches:
+		for victim in rule.shadows:
+			shadowed[str(victim)] = true
+	var out: Array[SimRule] = []
+	for rule in matches:
+		if not shadowed.has(rule.id):
+			out.append(rule)
+	return out
+
+
 func first_match(ctx: SimRuleContext, rule_id: String = "") -> SimRule:
 	for r in rules:
 		if not rule_id.is_empty() and r.id != rule_id:
