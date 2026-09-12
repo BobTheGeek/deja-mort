@@ -20,6 +20,8 @@ var _object_nodes: Dictionary = {}   # object id -> Node3D (a model root, or a g
 var _model_nodes: Dictionary = {}    # object ids drawn from a .glb rather than a box
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
+var _shut_away: Dictionary = {}  # ids inside a closed container, this frame
+var _spread: Array = []          # objects stacked onto furniture this frame
 var _once: Dictionary = {}           # actor id -> {clip, left} one-shot animation
 var _room: Dictionary = {}           # the room block, for the room's own death beat
 var _flicker_left: float = 0.0
@@ -444,11 +446,101 @@ func _apply_lighting(lit: bool) -> void:
 
 
 func _sync_objects(world: SimWorld) -> void:
+	_hide_what_is_shut_away(world)
+	_place_objects(world)
+	_stack_small_objects(world)
+
+
+## What is inside a shut cupboard is not on screen. It used to be drawn at its
+## own square regardless, so a jar inside a closed cabinet was visible, clickable
+## and refused — which reads as a broken game rather than a shut cabinet.
+##
+## Generic: any object that lists `contains` and has an `open` state hides what
+## it holds while it is shut. No object is named.
+func _hide_what_is_shut_away(world: SimWorld) -> void:
+	_shut_away.clear()
+	for obj in world.objects.all():
+		if obj.contains.is_empty() or obj.get_state("open", null) == null:
+			continue
+		if bool(obj.get_state("open", false)):
+			continue
+		for id in obj.contains:
+			var inside := world.objects.by_id(str(id))
+			# Once it is out of the cupboard it has its own place in the room.
+			if inside != null and inside.on.is_empty():
+				_shut_away[str(id)] = true
+
+
+## A toaster on a counter is on the counter. Everything used to be drawn at
+## floor level, so the small objects sat inside the furniture they share a square
+## with — invisible, and unclickable, which is most of what Bob could not click.
+##
+## No object is named: an object is stacked when something taller stands on its
+## square, which is what "on the counter" means geometrically.
+func _stack_small_objects(world: SimWorld) -> void:
+	_spread.clear()
+	var bounds: Dictionary = {}
+	for obj in world.objects.all():
+		if _object_nodes.has(obj.id) and not obj.cells.is_empty() and not _shut_away.has(obj.id):
+			bounds[obj.id] = object_bounds(obj.id)
+	for obj in world.objects.all():
+		if not bounds.has(obj.id):
+			continue
+		var mine: AABB = bounds[obj.id]
+		var support := 0.0
+		for other in world.objects.all():
+			if other.id == obj.id or not bounds.has(other.id):
+				continue
+			if not _shares_a_cell(obj, other):
+				continue
+			var theirs: AABB = bounds[other.id]
+			if theirs.size.y <= mine.size.y:
+				continue
+			support = maxf(support, theirs.end.y)
+		if support <= 0.0:
+			continue
+		var node: Node3D = _object_nodes[obj.id]
+		node.position.y += support
+		_spread.append({"id": obj.id, "cell": obj.cells[0]})
+	_spread_across_cell()
+
+
+## Four things on one counter square used to be drawn in exactly the same spot,
+## so three of them were inside the fourth. They are laid out around the square
+## instead — by their order in the room file, so it is the same arrangement every
+## loop.
+func _spread_across_cell() -> void:
+	var by_cell: Dictionary = {}
+	for item in _spread:
+		var key := "%d,%d" % [(item["cell"] as Vector2i).x, (item["cell"] as Vector2i).y]
+		if not by_cell.has(key):
+			by_cell[key] = []
+		(by_cell[key] as Array).append(str(item["id"]))
+	var radius := visuals.number("object.stack_spread", 0.22)
+	for key in by_cell:
+		var ids: Array = by_cell[key]
+		if ids.size() < 2:
+			continue
+		for i in ids.size():
+			var node: Node3D = _object_nodes[ids[i]]
+			var angle := float(i) / float(ids.size()) * TAU
+			node.position += Vector3(cos(angle), 0.0, sin(angle)) * radius
+	_spread.clear()
+
+
+func _shares_a_cell(a: SimObject, b: SimObject) -> bool:
+	for cell in a.cells:
+		if b.cells.has(cell):
+			return true
+	return false
+
+
+func _place_objects(world: SimWorld) -> void:
 	for obj in world.objects.all():
 		var node: Node3D = _object_nodes.get(obj.id, null)
 		if node == null:
 			continue
-		if obj.cells.is_empty():
+		if obj.cells.is_empty() or _shut_away.has(obj.id):
 			node.visible = false
 			continue
 		node.visible = true
@@ -721,6 +813,65 @@ static func model_path(mesh_name: String) -> String:
 
 func object_node(id: String) -> Node3D:
 	return _object_nodes.get(id, null)
+
+
+## What an object occupies on screen, as drawn — model scale, rotation and all.
+func object_bounds(id: String) -> AABB:
+	var node: Node3D = _object_nodes.get(id, null)
+	if node == null:
+		return AABB()
+	var out := AABB()
+	var first := true
+	for child in _descendants(node):
+		if not (child is MeshInstance3D) or (child as MeshInstance3D).mesh == null:
+			continue
+		var mi := child as MeshInstance3D
+		var box: AABB = _chain_from(mi, node) * mi.mesh.get_aabb()
+		out = box if first else out.merge(box)
+		first = false
+	if first:
+		return AABB()
+	# The node itself is placed on the room; the chain above stops at it.
+	return AABB(out.position + node.position, out.size)
+
+
+func _chain_from(node: Node3D, root: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var current: Node = node
+	while current != null and current != root:
+		if current is Node3D:
+			t = (current as Node3D).transform * t
+		current = current.get_parent()
+	return t
+
+
+## The object under a click. Rays against what is drawn, because clicking the
+## floor square under the cursor is wrong for anything tall: from this camera
+## the middle of the fridge projects onto the square behind the fridge.
+##
+## Presentation decides which object the player meant; the sim still decides
+## what may be done to it.
+func pick(from: Vector3, direction: Vector3) -> String:
+	var best := ""
+	var nearest := INF
+	for id in _object_nodes:
+		var node: Node3D = _object_nodes[id]
+		if node == null or not node.visible:
+			continue
+		var box := object_bounds(str(id))
+		if box.size == Vector3.ZERO:
+			continue
+		# A flat thing — a rug, a spill — is unclickable as a box of zero height.
+		if box.size.y < 0.02:
+			box = AABB(box.position, Vector3(box.size.x, 0.02, box.size.z))
+		var hit: Variant = box.intersects_ray(from, direction)
+		if hit == null:
+			continue
+		var distance := (hit as Vector3).distance_to(from)
+		if distance < nearest:
+			nearest = distance
+			best = str(id)
+	return best
 
 
 func actor_node(id: String) -> Node3D:

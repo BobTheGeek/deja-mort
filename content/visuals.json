@@ -260,7 +260,8 @@
           0.48
         ]
       }
-    }
+    },
+    "stack_spread": 0.22
   },
   "models": {
     "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",
