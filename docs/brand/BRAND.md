@@ -1,6 +1,6 @@
 # DÉJÀ MORT — Brand Tokens and Asset Kit
 
-Source of truth: `reference/logo-asset-sheet.jpeg` (the approved treatment). The SVGs in this folder are a **vector reconstruction** of that sheet — clean geometry, editable, same tokens — not the original designer's file. If the design tool can export its own vector source, replace these with it and keep the tokens.
+Source of truth: the Claude Design final set in `svg/` and `png/` (approved Sept 12, 2026). History: `../reference/logo-asset-sheet.jpeg` is the first (door) treatment, kept for the title-screen door beat only; `../reference/door-treatment/` holds my vector reconstruction of it. `docs/reference/` is a sibling of `docs/brand/`.
 
 ## Tokens (approved Sept 12, 2026 — Claude Design final set)
 
@@ -22,7 +22,7 @@ Source of truth: `reference/logo-asset-sheet.jpeg` (the approved treatment). The
 
 **Don'ts (from the sheet):** drop or swap the accents · straighten the grave or change its angle · change the hand positions (it is 1:30) · add numerals, ticks, or a second hand · fill the circle · put the tagline inside the lockup's clear space or with the mark alone · use red · put the mark on a busy photograph · rotate, stretch, outline, or add effects · recolor the accent to anything else.
 
-**Superseded:** the door mark (first treatment) and the ember palette (#111111 / #F0F0F0 / #E65C00). The door survives as the title-screen opening element only — see `reference/approved-door-mark.png`. The SVGs in this folder are reconstructions of the *door* treatment and are superseded by Claude Design's delivered files; replace them on receipt.
+**Superseded:** the door mark (first treatment) and the ember palette (#111111 / #F0F0F0 / #E65C00). The door survives as the title-screen opening element only — see `../reference/approved-door-mark.png`.
 
 ## Files (Claude Design final set, Sept 12, 2026)
 
@@ -54,7 +54,7 @@ brand/
 - The SVGs' tagline is ≈29% of the wordmark cap height (the sheet's usage note says 38%). The files match what was approved visually; if it should be larger, it's the `font-size` on the `class="t"` text in `svg/live/`, then re-run the outliner.
 - Accent strokes use round line caps in the SVGs; the sheet captures show flat caps. Vector is the source of truth.
 
-**Superseded:** the door treatment lives in `reference/door-treatment/` (my reconstruction) and `reference/approved-door-mark.png` (the first sheet's crop). Title-screen use only.
+**Superseded:** the door treatment lives in `../reference/door-treatment/` (my reconstruction) and `../reference/approved-door-mark.png` (the first sheet's crop). Title-screen use only.
 
 ## Godot theme constants
 
@@ -73,7 +73,7 @@ const FONT_UI       := "res://assets/fonts/Inter-Regular.ttf"
 const FONT_UI_BOLD  := "res://assets/fonts/Inter-Bold.ttf"
 ```
 
-Where the tokens show up in-game: the diorama void is `BG_DARK`; the room's single light and the timer's last-ten-seconds tint are `ACCENT`; HUD type is `FG_DARK`. Title screen beat: the clock mark ticks once, the wordmark appears, the tagline fades in, then the door (`reference/approved-door-mark.png` geometry) opens into Room 1.
+Where the tokens show up in-game: the diorama void is `BG_DARK`; the room's single light and the timer's last-ten-seconds tint are `ACCENT`; HUD type is `FG_DARK`. Title screen beat: the clock mark ticks once, the wordmark appears, the tagline fades in, then the door (`../reference/approved-door-mark.png` geometry) opens into Room 1.
 
 ## Export targets
 
