@@ -80,6 +80,8 @@ godot --headless -s tools/rule_coverage.gd # every rule id must have a passing t
 godot --headless -s tools/verify_all.gd    # solver Mode A over every room
 godot --headless -s tools/solve.gd -- content/rooms/room_01_studio.json  # full solver report
 godot --headless -s tools/play_headless.gd -- room_01_studio all  # poke the sim
+godot --path . -s tools/capture.gd -- shot 2.0            # screenshot the game for a PR
+godot --path . -s tools/capture.gd -- loop 95 --speed 10  # a whole loop, fast
 ```
 
 Pinned engine: Godot **4.7.2-stable**. Test framework: gdUnit4 **6.2.1**, vendored at `addons/gdUnit4/`.
