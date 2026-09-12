@@ -1,8 +1,12 @@
 extends GdUnitTestSuite
 
-## Guards the brand kit: the tokens match docs/brand/BRAND.md, every path the
-## autoload names actually exists, every font family keeps its own licence, and
-## the icon is wired everywhere a build can carry one.
+## Guards the brand kit as it ships. The inventory is asserted against
+## assets/brand/ — what goes in the build — rather than by re-comparing with
+## docs/, which only ever proved a copy that already happened.
+##
+## The token check still reads docs/brand/BRAND.md on purpose: it exists to catch
+## drift between the code and the brand document, and duplicating that document
+## into assets/ would just recreate the stale second copy we deleted.
 
 const BRAND_DOC := "res://docs/brand/BRAND.md"
 const PRESETS := "res://export_presets.cfg"
@@ -60,13 +64,56 @@ func test_each_font_family_keeps_its_own_licence() -> void:
 		assert_str(FileAccess.get_file_as_string(licence)).contains("SIL OPEN FONT LICENSE")
 
 
-func test_the_delivered_art_came_across_intact() -> void:
-	for pair in [["res://docs/brand/svg/outlined", ".svg"], ["res://docs/brand/png", ".png"],
-			["res://docs/brand/png/lockups", ".png"]]:
-		var into: String = "res://assets/brand/lockups" if str(pair[0]).ends_with("lockups") else "res://assets/brand"
-		for name in _names(str(pair[0]), str(pair[1])):
-			assert_bool(FileAccess.file_exists("%s/%s" % [into, name])) \
-				.override_failure_message("delivered file did not come across: %s" % name).is_true()
+## The shipped inventory, stated outright. If a file goes missing this fails
+## whether or not docs/ still has it.
+func test_the_shipped_brand_inventory_is_complete() -> void:
+	for size in [16, 32, 48, 64, 128, 256, 512, 1024]:
+		for stem in ["app-icon", "mark", "mark-mono"]:
+			var path := "res://assets/brand/%s-%d.png" % [stem, size]
+			assert_bool(FileAccess.file_exists(path)) \
+				.override_failure_message("missing %s" % path).is_true()
+	for generated in ["icon-adaptive-foreground-1024.png", "icon-adaptive-background-1024.png"]:
+		assert_bool(FileAccess.file_exists("res://assets/brand/" + generated)) \
+			.override_failure_message("missing generated layer %s" % generated).is_true()
+	assert_int(_names("res://assets/brand", ".png").size()).is_equal(26)
+	assert_int(_names("res://assets/brand", ".svg").size()).is_equal(24)
+	assert_int(_names("res://assets/brand/lockups", ".png").size()).is_equal(19)
+
+
+## Both lockup families and the mark, in outlined vector form — the ones that
+## render the same without Archivo and Inter installed.
+func test_the_outlined_vectors_cover_every_lockup_family() -> void:
+	var svgs := Array(_names("res://assets/brand", ".svg"))
+	for stem in ["lockup-inline-dark", "lockup-stacked-dark", "inline-dark",
+			"stacked-dark", "mark-dark", "mark-mono"]:
+		assert_array(svgs).override_failure_message("no outlined %s.svg" % stem) \
+			.contains(["%s.svg" % stem])
+
+
+## docs/ is documentation, not game content. Without this Godot imports every
+## font, png and svg in there and litters the repo with .import files.
+func test_docs_are_not_imported_as_game_content() -> void:
+	assert_bool(FileAccess.file_exists("res://docs/.gdignore")) \
+		.override_failure_message("docs/.gdignore is missing — Godot will import docs/ as assets").is_true()
+
+
+func test_no_import_files_are_left_under_docs() -> void:
+	var strays := _import_files("res://docs")
+	assert_int(strays.size()).override_failure_message(
+		"%d .import files under docs/ — first few: %s" % [strays.size(), strays.slice(0, 5)]).is_equal(0)
+
+
+func _import_files(dir_path: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return out
+	for f in dir.get_files():
+		if f.ends_with(".import"):
+			out.append("%s/%s" % [dir_path, f])
+	for d in dir.get_directories():
+		out.append_array(_import_files("%s/%s" % [dir_path, d]))
+	return out
 
 
 # --- icon wiring -------------------------------------------------------------

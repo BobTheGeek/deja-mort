@@ -1,0 +1,5 @@
+# docs/ is documentation, not game content.
+# Without this Godot imports every font, png and svg in here as a game asset and
+# writes a .import file beside each one. Nothing in docs/ is loaded through
+# ResourceLoader; the tests that read it use FileAccess and DirAccess, which are
+# unaffected. Export presets already exclude docs/ from builds.
