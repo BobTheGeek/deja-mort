@@ -176,9 +176,9 @@ func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
 	var mesh_name := str(obj.prop("mesh", ""))
 	if mesh_name.is_empty():
 		return null
-	var path := "res://assets/models/%s.glb" % mesh_name
-	if not ResourceLoader.exists(path):
-		push_warning("RoomRenderer: %s names a missing model %s" % [obj.id, path])
+	var path := model_path(mesh_name)
+	if path.is_empty():
+		push_warning("RoomRenderer: %s names a missing model %s" % [obj.id, mesh_name])
 		return null
 
 	var root := Node3D.new()
@@ -255,12 +255,14 @@ func _add_actor(actor: SimActor) -> Node3D:
 	_actor_root.add_child(root)
 
 	var mesh_name := str(visuals.get_value(key + ".mesh", ""))
-	var path := "res://assets/models/%s.glb" % mesh_name
-	if not mesh_name.is_empty() and ResourceLoader.exists(path):
+	var path := model_path(mesh_name)
+	if not path.is_empty():
 		var model: Node3D = (load(path) as PackedScene).instantiate()
 		root.add_child(model)
 		var bounds := _local_bounds(model)
 		if bounds.size.y > 0.0:
+			# Height only. A rigged figure stands in a T-pose until its idle clip
+			# starts, so its bind-pose width is arms-out and means nothing.
 			var scale_factor := height / bounds.size.y
 			model.scale = Vector3.ONE * scale_factor
 			model.position = Vector3(
@@ -447,7 +449,31 @@ func _sync_actors(world: SimWorld, delta: float) -> void:
 		node.rotation_degrees = Vector3(
 			0.0, node.rotation_degrees.y,
 			visuals.number("actor.down_roll_deg", 90.0) if down else 0.0)
+		_drive_animation(node, actor)
 		_fade_actor(node, key, hidden_alpha if actor.is_hidden() else 1.0)
+
+
+## Idle, walk, death. The rig has twenty-four clips; these are the three the sim
+## can already tell the difference between.
+func _drive_animation(node: Node3D, actor: SimActor) -> void:
+	var player := _animation_player(node)
+	if player == null:
+		return
+	var clip := str(visuals.get_value("actor.clips.idle", "Idle"))
+	if not actor.alive:
+		clip = str(visuals.get_value("actor.clips.death", "Death"))
+	elif not actor.path.is_empty():
+		clip = str(visuals.get_value("actor.clips.walk", "Walk"))
+	if not player.has_animation(clip) or player.current_animation == clip:
+		return
+	player.play(clip, visuals.number("actor.clips.blend_s", 0.15))
+
+
+func _animation_player(node: Node) -> AnimationPlayer:
+	for child in _descendants(node):
+		if child is AnimationPlayer:
+			return child
+	return null
 
 
 ## Figures keep their own materials at full opacity; hiding fades them.
@@ -469,6 +495,17 @@ func _actor_is_present(actor: SimActor) -> bool:
 		return true
 	var attacker := actor as SimAttacker
 	return attacker != null and attacker.inside and not attacker.left
+
+
+## Packs ship as .glb or .gltf. Returns the path that exists, or "".
+static func model_path(mesh_name: String) -> String:
+	if mesh_name.is_empty():
+		return ""
+	for extension in [".glb", ".gltf"]:
+		var path := "res://assets/models/%s%s" % [mesh_name, extension]
+		if ResourceLoader.exists(path):
+			return path
+	return ""
 
 
 func object_node(id: String) -> Node3D:
