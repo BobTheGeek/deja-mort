@@ -129,3 +129,32 @@ func test_the_wheel_clamps_inside_the_safe_area_too() -> void:
 	assert_float(box.end.y).override_failure_message(
 		"the wheel's caption runs under the home bar") \
 		.is_less_equal(v.number("ui.design_height") - 40.0 + 0.5)
+
+
+# --- how big the window opens ------------------------------------------------
+
+## The UI is drawn at 1920x1080 and the canvas stretches to the window, so a
+## 1152-wide window renders every number at 60% of itself. That is how a tally
+## of 3px scratches next to a 20px label reads as "the old plain text label with
+## nothing beside it", which is what Bob saw.
+func test_the_window_opens_as_big_as_the_screen_sensibly_allows() -> void:
+	var v := _visuals()
+	var base := Vector2(v.number("ui.design_width"), v.number("ui.design_height"))
+	# A big desktop: the design's own size, and no larger.
+	assert_vector(UiScale.window_size(Vector2i(3456, 2160), v)).is_equal(Vector2i(1920, 1080))
+	# A laptop: as much of it as the fraction allows, still 16:9.
+	var laptop := UiScale.window_size(Vector2i(1512, 982), v)
+	assert_bool(laptop.x <= int(1512.0 * v.number("ui.window_screen_fraction"))) \
+		.override_failure_message("the window is wider than the screen allows: %s" % laptop).is_true()
+	assert_float(float(laptop.x) / float(laptop.y)).override_failure_message(
+		"the window opened at a different shape from the canvas").is_equal_approx(
+			base.x / base.y, 0.02)
+	assert_int(laptop.x).override_failure_message(
+		"a window this small renders the UI at less than half size").is_greater(1100)
+
+
+func test_the_game_sizes_its_own_window() -> void:
+	var source := FileAccess.get_file_as_string("res://game/main.gd")
+	assert_str(source).override_failure_message(
+		"nothing sizes the window, so it opens at whatever project.godot last said") \
+		.contains("UiScale.window_size")

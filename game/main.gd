@@ -30,6 +30,7 @@ var _reset_at: float = -1.0
 var _banner_at: float = 0.0
 var _elapsed: float = 0.0
 var _target := ClickTarget.new()
+var _log := SessionLog.new()
 var _finished: bool = false
 
 
@@ -41,12 +42,47 @@ func _ready() -> void:
 		for e in content.errors:
 			push_error("content: %s" % e)
 		return
+	_start_log()
+	_size_window()
 	# Before anything is built: a phone needs the UI bigger than the design and
 	# out from under its own notch, and both are read from the device.
 	UiScale.apply(get_window(), visuals)
 	get_window().size_changed.connect(_on_window_resized)
 	_build_nodes()
 	_start_loop()
+
+
+## The UI is drawn at 1920x1080 and stretched to the window, so a small window
+## renders all of it small. Desktop only, and only the window it opens with —
+## resizing after that is the player's business.
+func _size_window() -> void:
+	if OS.has_feature("mobile"):
+		return
+	var window := get_window()
+	if window == null:
+		return
+	var screen := DisplayServer.screen_get_usable_rect(window.current_screen)
+	var wanted := UiScale.window_size(screen.size, visuals)
+	if wanted == window.size:
+		return
+	window.size = wanted
+	window.position = screen.position + (screen.size - wanted) / 2
+
+
+## A recording of the session, for reading a playtest rather than guessing at
+## one. Debug builds only.
+func _start_log() -> void:
+	if not SessionLog.wanted(visuals, OS.is_debug_build()):
+		return
+	var now := Time.get_datetime_dict_from_system()
+	var stamp := "%04d%02d%02d-%02d%02d%02d" % [now["year"], now["month"], now["day"],
+		now["hour"], now["minute"], now["second"]]
+	if _log.start(SessionLog.path_for(stamp)):
+		print("session log: %s" % ProjectSettings.globalize_path(_log.path()))
+
+
+func _exit_tree() -> void:
+	_log.close()
 
 
 ## A window that moves to another screen can change DPI under us.
@@ -142,6 +178,8 @@ func _start_loop() -> void:
 	# A fresh seed per loop: the room resets completely, only knowledge persists.
 	world = SimWorld.create(json.data, content, SimRng.new(loop_index))
 	world.events.subscribe(_on_sim_event)
+	_log.loop_started(loop_index)
+	_log.listen(world)
 	_audio.listen(world)
 	_tick_seconds = 1.0 / float(world.system("tick_hz"))
 	_accumulator = 0.0
@@ -182,6 +220,7 @@ func _process(delta: float) -> void:
 			if not world.ending.is_empty():
 				break
 
+	_log.advance(delta)
 	_wheel.advance(delta)
 	_notebook.advance(delta)
 	_win.advance(delta)
@@ -225,6 +264,7 @@ func _finish_loop(ending: String) -> void:
 	_finished = true
 	_wheel.close()
 	var report := SimOutcome.evaluate(world, loop_index)
+	_log.loop_ended(ending, int(report["stars"]), float(report["time_s"]))
 	_save.record_loop(room_id, world, report, loop_index)
 	_save.save()
 	if SimOutcome.won(ending):
@@ -302,12 +342,13 @@ func _click_world(screen_point: Vector2) -> void:
 	var cell := on_screen.origin() if on_screen != null else _camera.cell_under(screen_point)
 	if not world.grid.in_bounds(cell):
 		return
+	_log.click(screen_point, cell, picked)
 	var target: Variant = _target.choose(world, cell, picked)
 	if target != null:
 		var at := _target.position_on(world, cell)
 		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]))
 		return
-	world.walk_to(cell)
+	_log.walk(cell, world.walk_to(cell))
 
 
 ## A refusal keeps the wheel open and says so. Closing silently was
@@ -316,7 +357,9 @@ func _on_verb_chosen(verb: String, target: Variant, rule_id: String) -> void:
 	if not world.ending.is_empty():
 		_wheel.close()
 		return
-	if world.verb_on(verb, target, rule_id):
+	var accepted := world.verb_on(verb, target, rule_id)
+	_log.intent(verb, target, rule_id, accepted)
+	if accepted:
 		_wheel.close()
 		return
 	_wheel.report_refused(verb)
