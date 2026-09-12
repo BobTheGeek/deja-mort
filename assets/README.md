@@ -77,10 +77,15 @@ Colours live in one place: the `Brand` autoload at `game/theme/brand.gd`. Never 
 
 | Pack | Source | License | Used for | Location |
 |---|---|---|---|---|
-| Kenney Furniture Kit | kenney.nl | CC0 | household props | assets/models/kenney/ |
-| | | | | |
+| Kenney Furniture Kit 2.0 | [kenney.nl/assets/furniture-kit](https://kenney.nl/assets/furniture-kit) | **CC0 1.0** — `assets/models/kenney/LICENSE.txt` | household props | `assets/models/kenney/` |
 
-Nothing imported yet — the game is greybox until M4.
+140 `.glb` models, 2.1 MB. The whole kit is committed rather than the subset Room 1 uses, so later rooms do not have to re-download it and the licence covers one intact pack. The previews and texture PNGs from the download are **not** committed — only the models and the licence.
+
+Attribution is not required by CC0. Credited anyway: created and distributed by Kenney (www.kenney.nl).
+
+**Scale:** the kit is not authored at 1 unit = 1 m. `game/room_renderer.gd` measures each model's own bounds and scales it uniformly into the footprint the sim already knows about, so nothing is stretched and the pack's proportions stay honest. Origins are already at floor level, which matches the `docs/06` import convention.
+
+**Palette:** the kit is cheerful and `docs/06` wants desaturated. Rather than repaint 140 models and lose their flat shading, the mood is pulled globally by `post.saturation` in `content/visuals.json`. Keep the bones, change the mood.
 
 ## Audio
 

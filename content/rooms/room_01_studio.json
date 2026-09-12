@@ -111,7 +111,9 @@
         "braced_by": null
       },
       "passable_state": "open",
-      "inspect": "The only way in. A lock, a chain, and a landlord's idea of security."
+      "inspect": "The only way in. A lock, a chain, and a landlord's idea of security.",
+      "mesh": "kenney/doorwayFront",
+      "mesh_yaw": 90
     },
     {
       "id": "door_chain",
@@ -168,7 +170,9 @@
         "open": false,
         "broken": false
       },
-      "inspect": "Painted shut, four floors up."
+      "inspect": "Painted shut, four floors up.",
+      "mesh": "kenney/wallWindow",
+      "mesh_yaw": 180
     },
     {
       "id": "curtains",
@@ -218,7 +222,9 @@
         "lit": false
       },
       "reach": 8,
-      "inspect": "Four burners. The clicker still works."
+      "inspect": "Four burners. The clicker still works.",
+      "mesh": "kenney/kitchenStove",
+      "mesh_yaw": 180
     },
     {
       "id": "frying_pan",
@@ -261,7 +267,9 @@
         "cooking_oil"
       ],
       "reach": 8,
-      "inspect": "The drawer everything ends up in."
+      "inspect": "The drawer everything ends up in.",
+      "mesh": "kenney/kitchenCabinetDrawer",
+      "mesh_yaw": 180
     },
     {
       "id": "charger",
@@ -329,7 +337,9 @@
       ],
       "cord_range": 3,
       "reach": 8,
-      "inspect": "A cheap two-slot toaster. The cord is fraying."
+      "inspect": "A cheap two-slot toaster. The cord is fraying.",
+      "mesh": "kenney/toaster",
+      "mesh_yaw": 180
     },
     {
       "id": "bubble_token",
@@ -364,7 +374,9 @@
         "on": false
       },
       "reach": 8,
-      "inspect": "The tap drips even when it is off."
+      "inspect": "The tap drips even when it is off.",
+      "mesh": "kenney/kitchenSink",
+      "mesh_yaw": 180
     },
     {
       "id": "counter_knife",
@@ -385,7 +397,9 @@
         "kitchen_knife"
       ],
       "reach": 8,
-      "inspect": "Five slots. Four knives."
+      "inspect": "Five slots. Four knives.",
+      "mesh": "kenney/kitchenCabinet",
+      "mesh_yaw": 180
     },
     {
       "id": "kitchen_knife",
@@ -425,7 +439,9 @@
         "glass_jar"
       ],
       "reach": 8,
-      "inspect": "Mugs, a jar, and dust."
+      "inspect": "Mugs, a jar, and dust.",
+      "mesh": "kenney/kitchenCabinetUpper",
+      "mesh_yaw": 180
     },
     {
       "id": "glass_jar",
@@ -478,7 +494,9 @@
         "W",
         "E"
       ],
-      "inspect": "Humming. Heavy. Exactly as wide as the doorway."
+      "inspect": "Humming. Heavy. Exactly as wide as the doorway.",
+      "mesh": "kenney/kitchenFridge",
+      "mesh_yaw": 180
     },
     {
       "id": "soda_cans",
@@ -511,7 +529,8 @@
         ]
       ],
       "walk_over": true,
-      "inspect": "A rug that hides whatever is under it."
+      "inspect": "A rug that hides whatever is under it.",
+      "mesh": "kenney/rugRectangle"
     },
     {
       "id": "bookshelf",
@@ -549,7 +568,9 @@
           ]
         ]
       },
-      "inspect": "Overloaded and not fixed to the wall."
+      "inspect": "Overloaded and not fixed to the wall.",
+      "mesh": "kenney/bookcaseClosedWide",
+      "mesh_yaw": 90
     },
     {
       "id": "couch",
@@ -581,7 +602,8 @@
         ]
       ],
       "category": "behind_furniture",
-      "inspect": "Too heavy to move fast. Big enough to hide behind."
+      "inspect": "Too heavy to move fast. Big enough to hide behind.",
+      "mesh": "kenney/loungeSofaLong"
     },
     {
       "id": "coffee_table",
@@ -603,7 +625,8 @@
       "break_adds_tags": [
         "sharp"
       ],
-      "inspect": "Glass top. One good hit."
+      "inspect": "Glass top. One good hit.",
+      "mesh": "kenney/tableCoffee"
     },
     {
       "id": "tv",
@@ -626,7 +649,9 @@
         "broken": false
       },
       "lure_noise": 3,
-      "inspect": "Left on standby. The remote is gone."
+      "inspect": "Left on standby. The remote is gone.",
+      "mesh": "kenney/televisionModern",
+      "mesh_yaw": 0
     },
     {
       "id": "floor_lamp",
@@ -654,7 +679,8 @@
         5
       ],
       "cord_range": 3,
-      "inspect": "A tall lamp with a long cord."
+      "inspect": "A tall lamp with a long cord.",
+      "mesh": "kenney/lampRoundFloor"
     },
     {
       "id": "closet",
@@ -687,7 +713,9 @@
         ]
       ],
       "category": "closet",
-      "inspect": "The obvious place."
+      "inspect": "The obvious place.",
+      "mesh": "kenney/bookcaseClosedDoors",
+      "mesh_yaw": 0
     },
     {
       "id": "umbrella",
@@ -724,7 +752,8 @@
       "contains": [
         "towel"
       ],
-      "inspect": "Two weeks behind."
+      "inspect": "Two weeks behind.",
+      "mesh": "kenney/cardboardBoxOpen"
     },
     {
       "id": "towel",
@@ -767,7 +796,9 @@
         ]
       ],
       "category": "bed",
-      "inspect": "Low enough to get under. Barely."
+      "inspect": "Low enough to get under. Barely.",
+      "mesh": "kenney/bedDouble",
+      "mesh_yaw": 90
     },
     {
       "id": "nightstand",
@@ -793,7 +824,9 @@
         10,
         5
       ],
-      "inspect": "A drawer and a socket."
+      "inspect": "A drawer and a socket.",
+      "mesh": "kenney/sideTableDrawers",
+      "mesh_yaw": 90
     },
     {
       "id": "phone",
@@ -848,7 +881,9 @@
         "locked": false
       },
       "passable_state": "open",
-      "inspect": "Hollow. A lock that would embarrass a cupboard."
+      "inspect": "Hollow. A lock that would embarrass a cupboard.",
+      "mesh": "kenney/doorway",
+      "mesh_yaw": 90
     },
     {
       "id": "bathtub",
@@ -873,7 +908,9 @@
         ]
       ],
       "category": "bathroom",
-      "inspect": "Deep enough to lie in. He looks here last."
+      "inspect": "Deep enough to lie in. He looks here last.",
+      "mesh": "kenney/bathtub",
+      "mesh_yaw": 90
     },
     {
       "id": "med_cabinet",
@@ -899,7 +936,9 @@
         9,
         1
       ],
-      "inspect": "Mirror, painkillers, and worse ideas."
+      "inspect": "Mirror, painkillers, and worse ideas.",
+      "mesh": "kenney/bathroomCabinet",
+      "mesh_yaw": 180
     },
     {
       "id": "hairspray",
@@ -961,7 +1000,8 @@
       "state": {
         "on": false
       },
-      "inspect": "It flushes. That is all it does."
+      "inspect": "It flushes. That is all it does.",
+      "mesh": "kenney/toilet"
     }
   ],
   "systems": {

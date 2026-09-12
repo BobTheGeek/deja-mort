@@ -360,5 +360,10 @@
     "roughness": 1.0,
     "metallic": 0.0,
     "specular": 0.0
+  },
+  "post": {
+    "saturation": 0.42,
+    "contrast": 1.12,
+    "brightness": 1.0
   }
 }
