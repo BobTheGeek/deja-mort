@@ -185,8 +185,8 @@ func test_rule_toggle_lock() -> void:
 
 func test_rule_toggle_chain() -> void:
 	var w := F.world()
-	assert_bool(F.act(w, "toggle", "front_door", "toggle_chain")).is_true()
-	assert_bool(bool(w.objects.by_id("front_door").get_state("chained"))).is_true()
+	assert_bool(F.act(w, "toggle", "door_chain", "toggle_chain")).is_true()
+	assert_bool(bool(w.objects.by_id("door_chain").get_state("chained"))).is_true()
 
 
 func test_rule_toggle_on() -> void:

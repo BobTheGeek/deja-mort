@@ -45,7 +45,7 @@ func test_locking_and_chaining_the_door_costs_him_the_profile_seconds() -> void:
 
 	var barred := F.world()
 	F.act(barred, "toggle", "front_door", "toggle_lock")
-	F.act(barred, "toggle", "front_door", "toggle_chain")
+	F.act(barred, "toggle", "door_chain", "toggle_chain")
 	_at_arrival(barred)
 	var barred_entry := _seconds_until_inside(barred)
 

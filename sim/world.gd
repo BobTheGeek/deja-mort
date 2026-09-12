@@ -195,6 +195,20 @@ func inside_cell_of(entry: SimObject) -> Vector2i:
 	return candidates[0] if not candidates.is_empty() else SimEvent.NO_CELL
 
 
+## An entry plus everything guarding it. A lock is part of a door; a chain is its
+## own thing on the frame. Both cost him seconds, and neither needs the entry to
+## carry state that is not really about the entry.
+func barriers_for(entry: SimObject) -> Array[SimObject]:
+	var out: Array[SimObject] = []
+	if entry == null:
+		return out
+	out.append(entry)
+	for obj in objects.all():
+		if str(obj.prop("guards", "")) == entry.id:
+			out.append(obj)
+	return out
+
+
 func death_cause_for_weapon(weapon: String) -> String:
 	var map: Dictionary = system("attacker.weapon_death_cause", {})
 	return str(map.get(weapon, weapon))

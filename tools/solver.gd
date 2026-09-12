@@ -317,10 +317,11 @@ func _heuristic(world: SimWorld) -> float:
 	for layer in ["slippery", "shock", "burning", "trip", "wet"]:
 		score += float(world.hazards.count(layer))
 	for entry in world.objects.with_tag("entry"):
-		if bool(entry.get_state("locked", false)):
-			score += 4.0
-		if bool(entry.get_state("chained", false)):
-			score += 4.0
+		for barrier in world.barriers_for(entry):
+			if bool(barrier.get_state("locked", false)):
+				score += 4.0
+			if bool(barrier.get_state("chained", false)):
+				score += 4.0
 		if not str(entry.get_state("braced_by", "")).is_empty():
 			score += 10.0
 	if world.player.is_hidden():

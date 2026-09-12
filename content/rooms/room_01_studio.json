@@ -97,8 +97,7 @@
       "tags": [
         "entry",
         "openable",
-        "lockable",
-        "chainable"
+        "lockable"
       ],
       "footprint": [
         [
@@ -109,11 +108,29 @@
       "state": {
         "open": false,
         "locked": false,
-        "chained": false,
         "braced_by": null
       },
       "passable_state": "open",
       "inspect": "The only way in. A lock, a chain, and a landlord's idea of security."
+    },
+    {
+      "id": "door_chain",
+      "name": "Door chain",
+      "tags": [
+        "chainable"
+      ],
+      "footprint": [
+        [
+          0,
+          2
+        ]
+      ],
+      "state": {
+        "chained": false
+      },
+      "guards": "front_door",
+      "walk_over": true,
+      "inspect": "A chain on the frame. It would hold for a few seconds."
     },
     {
       "id": "light_switch",
@@ -1064,7 +1081,7 @@
           "intent": "verb_on",
           "args": [
             "toggle",
-            "front_door",
+            "door_chain",
             "toggle_chain"
           ]
         },
