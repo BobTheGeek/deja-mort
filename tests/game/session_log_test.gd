@@ -155,3 +155,52 @@ func test_the_game_records_a_session() -> void:
 	for call in ["SessionLog", "_log.click(", "_log.intent("]:
 		assert_str(source).override_failure_message(
 			"main.gd never calls %s" % call).contains(call)
+
+
+## The first real session flagged three "taps that hit nothing". All three were
+## taps on bare floor that walked the player there — which is the game working.
+## A tap only means something went wrong when it did not even move him.
+func test_a_tap_on_bare_floor_that_walks_is_not_a_failure() -> void:
+	var summary := SessionLog.summarise([
+		{"kind": "click", "loop": 1, "picked": "", "cell": [5, 4], "t": 1.0},
+		{"kind": "walk", "loop": 1, "cell": [5, 4], "accepted": true, "t": 1.0},
+	])
+	assert_int(int(summary["taps_on_nothing"])).override_failure_message(
+		"walking somewhere is what a tap on the floor is for").is_equal(0)
+	assert_int(int(summary["walks"])).is_equal(1)
+
+
+func test_a_tap_that_did_nothing_at_all_still_counts() -> void:
+	var summary := SessionLog.summarise([
+		{"kind": "click", "loop": 1, "picked": "", "cell": [5, 4], "t": 1.0},
+		{"kind": "walk", "loop": 1, "cell": [5, 4], "accepted": false, "t": 1.0},
+		{"kind": "click", "loop": 1, "picked": "", "cell": [0, 0], "t": 2.0},
+	])
+	assert_int(int(summary["taps_on_nothing"])).override_failure_message(
+		"a tap that picked nothing and moved nobody is the one worth knowing about") \
+		.is_equal(2)
+
+
+## Whether the hint system gets opened at all is worth knowing.
+func test_opening_a_panel_is_recorded() -> void:
+	var log := _log()
+	log.panel("notebook", true)
+	log.close()
+	var record: Dictionary = log.records()[0]
+	assert_str(str(record["panel"])).is_equal("notebook")
+	assert_bool(bool(record["open"])).is_true()
+
+
+func test_the_summary_counts_panel_opens() -> void:
+	var summary := SessionLog.summarise([
+		{"kind": "panel", "loop": 1, "panel": "notebook", "open": true},
+		{"kind": "panel", "loop": 1, "panel": "notebook", "open": false},
+		{"kind": "panel", "loop": 2, "panel": "notebook", "open": true},
+	])
+	assert_int(int(summary["notebook_opens"])).is_equal(2)
+
+
+func test_the_game_records_the_notebook_being_opened() -> void:
+	var source := FileAccess.get_file_as_string("res://game/main.gd")
+	assert_str(source).override_failure_message(
+		"nothing records whether the hint system is ever used").contains("_log.panel(")

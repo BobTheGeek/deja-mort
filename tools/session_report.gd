@@ -57,6 +57,7 @@ func _report(path: String) -> void:
 	print("  %d record(s), %d loop(s)" % [records.size(), summary["loops"]])
 	print("  taps %d (%d resolved to nothing) · walks %d" % [
 		summary["taps"], summary["taps_on_nothing"], summary["walks"]])
+	print("  notebook opened %d time(s)" % summary["notebook_opens"])
 	print("  actions %d — %d done, %d refused" % [
 		summary["intents"], summary["accepted"], summary["refused"]])
 	print("  endings: %s" % [", ".join(PackedStringArray(summary["endings"])) if not (summary["endings"] as Array).is_empty() else "none"])
@@ -81,7 +82,7 @@ func _report(path: String) -> void:
 		for entry in repeated:
 			print("    %s x%d" % [(entry as Dictionary)["what"], int((entry as Dictionary)["times"])])
 	if int(summary["taps_on_nothing"]) > 0:
-		print("  taps that hit nothing at all:")
+		print("  taps that picked nothing and moved nobody:")
 		for raw in records:
 			var record: Dictionary = raw
 			if str(record.get("kind", "")) == "click" and str(record.get("picked", "")).is_empty():
