@@ -1,229 +1,541 @@
 class_name GameHud
 extends Control
 
-## Timer, loop counter, what is in your hands, whether you are hidden, and what
-## the room just told you. Reads sim state; decides nothing.
+## The timer, how many times you have died, what is in your hands, whether you
+## are hidden, what the room just told you, and how the loop ended. Reads sim
+## state; decides nothing.
 ##
-## Sizes and positions are Claude Design's, in px at the 1920x1080 canvas the
-## project stretches to (docs/ui/SPEC.md). The tally strokes, the urgent bar and
-## the hidden chip are the HUD rebuild and are not here yet.
+## Drawn rather than assembled, like the wheel: the tally is scratched strokes
+## and the chips are flat fills with dashed borders, which is a handful of draw
+## calls and no textures. Every number is `hud` in visuals.json, which is Claude
+## Design's turn-1 table; docs/ui/SPEC.md is the drawing.
+
+signal notebook_pressed()
 
 const BRAND := preload("res://game/theme/brand.gd")
 
+## Read by the HUD, so a test fails the build when the table loses one rather
+## than a fallback quietly undoing half the design.
+const REQUIRED_KEYS: PackedStringArray = [
+	"margin_x", "margin_top", "margin_bottom", "timer_top", "timer_size", "timer_color",
+	"timer_letter_spacing_em", "urgent_below_s", "urgent_color", "urgent_bar_width_max",
+	"urgent_bar_height", "urgent_bar_gap", "urgent_bar_color", "tally_stroke_width",
+	"tally_stroke_height", "tally_gap", "tally_group_gap", "tally_rotation_jitter_deg",
+	"tally_alpha", "loop_label_size", "loop_label_alpha", "loop_label_gap",
+	"holding_label_size", "holding_label_tracking_em", "holding_label_alpha",
+	"holding_value_size", "hidden_gap_above", "hidden_padding", "hidden_border_width",
+	"hidden_border_alpha", "hidden_fill", "hidden_fill_alpha", "hidden_radius",
+	"hidden_icon_size", "hidden_text_size", "hidden_breathe_alpha_min",
+	"hidden_breathe_period_s", "inspect_size", "inspect_line_height", "inspect_max_width",
+	"inspect_padding", "inspect_radius", "inspect_fill", "inspect_fill_alpha",
+	"inspect_max_lines", "inspect_hold_s", "inspect_fade_s", "inspect_border_width",
+	"inspect_border_color", "inspect_border_alpha", "inspect_name_color", "banner_size",
+	"banner_color", "banner_tracking_em", "banner_room_dim_alpha", "notebook_button_size",
+	"notebook_button_right", "notebook_button_bottom", "notebook_button_fill",
+	"notebook_button_fill_alpha", "notebook_button_border", "notebook_button_border_alpha",
+	"notebook_button_border_width", "notebook_button_radius", "notebook_button_icon_size",
+	"notebook_button_hover_fill", "notebook_button_hover_icon", "notebook_button_hint_size",
+	"notebook_button_hint_tracking_em", "notebook_button_hint_alpha", "paused_timer_alpha",
+	"paused_label_size", "paused_label_tracking_em", "paused_label_alpha", "icon_path",
+	"hide_icon",
+]
+
+## Past this the strokes stop being countable and the numeral is the truth.
+const TALLY_CAP := 25
+
 var visuals: GameVisuals = null
 
-var _timer: Label = null
-var _lines: VBoxContainer = null
-var _loop: Label = null
-var _held: Label = null
-var _hidden: Label = null
-var _banner: Label = null
-var _inspect: Panel = null
-var _inspect_text: RichTextLabel = null
+var _font: Font = null
+var _font_bold: Font = null
+var _notebook_icon: Texture2D = null
+var _hide_icon: Texture2D = null
+
+var _remaining: float = 0.0
+var _deaths: int = 0
+var _holding: String = ""
+var _hidden_in: String = ""
+var _paused: bool = false
+var _ending: String = ""
+var _banner: String = ""
+var _inspect_name: String = ""
+var _inspect_body: String = ""
 var _inspect_left: float = 0.0
+var _inspect_alpha: float = 1.0
+var _elapsed: float = 0.0
+var _notebook_hover: bool = false
 
 
 func setup(table: GameVisuals) -> void:
 	visuals = table
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_font = _load_font("FONT_UI")
+	_font_bold = _load_font("FONT_UI_BOLD")
+	_notebook_icon = load(str(visuals.get_value("hud.icon_path", "")) % "notebook") as Texture2D
+	_hide_icon = load(str(visuals.get_value("hud.hide_icon", ""))) as Texture2D
 	_fit_viewport()
-
-	var big := int(visuals.number("hud.timer_size", 84))
-	var small := int(visuals.number("hud.loop_label_size", 20))
-
-	# The timer is the loudest thing on screen and it owns the top centre.
-	_timer = _make_label(big, HORIZONTAL_ALIGNMENT_CENTER, true)
-	_timer.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_timer.offset_top = visuals.number("hud.timer_top", 36.0) + visuals.inset("top")
-	_timer.offset_bottom = _timer.offset_top + float(big) * 1.3
-	add_child(_timer)
-
-	_lines = VBoxContainer.new()
-	_lines.position = Vector2(
-		visuals.number("hud.margin_x", 48.0) + visuals.inset("left"),
-		visuals.number("hud.margin_top", 44.0) + visuals.inset("top"))
-	_lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_lines)
-
-	_loop = _make_label(small)
-	_loop.modulate.a = visuals.number("hud.loop_label_alpha", 0.75)
-	_held = _make_label(int(visuals.number("hud.holding_value_size", 22)))
-	_hidden = _make_label(int(visuals.number("hud.hidden_text_size", 18)))
-	for label in [_loop, _held, _hidden]:
-		_lines.add_child(label)
-
-	_banner = _make_label(int(visuals.number("hud.banner_size", 128)), HORIZONTAL_ALIGNMENT_CENTER, true)
-	_banner.set_anchors_preset(Control.PRESET_CENTER)
-	_banner.offset_left = -700.0
-	_banner.offset_right = 700.0
-	_banner.offset_top = -visuals.number("hud.banner_size", 128.0)
-	_banner.offset_bottom = visuals.number("hud.banner_size", 128.0)
-	_banner.visible = false
-	add_child(_banner)
-
-	_build_inspect()
-	_fit_viewport()
-
-
-## Inspect is the one verb whose whole product is words, and white text straight
-## onto a lit wall is the contrast case the brief calls out. So it gets a panel.
-func _build_inspect() -> void:
-	# A Panel with hand-placed children rather than a PanelContainer: the HUD is
-	# built off the scene tree in tests, where no layout pass ever runs and a
-	# container's idea of its own size is whatever it was last told.
-	_inspect = Panel.new()
-	_inspect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_inspect.add_theme_stylebox_override("panel", _inspect_style())
-	_inspect.visible = false
-	add_child(_inspect)
-
-	_inspect_text = RichTextLabel.new()
-	_inspect_text.bbcode_enabled = true
-	_inspect_text.fit_content = false
-	_inspect_text.scroll_active = false
-	_inspect_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_inspect_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_inspect_text.add_theme_font_size_override("normal_font_size",
-		int(visuals.number("hud.inspect_size", 26)))
-	_inspect_text.add_theme_font_size_override("bold_font_size",
-		int(visuals.number("hud.inspect_size", 26)))
-	_inspect_text.add_theme_font_override("normal_font", _font("FONT_UI"))
-	_inspect_text.add_theme_font_override("bold_font", _font("FONT_UI_BOLD"))
-	_inspect_text.add_theme_color_override("default_color", visuals.colour("hud.timer_color"))
-	_inspect.add_child(_inspect_text)
-	_place_inspect()
-
-
-## Measured rather than laid out, so one line of text gets a one-line panel.
-func _inspect_metrics() -> Dictionary:
-	var padding: Array = visuals.get_value("hud.inspect_padding", [18, 26])
-	var size := visuals.number("hud.inspect_size", 26.0)
-	var width := visuals.number("hud.inspect_max_width", 980.0)
-	var inner := width - float(padding[1]) * 2.0
-	var font := _font("FONT_UI")
-	var text := _inspect_text.get_parsed_text() if _inspect_text != null else ""
-	var run := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(size)).x \
-		if font != null else 0.0
-	var lines := clampi(int(ceil(run / maxf(inner, 1.0))), 1, 3)
-	var line_height := size * visuals.number("hud.inspect_line_height", 1.4)
-	return {
-		"padding": Vector2(float(padding[1]), float(padding[0])),
-		"size": Vector2(width, line_height * float(lines) + float(padding[0]) * 2.0),
-		"inner": Vector2(inner, line_height * float(lines)),
-	}
-
-
-func _inspect_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = visuals.colour_with_alpha("hud.inspect_fill", "hud.inspect_fill_alpha")
-	style.border_color = visuals.colour_with_alpha("hud.inspect_border_color", "hud.inspect_border_alpha")
-	var border := int(visuals.number("hud.inspect_border_width", 1.5))
-	style.set_border_width_all(border)
-	var radius := int(visuals.number("hud.inspect_radius", 4))
-	style.set_corner_radius_all(radius)
-	return style
-
-
-func _place_inspect() -> void:
-	if _inspect == null:
-		return
-	var metrics := _inspect_metrics()
-	var box: Vector2 = size if size.x > 0.0 else Vector2(
-		visuals.number("ui.design_width", 1920.0), visuals.number("ui.design_height", 1080.0))
-	_inspect.size = metrics["size"]
-	_inspect.position = Vector2((box.x - _inspect.size.x) * 0.5,
-		box.y - visuals.number("hud.margin_bottom", 56.0) - visuals.inset("bottom") - _inspect.size.y)
-	_inspect_text.position = metrics["padding"]
-	_inspect_text.size = metrics["inner"]
-
-
-## Where the left-hand column starts, notch included.
-func lines_position() -> Vector2:
-	return _lines.position if _lines != null else Vector2.ZERO
-
-
-func inspect_rect() -> Rect2:
-	return Rect2(_inspect.position, _inspect.size) if _inspect != null else Rect2()
 
 
 ## Built off the scene tree in tests, where there is no viewport to measure.
 func _fit_viewport() -> void:
 	var view := get_viewport()
 	if view == null:
-		size = Vector2(visuals.number("ui.design_width", 1920.0), visuals.number("ui.design_height", 1080.0))
+		size = frame()
 		return
 	size = view.get_visible_rect().size
-	_place_inspect()
 	if not view.size_changed.is_connected(_fit_viewport):
 		view.size_changed.connect(_fit_viewport)
+	queue_redraw()
 
 
-func _font(constant: String) -> Font:
-	var script: Script = BRAND
-	var path: Variant = script.get_script_constant_map().get(constant, null)
-	return load(str(path)) as Font if path != null else null
-
-
-func _make_label(font_size: int, align: int = HORIZONTAL_ALIGNMENT_LEFT, bold := false) -> Label:
-	var label := Label.new()
-	label.add_theme_font_size_override("font_size", font_size)
-	var font := _font("FONT_UI_BOLD" if bold else "FONT_UI")
-	if font != null:
-		label.add_theme_font_override("font", font)
-	label.horizontal_alignment = align
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
+func frame() -> Vector2:
+	var view := get_viewport()
+	if view != null:
+		return view.get_visible_rect().size
+	return Vector2(visuals.number("ui.design_width", 1920.0), visuals.number("ui.design_height", 1080.0))
 
 
 func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
-	var remaining := world.timer_remaining_s()
-	_timer.text = "%0.1f" % remaining
-	var urgent := remaining <= visuals.number("hud.urgent_below_s", 10.0)
-	_timer.add_theme_color_override("font_color",
-		visuals.colour("hud.urgent_color") if urgent else visuals.colour("hud.timer_color"))
-
-	_loop.text = "Death %d" % maxi(loop_index - 1, 0)
-	_held.text = "Holding: %s" % (world.player.holding if not world.player.holding.is_empty() else "—")
-	_hidden.text = "Hidden in: %s" % world.player.hidden_in if world.player.is_hidden() else ""
-
-	if world.ending.is_empty() or panel_open:
-		_banner.visible = false
-		return
-	_banner.visible = true
-	_banner.text = world.ending.to_upper()
-	_banner.add_theme_color_override("font_color", visuals.colour("hud.banner_color"))
+	_remaining = world.timer_remaining_s()
+	_deaths = maxi(loop_index - 1, 0)
+	_paused = panel_open
+	_ending = world.ending
+	var held := world.objects.by_id(world.player.holding) if not world.player.holding.is_empty() else null
+	_holding = held.name if held != null else ""
+	var spot := world.objects.by_id(world.player.hidden_in) if world.player.is_hidden() else null
+	_hidden_in = spot.name if spot != null else ""
+	if not _ending.is_empty() and not panel_open:
+		_banner = _ending.to_upper()
+	queue_redraw()
 
 
-## What you just looked at, for as long as the table says. The name is there
-## because the wheel can be aimed at any of five things stacked on a cell.
+## Real seconds, for the things that move while the sim is stopped.
+func advance(delta: float) -> void:
+	_elapsed += delta
+	if _inspect_left > 0.0:
+		_inspect_left -= delta
+		_inspect_alpha = clampf(_inspect_left / maxf(visuals.number("hud.inspect_fade_s", 0.8), 0.001),
+			0.0, 1.0)
+		if _inspect_left <= 0.0:
+			_inspect_name = ""
+			_inspect_body = ""
+	queue_redraw()
+
+
+# --- the timer ---------------------------------------------------------------
+
+func timer_colour() -> Color:
+	return visuals.colour("hud.urgent_color") if _is_urgent() else visuals.colour("hud.timer_color")
+
+
+func timer_alpha() -> float:
+	return visuals.number("hud.paused_timer_alpha", 0.45) if _paused else 1.0
+
+
+func paused_look() -> bool:
+	return _paused
+
+
+func _is_urgent() -> bool:
+	return _remaining <= visuals.number("hud.urgent_below_s", 10.0)
+
+
+func _timer_rect() -> Rect2:
+	var height := visuals.number("hud.timer_size", 84.0)
+	var top := visuals.number("hud.timer_top", 36.0) + visuals.inset("top")
+	return Rect2(Vector2(0.0, top), Vector2(frame().x, height * 1.2))
+
+
+## Drains over the last ten seconds. The timer is the antagonist; this is it
+## breathing down your neck.
+func urgent_bar_rect() -> Rect2:
+	if not _is_urgent() or _paused:
+		return Rect2()
+	var span := visuals.number("hud.urgent_below_s", 10.0)
+	var width := visuals.number("hud.urgent_bar_width_max", 200.0) \
+		* clampf(_remaining / maxf(span, 0.001), 0.0, 1.0)
+	var height := visuals.number("hud.urgent_bar_height", 3.0)
+	var top := _timer_rect().position.y + visuals.number("hud.timer_size", 84.0) \
+		+ visuals.number("hud.urgent_bar_gap", 6.0)
+	return Rect2(Vector2(frame().x * 0.5 - width * 0.5, top), Vector2(width, height))
+
+
+# --- the tally ---------------------------------------------------------------
+
+## Where the left-hand column starts, notch included.
+func lines_position() -> Vector2:
+	return Vector2(visuals.number("hud.margin_x", 48.0) + visuals.inset("left"),
+		visuals.number("hud.margin_top", 44.0) + visuals.inset("top"))
+
+
+## One scratch per death, in groups of five with the fifth struck across the
+## other four. "Death 3" is a score; three scratches is a fact about you.
+func tally_strokes() -> Array:
+	if _paused or _deaths <= 0:
+		return []
+	var drawn := _deaths if _deaths <= TALLY_CAP else 5
+	var width := visuals.number("hud.tally_stroke_width", 3.0)
+	var height := visuals.number("hud.tally_stroke_height", 26.0)
+	var gap := visuals.number("hud.tally_gap", 6.0)
+	var group_gap := visuals.number("hud.tally_group_gap", 14.0)
+	var jitter := visuals.number("hud.tally_rotation_jitter_deg", 2.0)
+	var origin := lines_position()
+	var out: Array = []
+	for i in drawn:
+		var group := i / 5
+		var within := i % 5
+		var left := origin.x + float(group) * ((width + gap) * 4.0 + group_gap)
+		if within == 4:
+			# The fifth lies across the four it closes.
+			out.append({
+				"from": Vector2(left - gap * 0.5, origin.y + height * 0.9),
+				"to": Vector2(left + (width + gap) * 3.5, origin.y + height * 0.1),
+				"diagonal": true,
+			})
+			continue
+		var x := left + float(within) * (width + gap)
+		# Deterministic wobble: a hand, not a printer, and the same hand twice.
+		var lean := sin(float(i) * 2.399) * jitter
+		var offset := tan(deg_to_rad(lean)) * height * 0.5
+		out.append({
+			"from": Vector2(x - offset, origin.y),
+			"to": Vector2(x + offset, origin.y + height),
+			"diagonal": false,
+		})
+	return out
+
+
+func loop_label() -> String:
+	return "" if _paused else "Death %d" % _deaths
+
+
+func _tally_width() -> float:
+	var strokes := tally_strokes()
+	if strokes.is_empty():
+		return 0.0
+	var right := 0.0
+	for stroke in strokes:
+		right = maxf(right, maxf((stroke["from"] as Vector2).x, (stroke["to"] as Vector2).x))
+	return right - lines_position().x
+
+
+# --- hands and hiding --------------------------------------------------------
+
+func holding_value() -> String:
+	return "" if _paused else _holding
+
+
+func holding_rect() -> Rect2:
+	var label := visuals.number("hud.holding_label_size", 13.0)
+	var value := visuals.number("hud.holding_value_size", 22.0)
+	var width := 320.0
+	var right := frame().x - visuals.number("hud.margin_x", 48.0) - visuals.inset("right")
+	var top := visuals.number("hud.margin_top", 44.0) + visuals.inset("top")
+	return Rect2(Vector2(right - width, top), Vector2(width, label * 1.9 + value * 1.4))
+
+
+func hidden_visible() -> bool:
+	return not _paused and not _hidden_in.is_empty()
+
+
+func hidden_text() -> String:
+	return "Hidden in %s" % _hidden_in if hidden_visible() else ""
+
+
+## A fragile state, so it breathes rather than sitting there.
+func hidden_alpha() -> float:
+	var low := visuals.number("hud.hidden_breathe_alpha_min", 0.6)
+	var period := maxf(visuals.number("hud.hidden_breathe_period_s", 2.4), 0.001)
+	return low + (1.0 - low) * (cos(_elapsed / period * TAU) * 0.5 + 0.5)
+
+
+func hidden_rect() -> Rect2:
+	var padding: Array = visuals.get_value("hud.hidden_padding", [8, 14])
+	var text_size := visuals.number("hud.hidden_text_size", 18.0)
+	var icon := visuals.number("hud.hidden_icon_size", 22.0)
+	var run := _font.get_string_size(hidden_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, int(text_size)).x \
+		if _font != null else 160.0
+	var width := run + icon + float(padding[1]) * 2.0 + 10.0
+	var height := maxf(text_size, icon) + float(padding[0]) * 2.0
+	var holding := holding_rect()
+	return Rect2(Vector2(holding.end.x - width,
+		holding.end.y + visuals.number("hud.hidden_gap_above", 14.0)), Vector2(width, height))
+
+
+# --- the way into the notebook -----------------------------------------------
+
+## Tab opens the notebook on a desktop. A phone has no Tab key.
+func notebook_button_rect() -> Rect2:
+	var box := visuals.number("hud.notebook_button_size", 56.0)
+	return Rect2(Vector2(
+		frame().x - visuals.number("hud.notebook_button_right", 48.0) - visuals.inset("right") - box,
+		frame().y - visuals.number("hud.notebook_button_bottom", 56.0) - visuals.inset("bottom") - box),
+		Vector2(box, box))
+
+
+func press_at(point: Vector2) -> bool:
+	if not notebook_button_rect().has_point(point):
+		return false
+	notebook_pressed.emit()
+	return true
+
+
+func hover_at(point: Vector2) -> void:
+	var was := _notebook_hover
+	_notebook_hover = notebook_button_rect().has_point(point)
+	if was != _notebook_hover:
+		queue_redraw()
+
+
+# --- what the room just said -------------------------------------------------
+
 func show_inspect(object_name: String, text: String) -> void:
-	var name_colour := visuals.colour("hud.inspect_name_color")
-	_inspect_text.text = "[b][color=#%s]%s[/color][/b]  %s" % [
-		name_colour.to_html(false), object_name, text] if not object_name.is_empty() else text
-	_inspect.visible = true
-	_inspect.modulate.a = 1.0
+	_inspect_name = object_name
+	_inspect_body = text
 	_inspect_left = visuals.number("hud.inspect_hold_s", 5.0)
-	_place_inspect()
+	_inspect_alpha = 1.0
+	queue_redraw()
 
 
 func inspect_text() -> String:
-	return _inspect_text.get_parsed_text() if _inspect.visible else ""
+	if _inspect_body.is_empty():
+		return ""
+	return "%s  %s" % [_inspect_name, _inspect_body] if not _inspect_name.is_empty() else _inspect_body
 
 
-## Fades on real seconds, not sim ticks: the sim is stopped while a panel is open
-## and the line should still go away.
-func advance(delta: float) -> void:
-	if _inspect_left <= 0.0:
-		return
-	_inspect_left -= delta
-	var fade := visuals.number("hud.inspect_fade_s", 0.8)
-	_inspect.modulate.a = clampf(_inspect_left / maxf(fade, 0.001), 0.0, 1.0)
-	if _inspect_left <= 0.0:
-		_inspect.visible = false
-		_inspect_text.text = ""
-		_inspect.modulate.a = 1.0
+func inspect_rect() -> Rect2:
+	if _inspect_body.is_empty():
+		return Rect2()
+	var padding: Array = visuals.get_value("hud.inspect_padding", [18, 26])
+	var width := visuals.number("hud.inspect_max_width", 980.0)
+	var text_size := visuals.number("hud.inspect_size", 26.0)
+	var height := text_size * visuals.number("hud.inspect_line_height", 1.4) \
+		* float(_inspect_lines().size()) + float(padding[0]) * 2.0
+	var box := frame()
+	return Rect2(Vector2((box.x - width) * 0.5,
+		box.y - visuals.number("hud.margin_bottom", 56.0) - visuals.inset("bottom") - height),
+		Vector2(width, height))
+
+
+## Wrapped by hand: the panel is measured before it is drawn, and a container
+## only knows its own size after a layout pass, which never runs in a test.
+func _inspect_lines() -> PackedStringArray:
+	var padding: Array = visuals.get_value("hud.inspect_padding", [18, 26])
+	var inner := visuals.number("hud.inspect_max_width", 980.0) - float(padding[1]) * 2.0
+	var text_size := int(visuals.number("hud.inspect_size", 26.0))
+	var cap := int(visuals.number("hud.inspect_max_lines", 2))
+	var lines := PackedStringArray()
+	var line := ""
+	for word in inspect_text().split(" "):
+		var candidate := str(word) if line.is_empty() else line + " " + str(word)
+		var too_long := _font != null and not line.is_empty() \
+			and _font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x > inner
+		if too_long:
+			lines.append(line)
+			line = str(word)
+			if lines.size() >= cap:
+				line = ""
+				break
+		else:
+			line = candidate
+	if lines.size() < cap and not line.is_empty():
+		lines.append(line)
+	return lines
 
 
 func flash(text: String) -> void:
-	_banner.text = text
-	_banner.visible = true
+	_banner = text
+	queue_redraw()
+
+
+# --- drawing -----------------------------------------------------------------
+
+func _draw() -> void:
+	if visuals == null or _font == null:
+		return
+	_draw_timer()
+	if _paused:
+		_draw_tracked(_font, "PAUSED", Vector2(frame().x * 0.5, _timer_rect().end.y + 18.0),
+			int(visuals.number("hud.paused_label_size", 13.0)),
+			visuals.number("hud.paused_label_tracking_em", 0.24),
+			_alpha(visuals.colour("hud.timer_color"), visuals.number("hud.paused_label_alpha", 0.55)),
+			true)
+		return
+	_draw_tally()
+	_draw_holding()
+	if hidden_visible():
+		_draw_hidden()
+	_draw_notebook_button()
+	if not _inspect_body.is_empty():
+		_draw_inspect()
+	if not _banner.is_empty():
+		_draw_banner()
+
+
+func _draw_timer() -> void:
+	var text_size := int(visuals.number("hud.timer_size", 84.0))
+	_draw_tracked(_font_bold, "%0.1f" % _remaining,
+		Vector2(frame().x * 0.5, _timer_rect().position.y + float(text_size)), text_size,
+		visuals.number("hud.timer_letter_spacing_em", -0.02),
+		_alpha(timer_colour(), timer_alpha()), true)
+	var bar := urgent_bar_rect()
+	if bar.size.x > 0.0:
+		draw_rect(bar, visuals.colour("hud.urgent_bar_color"), true)
+
+
+func _draw_tally() -> void:
+	var colour := _alpha(visuals.colour("hud.timer_color"), visuals.number("hud.tally_alpha", 0.85))
+	var width := visuals.number("hud.tally_stroke_width", 3.0)
+	for stroke in tally_strokes():
+		draw_line(stroke["from"], stroke["to"], colour,
+			width * (0.8 if bool(stroke["diagonal"]) else 1.0), true)
+	var label := loop_label()
+	if label.is_empty():
+		return
+	var origin := lines_position()
+	var left := origin.x
+	if _deaths > 0:
+		left += _tally_width() + visuals.number("hud.loop_label_gap", 14.0)
+	draw_string(_font, Vector2(left, origin.y + visuals.number("hud.tally_stroke_height", 26.0) * 0.85),
+		label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(visuals.number("hud.loop_label_size", 20.0)),
+		_alpha(visuals.colour("hud.timer_color"), visuals.number("hud.loop_label_alpha", 0.75)))
+
+
+func _draw_holding() -> void:
+	var box := holding_rect()
+	var label_size := int(visuals.number("hud.holding_label_size", 13.0))
+	_draw_tracked(_font, "HOLDING", Vector2(box.end.x, box.position.y + float(label_size)),
+		label_size, visuals.number("hud.holding_label_tracking_em", 0.14),
+		_alpha(visuals.colour("hud.timer_color"), visuals.number("hud.holding_label_alpha", 0.55)),
+		false, true)
+	var value := holding_value()
+	if value.is_empty():
+		value = "—"
+	var value_size := int(visuals.number("hud.holding_value_size", 22.0))
+	var run := _font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, value_size).x
+	draw_string(_font_bold,
+		Vector2(box.end.x - run, box.position.y + float(label_size) * 1.9 + float(value_size)),
+		value, HORIZONTAL_ALIGNMENT_LEFT, -1, value_size, visuals.colour("hud.timer_color"))
+
+
+func _draw_hidden() -> void:
+	var box := hidden_rect()
+	var alpha := hidden_alpha()
+	draw_style_box(_chip_style(alpha), box)
+	var padding: Array = visuals.get_value("hud.hidden_padding", [8, 14])
+	var icon := visuals.number("hud.hidden_icon_size", 22.0)
+	var colour := _alpha(visuals.colour("hud.timer_color"), alpha)
+	if _hide_icon != null:
+		draw_texture_rect(_hide_icon,
+			Rect2(box.position + Vector2(float(padding[1]), (box.size.y - icon) * 0.5),
+				Vector2(icon, icon)), false, colour)
+	var text_size := int(visuals.number("hud.hidden_text_size", 18.0))
+	draw_string(_font, box.position + Vector2(float(padding[1]) + icon + 10.0,
+		box.size.y * 0.5 + float(text_size) * 0.36), hidden_text(),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, colour)
+
+
+func _chip_style(alpha: float) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = _alpha(visuals.colour("hud.hidden_fill"),
+		visuals.number("hud.hidden_fill_alpha", 0.6) * alpha)
+	style.border_color = _alpha(visuals.colour("hud.timer_color"),
+		visuals.number("hud.hidden_border_alpha", 0.5) * alpha)
+	style.set_border_width_all(int(visuals.number("hud.hidden_border_width", 1.5)))
+	style.set_corner_radius_all(int(visuals.number("hud.hidden_radius", 4)))
+	return style
+
+
+func _draw_notebook_button() -> void:
+	var box := notebook_button_rect()
+	var style := StyleBoxFlat.new()
+	style.bg_color = _alpha(visuals.colour("hud.notebook_button_hover_fill" if _notebook_hover
+		else "hud.notebook_button_fill"),
+		1.0 if _notebook_hover else visuals.number("hud.notebook_button_fill_alpha", 0.78))
+	style.border_color = _alpha(visuals.colour("hud.notebook_button_border"),
+		visuals.number("hud.notebook_button_border_alpha", 0.35))
+	style.set_border_width_all(int(visuals.number("hud.notebook_button_border_width", 1.5)))
+	style.set_corner_radius_all(int(visuals.number("hud.notebook_button_radius", 4)))
+	draw_style_box(style, box)
+	if _notebook_icon != null:
+		var icon := visuals.number("hud.notebook_button_icon_size", 28.0)
+		draw_texture_rect(_notebook_icon,
+			Rect2(box.get_center() - Vector2(icon, icon) * 0.5, Vector2(icon, icon)), false,
+			visuals.colour("hud.notebook_button_hover_icon" if _notebook_hover
+				else "hud.notebook_button_border"))
+	if OS.has_feature("mobile"):
+		return
+	_draw_tracked(_font, "TAB", Vector2(box.get_center().x, box.end.y + 18.0),
+		int(visuals.number("hud.notebook_button_hint_size", 12.0)),
+		visuals.number("hud.notebook_button_hint_tracking_em", 0.16),
+		_alpha(visuals.colour("hud.timer_color"), visuals.number("hud.notebook_button_hint_alpha", 0.5)),
+		true)
+
+
+func _draw_inspect() -> void:
+	var box := inspect_rect()
+	var style := StyleBoxFlat.new()
+	style.bg_color = _alpha(visuals.colour("hud.inspect_fill"),
+		visuals.number("hud.inspect_fill_alpha", 0.92) * _inspect_alpha)
+	style.border_color = _alpha(visuals.colour("hud.inspect_border_color"),
+		visuals.number("hud.inspect_border_alpha", 0.4) * _inspect_alpha)
+	style.set_border_width_all(int(visuals.number("hud.inspect_border_width", 1.5)))
+	style.set_corner_radius_all(int(visuals.number("hud.inspect_radius", 4)))
+	draw_style_box(style, box)
+
+	var padding: Array = visuals.get_value("hud.inspect_padding", [18, 26])
+	var text_size := int(visuals.number("hud.inspect_size", 26.0))
+	var line_height := float(text_size) * visuals.number("hud.inspect_line_height", 1.4)
+	var y := box.position.y + float(padding[0]) + float(text_size)
+	var name_run := _font_bold.get_string_size(_inspect_name, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x
+	var first := true
+	for line in _inspect_lines():
+		var x := box.position.x + float(padding[1])
+		var text := str(line)
+		if first and not _inspect_name.is_empty() and text.begins_with(_inspect_name):
+			draw_string(_font_bold, Vector2(x, y), _inspect_name, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				text_size, _alpha(visuals.colour("hud.inspect_name_color"), _inspect_alpha))
+			x += name_run
+			text = text.substr(_inspect_name.length())
+		draw_string(_font, Vector2(x, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size,
+			_alpha(visuals.colour("hud.timer_color"), _inspect_alpha))
+		y += line_height
+		first = false
+
+
+func _draw_banner() -> void:
+	draw_rect(Rect2(Vector2.ZERO, frame()), _alpha(visuals.colour("hud.inspect_fill"),
+		visuals.number("hud.banner_room_dim_alpha", 0.45)), true)
+	var text_size := int(visuals.number("hud.banner_size", 128.0))
+	_draw_tracked(_font_bold, _banner, frame() * 0.5 + Vector2(0.0, float(text_size) * 0.36),
+		text_size, visuals.number("hud.banner_tracking_em", 0.28),
+		visuals.colour("hud.banner_color"), true)
+
+
+## Letter spacing, which draw_string does not do. Tracked capitals are most of
+## how this HUD reads, so it is worth the loop.
+func _draw_tracked(font: Font, text: String, anchor: Vector2, text_size: int, tracking_em: float,
+		colour: Color, centred := false, right := false) -> void:
+	if font == null or text.is_empty():
+		return
+	var extra := tracking_em * float(text_size)
+	var total := -extra
+	for i in text.length():
+		total += font.get_string_size(text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x + extra
+	var x := anchor.x
+	if centred:
+		x -= total * 0.5
+	elif right:
+		x -= total
+	for i in text.length():
+		draw_string(font, Vector2(x, anchor.y), text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, colour)
+		x += font.get_string_size(text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x + extra
+
+
+func _alpha(colour: Color, alpha: float) -> Color:
+	return Color(colour.r, colour.g, colour.b, colour.a * alpha)
+
+
+func _load_font(constant: String) -> Font:
+	var script: Script = BRAND
+	var path: Variant = script.get_script_constant_map().get(constant, null)
+	return load(str(path)) as Font if path != null else null
