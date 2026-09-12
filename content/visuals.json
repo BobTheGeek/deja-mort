@@ -8,22 +8,24 @@
     "frame_margin": 0.5
   },
   "light": {
-    "pitch_deg": -55.0,
-    "yaw_deg": -40.0,
-    "energy": 1.6,
-    "shadow": true
+    "color": "$ACCENT",
+    "energy": 3.0,
+    "range": 19.0,
+    "shadow": true,
+    "attenuation": 1.1,
+    "shadow_bias": 0.04
   },
   "ambient": {
-    "energy": 0.45,
+    "energy": 0.55,
     "color": [
-      0.42,
-      0.44,
-      0.5
+      0.34,
+      0.4,
+      0.52
     ]
   },
   "dark": {
-    "light_energy": 0.22,
-    "ambient_energy": 0.1
+    "light_energy": 0.35,
+    "ambient_energy": 0.14
   },
   "loop": {
     "death_reset_s": 0.55,
@@ -33,44 +35,40 @@
   "floor": {
     "height": 0.08,
     "color": [
-      0.3,
-      0.3,
-      0.33
+      0.34,
+      0.35,
+      0.38
     ]
   },
   "wall": {
-    "height": 2.4,
-    "near_height": 0.5,
+    "height": 2.6,
+    "near_height": 0.45,
     "color": [
-      0.2,
-      0.2,
-      0.23
+      0.27,
+      0.28,
+      0.32
     ]
   },
   "void": {
-    "color": [
-      0.05,
-      0.05,
-      0.06
-    ]
+    "color": "$BG_DARK"
   },
   "actor": {
     "player": {
       "radius": 0.3,
       "height": 1.7,
       "color": [
-        0.82,
-        0.8,
-        0.74
+        0.86,
+        0.86,
+        0.83
       ]
     },
     "attacker": {
       "radius": 0.32,
       "height": 1.8,
       "color": [
-        0.62,
-        0.16,
-        0.16
+        0.45,
+        0.22,
+        0.22
       ]
     },
     "hidden_alpha": 0.25
@@ -79,35 +77,35 @@
     "default": {
       "height": 0.5,
       "color": [
-        0.46,
-        0.45,
-        0.44
+        0.42,
+        0.43,
+        0.46
       ],
       "inset": 0.08
     },
     "by_tag": {
       "entry": {
-        "height": 2.2,
+        "height": 2.3,
         "color": [
           0.36,
-          0.28,
-          0.22
+          0.31,
+          0.27
         ]
       },
       "window": {
         "height": 1.4,
         "color": [
-          0.4,
-          0.52,
-          0.58
+          0.3,
+          0.38,
+          0.45
         ]
       },
       "hides-player": {
         "height": 1.5,
         "color": [
-          0.4,
-          0.39,
-          0.42
+          0.36,
+          0.37,
+          0.41
         ]
       },
       "blocks-sight": {
@@ -118,70 +116,66 @@
       },
       "movable": {
         "color": [
-          0.5,
-          0.47,
-          0.4
+          0.42,
+          0.38,
+          0.33
         ]
       },
       "container": {
         "color": [
-          0.44,
           0.4,
-          0.34
+          0.36,
+          0.31
         ]
       },
       "toggleable": {
         "color": [
-          0.44,
-          0.46,
-          0.5
+          0.36,
+          0.39,
+          0.45
         ]
       },
       "wet-source": {
         "color": [
-          0.34,
-          0.46,
-          0.54
+          0.3,
+          0.39,
+          0.46
         ]
       },
       "gas-source": {
         "color": [
-          0.5,
-          0.42,
-          0.34
+          0.4,
+          0.37,
+          0.33
         ]
       },
       "flammable": {
         "color": [
-          0.52,
-          0.44,
-          0.34
+          0.43,
+          0.38,
+          0.32
         ]
       },
       "carryable": {
         "height": 0.28,
         "color": [
-          0.66,
-          0.63,
-          0.55
+          0.56,
+          0.55,
+          0.52
         ],
         "inset": 0.3
       },
       "collectible": {
         "height": 0.2,
-        "color": [
-          0.72,
-          0.66,
-          0.4
-        ],
+        "color": "$ACCENT",
         "inset": 0.36
       },
       "light-switch": {
         "height": 0.3,
         "color": [
-          0.62,
-          0.6,
-          0.54
+          0.5,
+          0.5,
+          0.48
         ]
       }
     }
@@ -196,10 +190,10 @@
       "emission": 1.1
     },
     "on": {
-      "emission": 0.45
+      "emission": 0.9
     },
     "lit": {
-      "emission": 0.7
+      "emission": 1.2
     },
     "open": {
       "yaw_deg": 65.0
@@ -325,24 +319,17 @@
     "timer_size": 64,
     "label_size": 18,
     "urgent_below_s": 10.0,
-    "timer_color": [
-      0.88,
-      0.86,
-      0.8
-    ],
-    "urgent_color": [
-      0.86,
-      0.26,
-      0.2
-    ],
+    "timer_color": "$FG_DARK",
+    "urgent_color": "$ACCENT",
     "timer_top": 14,
     "label_left": 24,
     "label_top": 96,
     "label_gap": 26
   },
   "vignette": {
-    "strength": 0.6,
-    "softness": 0.6
+    "strength": 0.72,
+    "softness": 0.52,
+    "grain": 0.035
   },
   "panel": {
     "color": [
@@ -358,5 +345,20 @@
     "border_width": 2,
     "corner_radius": 4,
     "padding": 18
+  },
+  "base": {
+    "margin": 0.9,
+    "height": 0.45,
+    "color": [
+      0.17,
+      0.18,
+      0.22
+    ],
+    "drop": 0.1
+  },
+  "material": {
+    "roughness": 1.0,
+    "metallic": 0.0,
+    "specular": 0.0
   }
 }
