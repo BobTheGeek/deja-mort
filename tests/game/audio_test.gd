@@ -24,9 +24,15 @@ func test_the_map_loads_and_names_only_cues_that_exist() -> void:
 	for rule in director.map["events"]:
 		assert_bool(cues.has(str((rule as Dictionary).get("cue", "")))) \
 			.override_failure_message("event rule names a cue that does not exist: %s" % [rule]).is_true()
+	# `cue` is deliberately absent — the clock is silent until the last ten
+	# seconds. Whichever cues the metronome does name must exist.
 	var metronome: Dictionary = director.map["metronome"]
 	for key in ["cue", "urgent_cue"]:
-		assert_bool(cues.has(str(metronome[key]))).is_true()
+		if not metronome.has(key):
+			continue
+		assert_bool(cues.has(str(metronome[key]))) \
+			.override_failure_message("metronome.%s names a cue that does not exist" % key).is_true()
+	assert_bool(metronome.has("urgent_cue")).is_true()
 
 
 func test_every_cue_synthesises_to_real_audio() -> void:
