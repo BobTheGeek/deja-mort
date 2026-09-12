@@ -98,6 +98,53 @@
     "turn_per_s": 14.0,
     "mesh_yaw": 180.0
   },
+  "death": {
+    "_comment": "How each way of dying is staged. Clip names are the Quaternius rig's; hold_s is how long the loop waits before it resets, and a click skips it.",
+    "victim_clip": "Death",
+    "hold_s": 2.0,
+    "light_flicker": 0.0,
+    "by_cause": {
+      "stabbed": {
+        "attacker_clip": "Sword_Slash",
+        "victim_clip": "Death",
+        "hold_s": 2.4,
+        "light_flicker": 0.0
+      },
+      "shot": {
+        "attacker_clip": "Gun_Shoot",
+        "victim_clip": "Death",
+        "hold_s": 2.2,
+        "light_flicker": 0.0
+      },
+      "strangled": {
+        "attacker_clip": "Punch_Right",
+        "victim_clip": "Death",
+        "hold_s": 2.6,
+        "light_flicker": 0.0
+      },
+      "struck": {
+        "attacker_clip": "Punch_Left",
+        "victim_clip": "HitRecieve",
+        "hold_s": 2.2,
+        "light_flicker": 0.0
+      },
+      "electrocuted": {
+        "attacker_clip": "",
+        "victim_clip": "HitRecieve_2",
+        "hold_s": 2.4,
+        "light_flicker": 3.0
+      },
+      "burning": {
+        "attacker_clip": "",
+        "victim_clip": "HitRecieve_2",
+        "hold_s": 2.6,
+        "light_flicker": 1.5
+      }
+    },
+    "flicker_hz": 11.0,
+    "flicker_depth": 0.75,
+    "banner_last_s": 0.7
+  },
   "object": {
     "default": {
       "height": 0.5,
@@ -205,6 +252,13 @@
         ]
       }
     }
+  },
+  "models": {
+    "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",
+    "kenney": {
+      "metres_per_unit": 2.0
+    },
+    "max_overhang_m": 0.6
   },
   "state_visual": {
     "burning": {
@@ -425,7 +479,13 @@
     "timer_top": 14,
     "label_left": 24,
     "label_top": 96,
-    "label_gap": 26
+    "label_gap": 26,
+    "inspect_size": 20.0,
+    "inspect_hold_s": 5.0,
+    "inspect_fade_s": 0.8,
+    "inspect_margin": 160.0,
+    "inspect_bottom": 120.0,
+    "inspect_color": "$FG_DARK"
   },
   "vignette": {
     "strength": 0.55,

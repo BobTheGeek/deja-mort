@@ -12,6 +12,8 @@ var _loop: Label = null
 var _held: Label = null
 var _hidden: Label = null
 var _banner: Label = null
+var _inspect: Label = null
+var _inspect_left: float = 0.0
 
 
 func setup(table: GameVisuals) -> void:
@@ -20,7 +22,6 @@ func setup(table: GameVisuals) -> void:
 	# A Control under a CanvasLayer has no parent rect to anchor against, so it
 	# is sized to the viewport by hand and kept that way.
 	_fit_viewport()
-	get_viewport().size_changed.connect(_fit_viewport)
 
 	var big := int(visuals.number("hud.timer_size", 64))
 	var small := int(visuals.number("hud.label_size", 18))
@@ -53,9 +54,29 @@ func setup(table: GameVisuals) -> void:
 	_banner.visible = false
 	add_child(_banner)
 
+	# Inspect is the one verb whose whole product is words. It used to produce
+	# them into the notebook and nowhere else, which read as nothing happening.
+	_inspect = _make_label(int(visuals.number("hud.inspect_size", 20)), HORIZONTAL_ALIGNMENT_CENTER)
+	_inspect.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_inspect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_inspect.offset_left = visuals.number("hud.inspect_margin", 140.0)
+	_inspect.offset_right = -visuals.number("hud.inspect_margin", 140.0)
+	_inspect.offset_top = -visuals.number("hud.inspect_bottom", 118.0)
+	_inspect.offset_bottom = -visuals.number("hud.inspect_bottom", 118.0) + float(int(visuals.number("hud.inspect_size", 20))) * 3.4
+	_inspect.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	add_child(_inspect)
 
+	_fit_viewport()
+
+
+## Built off the scene tree in tests, where there is no viewport to measure.
 func _fit_viewport() -> void:
-	size = get_viewport_rect().size
+	var view := get_viewport()
+	if view == null:
+		return
+	size = view.get_visible_rect().size
+	if not view.size_changed.is_connected(_fit_viewport):
+		view.size_changed.connect(_fit_viewport)
 
 
 func _make_label(font_size: int, align: int = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
@@ -83,6 +104,31 @@ func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
 	_banner.visible = true
 	_banner.text = world.ending.to_upper()
 	_banner.add_theme_color_override("font_color", visuals.colour("hud.timer_color"))
+
+
+## What you just looked at, for as long as the table says. The name is there
+## because the wheel can be aimed at any of five things stacked on a cell.
+func show_inspect(object_name: String, text: String) -> void:
+	_inspect.text = "%s — %s" % [object_name, text] if not object_name.is_empty() else text
+	_inspect.add_theme_color_override("font_color", visuals.colour("hud.inspect_color"))
+	_inspect_left = visuals.number("hud.inspect_hold_s", 4.0)
+
+
+func inspect_text() -> String:
+	return _inspect.text
+
+
+## Fades on real seconds, not sim ticks: the sim is stopped while a panel is open
+## and the line should still go away.
+func advance(delta: float) -> void:
+	if _inspect_left <= 0.0:
+		return
+	_inspect_left -= delta
+	var fade := visuals.number("hud.inspect_fade_s", 0.8)
+	_inspect.modulate.a = clampf(_inspect_left / maxf(fade, 0.001), 0.0, 1.0)
+	if _inspect_left <= 0.0:
+		_inspect.text = ""
+		_inspect.modulate.a = 1.0
 
 
 func flash(text: String) -> void:

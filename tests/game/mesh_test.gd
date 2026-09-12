@@ -79,19 +79,22 @@ func test_an_unmeshed_object_still_gets_its_greybox() -> void:
 	assert_object(_rendered(world).object_node("bubble_token")).is_not_null()
 
 
-## A model authored at Kenney's scale must end up the size of its footprint.
-func test_a_model_is_normalised_into_its_footprint() -> void:
+## Superseded by tests/game/scale_test.gd. A model is the size the real thing
+## is, which for a double bed is wider than the cells it occupies; fitting it to
+## its footprint is what made the furniture look like doll furniture. What is
+## still worth guarding here is that a model is placed on its footprint at all.
+func test_a_model_sits_on_the_cells_the_sim_gave_it() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
 	for id in ["fridge", "bed", "couch"]:
 		var obj := world.objects.by_id(id)
 		var node := renderer.object_node(id)
 		assert_object(node).is_not_null()
-		var span := _world_aabb(node)
-		var footprint := _footprint_size(obj)
-		assert_float(maxf(span.size.x, span.size.z)).override_failure_message(
-			"%s spans %.2f but its footprint is %.2f" % [id, maxf(span.size.x, span.size.z), footprint]) \
-			.is_less_equal(footprint + 0.05)
+		var centre := _world_aabb(node).get_center()
+		var wanted := _footprint_centre(obj)
+		assert_float(Vector2(centre.x, centre.z).distance_to(wanted)).override_failure_message(
+			"%s is centred at (%.2f, %.2f), not on its footprint %s" % [
+				id, centre.x, centre.z, wanted]).is_less(0.35)
 
 
 func test_a_model_stands_on_the_floor() -> void:
@@ -119,13 +122,13 @@ func _rendered(world: SimWorld) -> RoomRenderer:
 	return renderer
 
 
-func _footprint_size(obj: SimObject) -> float:
+func _footprint_centre(obj: SimObject) -> Vector2:
 	var lo := obj.cells[0]
 	var hi := obj.cells[0]
 	for c in obj.cells:
 		lo = Vector2i(mini(lo.x, c.x), mini(lo.y, c.y))
 		hi = Vector2i(maxi(hi.x, c.x), maxi(hi.y, c.y))
-	return float(maxi(hi.x - lo.x, hi.y - lo.y) + 1)
+	return Vector2(float(lo.x + hi.x + 1) * 0.5, float(lo.y + hi.y + 1) * 0.5)
 
 
 func _mesh_instances(node: Node) -> int:

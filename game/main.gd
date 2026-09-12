@@ -27,6 +27,7 @@ var _audio: AudioDirector = null
 var _accumulator: float = 0.0
 var _tick_seconds: float = 0.1
 var _reset_at: float = -1.0
+var _banner_at: float = 0.0
 var _elapsed: float = 0.0
 var _cycle: Dictionary = {}   # cell key -> which overlapping object to offer next
 var _finished: bool = false
@@ -152,7 +153,10 @@ func _process(delta: float) -> void:
 			loop_index += 1
 			_start_loop()
 		_renderer.sync(world, delta, _accumulator / _tick_seconds)
-		_hud.sync(world, loop_index, false)
+		_hud.advance(delta)
+		# The word LOSS across the middle of the beat is the thing that made a
+		# death feel like a spreadsheet. Let it play; name it at the end.
+		_hud.sync(world, loop_index, _elapsed < _banner_at)
 		return
 
 	# Any panel open = sim paused. Thinking is free; doing costs seconds.
@@ -167,6 +171,7 @@ func _process(delta: float) -> void:
 	if not _is_paused():
 		_audio.tick_metronome(world)
 	_renderer.sync(world, delta, _accumulator / _tick_seconds)
+	_hud.advance(delta)
 	_hud.sync(world, loop_index, _win.is_open() or _notebook.is_open())
 
 
@@ -175,7 +180,21 @@ func _is_paused() -> bool:
 
 
 func _on_sim_event(event: SimEvent) -> void:
+	# He swings before the screen says anything. The sim already resolved it; this
+	# is the beat docs/06 asks for, staged from the cause it recorded.
+	if event.type == SimEvent.TYPE_ATTACK:
+		var beat := DeathBeat.resolve(visuals, world.room,
+			world.death_cause_for_weapon(str(event.meta.get("weapon", ""))))
+		_renderer.play_once(event.actor, str(beat.get("attacker_clip", "")), float(beat.get("hold_s", 2.0)))
+	# Any event carrying words is a thing the room just told you. Inspect is the
+	# only one so far, and keying on the words rather than on the verb means the
+	# next rule that has something to say needs no code here.
+	if event.meta.has("text"):
+		var about := world.objects.by_id(event.object) if not event.object.is_empty() else null
+		_hud.show_inspect(about.name if about != null else "", str(event.meta["text"]))
 	if event.type == SimEvent.TYPE_DEATH and event.actor == world.player.id:
+		var death := DeathBeat.resolve(visuals, world.room, str(event.meta.get("cause", "")))
+		_renderer.flicker(float(death.get("light_flicker", 0.0)))
 		_hud.flash("DEAD")
 	elif event.type == SimEvent.TYPE_ENDING:
 		_finish_loop(str(event.meta.get("ending", "")))
@@ -202,18 +221,26 @@ func _on_replay() -> void:
 	_start_loop()
 
 
-## Death to control in under a second, from data. Slow deaths kill "one more try".
+## Long enough to watch him die, short enough to keep "one more try" — and a
+## click cuts it short, so the beat never costs you a retry you did not want.
 func _schedule_reset() -> void:
 	if _reset_at >= 0.0:
 		return
 	_wheel.close()
-	_reset_at = _elapsed + visuals.number("loop.death_reset_s", 0.55)
+	var beat := DeathBeat.resolve(visuals, world.room, world.player.death_cause)
+	_reset_at = _elapsed + maxf(float(beat.get("hold_s", 2.0)),
+		visuals.number("loop.death_reset_s", 0.55))
+	_banner_at = _reset_at - visuals.number("death.banner_last_s", 0.7)
 
 
 # --- input -------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
-	if world == null or _reset_at >= 0.0:
+	if world == null:
+		return
+	if _reset_at >= 0.0:
+		if event.is_pressed():
+			_reset_at = _elapsed
 		return
 	if _win.is_open():
 		return

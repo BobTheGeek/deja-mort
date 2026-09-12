@@ -530,7 +530,7 @@
       ],
       "walk_over": true,
       "inspect": "A rug that hides whatever is under it.",
-      "mesh": "kenney/rugRectangle"
+      "mesh": "kenney/rugSquare"
     },
     {
       "id": "bookshelf",
@@ -781,6 +781,14 @@
       ],
       "footprint": [
         [
+          9,
+          6
+        ],
+        [
+          9,
+          7
+        ],
+        [
           10,
           6
         ],
@@ -798,7 +806,7 @@
       "category": "bed",
       "inspect": "Low enough to get under. Barely.",
       "mesh": "kenney/bedDouble",
-      "mesh_yaw": 90
+      "mesh_yaw": 270
     },
     {
       "id": "nightstand",

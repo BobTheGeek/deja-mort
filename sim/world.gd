@@ -484,8 +484,38 @@ func _begin_perform(a: SimActor, act: SimAction) -> void:
 		act.phase = SimAction.PHASE_DONE
 		a.action = null
 		return
+	_turn_towards(a, act)
 	act.phase = SimAction.PHASE_PERFORMING
 	act.ends_tick = tick + act.duration_ticks
+
+
+## You look at what you are doing. `facing` used to be written only while
+## walking, so it kept whichever way the last step went, and for anything you
+## were already standing next to nothing wrote it at all. His perception is
+## entitled to know which way someone is turned, so this is sim state.
+func _turn_towards(a: SimActor, act: SimAction) -> void:
+	var cell := _aim_cell(a, act)
+	if cell == SimEvent.NO_CELL or cell == a.pos:
+		return
+	var delta := cell - a.pos
+	a.facing = Vector2i(signi(delta.x), 0) if absi(delta.x) >= absi(delta.y) \
+		else Vector2i(0, signi(delta.y))
+
+
+## The part of the target you are actually next to — a two-cell couch is faced
+## at the end you are standing beside, not at its origin corner.
+func _aim_cell(a: SimActor, act: SimAction) -> Vector2i:
+	var resolved := _resolve_target(act.target_id if not act.target_id.is_empty() else act.target_cell)
+	if resolved.is_empty():
+		return act.target_cell
+	var obj: SimObject = resolved["object"]
+	if obj == null or obj.cells.is_empty():
+		return resolved["cell"]
+	var best: Vector2i = obj.cells[0]
+	for c in obj.cells:
+		if grid.distance(c, a.pos) < grid.distance(best, a.pos):
+			best = c
+	return best
 
 
 func _complete(a: SimActor, act: SimAction) -> void:

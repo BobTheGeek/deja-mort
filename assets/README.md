@@ -83,7 +83,9 @@ Colours live in one place: the `Brand` autoload at `game/theme/brand.gd`. Never 
 
 Attribution is not required by CC0. Credited anyway: created and distributed by Kenney (www.kenney.nl).
 
-**Scale:** the kit is not authored at 1 unit = 1 m. `game/room_renderer.gd` measures each model's own bounds and scales it uniformly into the footprint the sim already knows about, so nothing is stretched and the pack's proportions stay honest. Origins are already at floor level, which matches the `docs/06` import convention.
+**Scale:** the kit is authored at **1 unit = 2 m**, consistently across all 140 models — measured, not guessed: the doorway is 1.01 units tall and a door is 2 m; the fridge is 0.92 and a fridge is 1.84. That one number lives in `content/visuals.json` as `models.kenney.metres_per_unit`, and `game/room_renderer.gd` scales every model by it. Origins are already at floor level, which matches the `docs/06` import convention.
+
+Models are **not** fitted to their footprint. They were, until a playtest: a double bed squeezed into its one-by-two cells came out a metre wide next to a 1.7 m figure, and the whole room read as doll furniture. A footprint is what the sim walks around; real furniture overhangs it. `tests/game/scale_test.gd` checks both ends — that each piece measures what the real thing measures, and that nothing hangs more than `models.max_overhang_m` past its cells.
 
 ### Characters
 
