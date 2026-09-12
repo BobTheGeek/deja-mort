@@ -129,7 +129,24 @@ func _build_grid(world: SimWorld) -> void:
 					_add_box(_floor_root, cell, Vector2i.ONE, floor_height, floor_colour, -floor_height * 0.5)
 				SimGrid.WALL:
 					var height := _wall_height(world, cell)
-					_add_box(_floor_root, cell, Vector2i.ONE, height, wall_colour, height * 0.5)
+					if height <= 0.0:
+						continue
+					_add_box(_floor_root, cell, Vector2i.ONE, height,
+						_wall_colour(world, cell, wall_colour), height * 0.5)
+
+
+## The two standing walls take different values. A corner is only legible when
+## its two planes are different, which is the first thing the style reference
+## does and the first thing a single flat grey loses.
+func _wall_colour(world: SimWorld, cell: Vector2i, fallback: Color) -> Color:
+	var yaw := deg_to_rad(visuals.number("camera.yaw_deg", 45.0))
+	var far_x: int = 0 if sin(yaw) > 0.0 else world.grid.width - 1
+	var far_z: int = 0 if cos(yaw) > 0.0 else world.grid.height - 1
+	if cell.x == far_x:
+		return visuals.colour("wall.color_far_x", fallback)
+	if cell.y == far_z:
+		return visuals.colour("wall.color_far_z", fallback)
+	return fallback
 
 
 ## Only the two outer walls facing away from the camera stand full height. The
@@ -137,15 +154,18 @@ func _build_grid(world: SimWorld) -> void:
 ## is the whole reason a fixed camera is worth having. Which edges are "near"
 ## comes from the authored camera yaw, so changing the angle re-solves it.
 func _wall_height(world: SimWorld, cell: Vector2i) -> float:
+	# An interior wall divides one space from another — Room 1 loses its bathroom
+	# without them — so it stands at its own height rather than being cut away.
 	var on_boundary := cell.x == 0 or cell.y == 0 \
 		or cell.x == world.grid.width - 1 or cell.y == world.grid.height - 1
 	if not on_boundary:
-		return visuals.number("wall.near_height", 0.5)
+		return visuals.number("wall.interior_height", 1.25)
+	# The two outer walls between the camera and the room are absent, not short.
 	var yaw := deg_to_rad(visuals.number("camera.yaw_deg", 45.0))
 	var near_x: int = world.grid.width - 1 if sin(yaw) > 0.0 else 0
 	var near_y: int = world.grid.height - 1 if cos(yaw) > 0.0 else 0
 	if cell.x == near_x or cell.y == near_y:
-		return visuals.number("wall.near_height", 0.5)
+		return visuals.number("wall.near_height", 0.0)
 	return visuals.number("wall.height", 2.4)
 
 
