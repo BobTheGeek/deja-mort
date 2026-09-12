@@ -16,6 +16,17 @@ extends Control
 signal chosen(verb: String, target: Variant, rule_id: String)
 signal dismissed()
 
+
+## The pause vignette, drawn by the wheel but parented below the HUD. It dims the
+## room, which is the point; dimming the timer and the loop counter with it is
+## not, and a wheel opened near the top left the timer unreadable.
+class Backdrop extends Control:
+	var wheel: ActionWheel = null
+
+	func _draw() -> void:
+		if wheel != null:
+			wheel.draw_backdrop_into(self)
+
 const BRAND := preload("res://game/theme/brand.gd")
 
 ## Read by the wheel, so a test can fail the build when the table loses one
@@ -51,8 +62,31 @@ var _refused_verb := ""
 var _refused_left := 0.0
 var _open_t := 0.0
 var _vignette: Texture2D = null
+var _backdrop: Backdrop = null
 var _font: Font = null
 var _font_bold: Font = null
+
+
+## The vignette lives outside the wheel so it can sit under the HUD. Created on
+## demand because the game builds its UI layer once and calls setup() per loop.
+func backdrop() -> Control:
+	if _backdrop == null:
+		_backdrop = Backdrop.new()
+		_backdrop.name = "WheelBackdrop"
+		_backdrop.wheel = self
+		_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_backdrop.visible = false
+	return _backdrop
+
+
+func draw_backdrop_into(target: CanvasItem) -> void:
+	if _vignette == null or not visible:
+		return
+	var span := visuals.number("wheel.backdrop_fade_radius", 540.0) * 2.0
+	var tint := visuals.colour("wheel.backdrop_color")
+	tint.a = visuals.number("wheel.backdrop_alpha", 0.6) * _eased()
+	target.draw_texture_rect(_vignette,
+		Rect2(_centre - Vector2(span, span) * 0.5, Vector2(span, span)), false, tint)
 
 
 func setup(table: GameVisuals, world: SimWorld) -> void:
@@ -122,6 +156,7 @@ func open_at(world: SimWorld, target: Variant, screen_point: Vector2,
 	_refresh(world)
 	visible = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	_sync_backdrop()
 	queue_redraw()
 
 
@@ -131,7 +166,16 @@ func close() -> void:
 	_target = null
 	_hover = ""
 	_refused_verb = ""
+	_sync_backdrop()
 	queue_redraw()
+
+
+func _sync_backdrop() -> void:
+	if _backdrop == null:
+		return
+	_backdrop.visible = visible
+	_backdrop.size = frame()
+	_backdrop.queue_redraw()
 
 
 func is_open() -> bool:
@@ -150,6 +194,7 @@ func advance(delta: float) -> void:
 	var duration := visuals.number("wheel.open_duration_s", 0.12)
 	if _open_t < 1.0:
 		_open_t = clampf(_open_t + delta / maxf(duration, 0.001), 0.0, 1.0)
+		_sync_backdrop()
 		queue_redraw()
 	if _refused_left > 0.0:
 		_refused_left -= delta
@@ -333,16 +378,18 @@ func _tinted(table: Dictionary, key: String, alpha_key: String) -> Variant:
 	return Color(base.r, base.g, base.b, float(table.get(alpha_key, 1.0)))
 
 
-## The wheel keeps the whole of itself, caption included, inside the frame.
+## The wheel keeps the whole of itself, caption included, inside the frame — and
+## inside whatever a notch or a home bar has left of it.
 func _clamped_centre(point: Vector2) -> Vector2:
 	var margin := visuals.number("wheel.edge_margin", 24.0)
 	var reach := visuals.number("wheel.radius") + visuals.number("wheel.slot_size") * 0.5
 	var below := reach + visuals.number("wheel.caption_reserve_below", 80.0)
 	var box := frame()
-	return Vector2(
-		clampf(point.x, margin + reach, maxf(box.x - margin - reach, margin + reach)),
-		clampf(point.y, margin + reach, maxf(box.y - margin - below, margin + reach)),
-	)
+	var low := Vector2(margin + visuals.inset("left") + reach, margin + visuals.inset("top") + reach)
+	var high := Vector2(
+		box.x - margin - visuals.inset("right") - reach,
+		box.y - margin - visuals.inset("bottom") - below)
+	return Vector2(clampf(point.x, low.x, maxf(high.x, low.x)), clampf(point.y, low.y, maxf(high.y, low.y)))
 
 
 ## Availability for all nine verbs, available or not. The unavailable slots are
@@ -400,7 +447,6 @@ func _load_font(constant: String) -> Font:
 func _draw() -> void:
 	if not visible or visuals == null:
 		return
-	_draw_backdrop()
 	if needs_leader():
 		var colour := visuals.colour_with_alpha("wheel.leader_line_color", "wheel.leader_line_alpha")
 		draw_line(_tap, _centre, colour, visuals.number("wheel.leader_line_width", 2.0))
@@ -409,18 +455,6 @@ func _draw() -> void:
 	for verb in _order:
 		_draw_slot(str(verb))
 	_draw_caption()
-
-
-## No full-screen dim: a radial vignette centred on the wheel, so the room the
-## player is reasoning about stays lit.
-func _draw_backdrop() -> void:
-	if _vignette == null:
-		return
-	var span := visuals.number("wheel.backdrop_fade_radius", 540.0) * 2.0
-	var tint := visuals.colour("wheel.backdrop_color")
-	tint.a = visuals.number("wheel.backdrop_alpha", 0.6) * _eased()
-	draw_texture_rect(_vignette, Rect2(_centre - Vector2(span, span) * 0.5, Vector2(span, span)),
-		false, tint)
 
 
 func _draw_slot(verb: String) -> void:
@@ -522,8 +556,9 @@ func _caption_rect() -> Rect2:
 		height += _caption_size(i) * 1.35
 	var top := _centre.y + visuals.number("wheel.radius") + visuals.number("wheel.slot_size") * 0.5 \
 		+ visuals.number("wheel.caption_gap_above", 16.0)
-	var left := clampf(_centre.x - width * 0.5, visuals.number("wheel.edge_margin", 24.0),
-		maxf(frame().x - width - visuals.number("wheel.edge_margin", 24.0), 0.0))
+	var margin := visuals.number("wheel.edge_margin", 24.0)
+	var left := clampf(_centre.x - width * 0.5, margin + visuals.inset("left"),
+		maxf(frame().x - width - margin - visuals.inset("right"), margin + visuals.inset("left")))
 	return Rect2(Vector2(left, top), Vector2(width, height))
 
 

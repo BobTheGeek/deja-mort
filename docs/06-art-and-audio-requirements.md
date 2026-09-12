@@ -18,7 +18,8 @@
 
 ### Camera and rendering
 
-- `Camera3D`, orthographic, true isometric rotation (-35.264°, 45°, 0). Size tuned so a 12×10 room fills ~80% of a 16:9 frame; on portrait mobile, rotate the room 90° rather than shrinking it.
+- `Camera3D`, orthographic, true isometric rotation (-35.264°, 45°, 0). Size tuned so a 12×10 room fills ~80% of a 16:9 frame.
+- **Mobile is landscape-locked** (decided 12 Sept 2026, Bob). The room floats in black, so aspect ratio costs nothing — 4:3 on an iPad and 21:9 on a phone were both checked on screen and neither crops. What a phone does need is a UI scaled for a thumb (`game/ui_scale.gd`, derived from the screen's DPI) and a HUD that stays out from under the notch. The portrait plan — rotate the room 90° — is in `docs/BACKLOG.md` rather than deleted.
 - **Renderer: Mobile.** One `DirectionalLight3D` or `OmniLight3D` with shadows enabled; test shadow quality on a phone at Milestone 3.
 - Walls: the two back walls render; the two front walls are absent (cutaway). If a room's geometry needs a front wall for a door, render it as a low knee-wall with the door frame visible.
 
