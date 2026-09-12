@@ -25,7 +25,7 @@ Copyright lines: Archivo © 2020 The Archivo Project Authors · Inter © 2016 Th
 
 ## Brand art
 
-`assets/brand/` — Claude Design final set, approved 12 Sept 2026. Owned by the project; not licensed from a third party. Source and delivery notes live in `docs/brand/`, and `docs/brand/BRAND.md` is the authority on how these may be used.
+`assets/brand/` — Claude Design final set, approved 12 Sept 2026. Owned by the project; not licensed from a third party. Source and delivery notes live in `docs/brand/`, and `docs/brand/BRAND.md` is the authority on how these may be used. Read that copy: a stale duplicate at `docs/BRAND.md` still describes the superseded door treatment as the source of truth.
 
 | Group | Files | Source | Notes |
 |---|---|---|---|
@@ -43,7 +43,7 @@ Two placement quirks the files cannot fix: the inline lockups are cropped tight 
 
 **Not copied on purpose:** `docs/brand/svg/live/` (live `<text>`, renders in a default serif unless the fonts are installed — editable source, not for builds) and `docs/brand/svg/outline_svg.py` (the converter).
 
-**Missing from the delivery:** `docs/brand/BRAND.md` refers to `reference/logo-asset-sheet.jpeg` (the approved treatment it calls its source of truth), `reference/approved-door-mark.png` and `reference/door-treatment/`. No `docs/brand/reference/` folder arrived. Nothing in this change depends on those files, but the title-screen door beat described in BRAND.md §"Godot theme constants" has no artwork behind it until they turn up.
+**History, not source:** `docs/reference/` holds the *first* treatment — `logo-asset-sheet.jpeg`, `approved-door-mark.png` and `door-treatment/`. The source of truth for everything in `assets/brand/` is the Claude Design final set in `docs/brand/svg/` and `docs/brand/png/`. The door survives only as the title-screen opening beat described in `docs/brand/BRAND.md`; it is not part of the icon or the lockups.
 
 ### Android adaptive icon
 
