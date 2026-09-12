@@ -20,12 +20,18 @@ var _object_nodes: Dictionary = {}   # object id -> Node3D (a model root, or a g
 var _model_nodes: Dictionary = {}    # object ids drawn from a .glb rather than a box
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
+var _once: Dictionary = {}           # actor id -> {clip, left} one-shot animation
+var _room: Dictionary = {}           # the room block, for the room's own death beat
+var _flicker_left: float = 0.0
+var _flicker_t: float = 0.0
 var _lit_state: bool = true
 var _lit_energy: float = 1.0
 
 
 func build(world: SimWorld, table: GameVisuals) -> void:
 	visuals = table
+	_room = world.room
+	_once.clear()
 	for child in get_children():
 		child.queue_free()
 	_object_nodes.clear()
@@ -201,10 +207,15 @@ func _build_objects(world: SimWorld) -> void:
 		_object_nodes[obj.id] = node
 
 
-## Instantiates the object's model and normalises it into the footprint the sim
-## already knows about. Kenney's kit is not authored at 1 unit = 1 m, so the scale
-## is derived from the model's own bounds rather than trusted. Returns null when
-## the object names no mesh, and the caller falls back to a greybox box.
+## Instantiates the object's model at the size the thing really is. A pack is
+## authored at one consistent scale — Kenney's furniture kit is 1 unit = 2 m —
+## so the conversion is one number per pack in visuals.json.
+##
+## It used to shrink every model until it fitted inside its cells, which is why
+## the bed came out a metre wide next to a 1.7 m figure. The footprint is what
+## the sim walks around, not a picture frame: real furniture overhangs.
+## Returns null when the object names no mesh, and the caller falls back to a
+## greybox box.
 func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
 	var mesh_name := str(obj.prop("mesh", ""))
 	if mesh_name.is_empty():
@@ -223,27 +234,37 @@ func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
 	if bounds.size.x <= 0.0 or bounds.size.z <= 0.0:
 		return root
 	var extent := _extent(obj)
+	var yaw := float(obj.prop("mesh_yaw", 0.0))
+	var scale_factor := _pack_scale(mesh_name, bounds, extent, yaw, look)
+	model.scale = Vector3.ONE * scale_factor
+	model.rotation_degrees = Vector3(0.0, yaw, 0.0)
+	# Origin at the footprint centre with the model's own floor at y = 0.
+	var centred := -(bounds.position + bounds.size * 0.5) * scale_factor
+	model.position = Vector3(centred.x, -bounds.position.y * scale_factor, centred.z) \
+		.rotated(Vector3.UP, deg_to_rad(yaw))
+	root.position = _footprint_centre(obj, extent)
+	return root
+
+
+## Metres per pack unit, from data. A pack with no declared scale falls back to
+## the old behaviour — fitted into its cells — so an undeclared pack looks wrong
+## in the one obvious way rather than filling the room.
+func _pack_scale(mesh_name: String, bounds: AABB, extent: Vector2i, yaw: float,
+		look: Dictionary) -> float:
+	var pack := mesh_name.get_slice("/", 0)
+	var per_unit := visuals.number("models.%s.metres_per_unit" % pack, 0.0)
+	if per_unit > 0.0:
+		return per_unit
+	push_warning("RoomRenderer: pack '%s' declares no metres_per_unit" % pack)
 	var inset := float(look.get("inset", 0.08))
 	var available := Vector2(
 		float(extent.x) * CELL - inset * 2.0,
 		float(extent.y) * CELL - inset * 2.0,
 	)
-	# The model is fitted as it will finally sit, not as it was authored. A quarter
-	# turn swaps which way its length runs, and without this a two-cell bed turned
-	# across its own footprint and shrank to fit the short side.
-	var yaw := float(obj.prop("mesh_yaw", 0.0))
+	# A quarter turn swaps which way the model's length runs.
 	if int(round(absf(yaw) / 90.0)) % 2 == 1:
 		available = Vector2(available.y, available.x)
-	# Uniform, so nothing is stretched: fit whichever span runs out first.
-	var scale_factor := minf(available.x / bounds.size.x, available.y / bounds.size.z)
-	model.scale = Vector3.ONE * scale_factor
-	model.rotation_degrees = Vector3(0.0, float(obj.prop("mesh_yaw", 0.0)), 0.0)
-	# Origin at the footprint centre with the model's own floor at y = 0.
-	var centred := -(bounds.position + bounds.size * 0.5) * scale_factor
-	model.position = Vector3(centred.x, -bounds.position.y * scale_factor, centred.z) \
-		.rotated(Vector3.UP, deg_to_rad(float(obj.prop("mesh_yaw", 0.0))))
-	root.position = _footprint_centre(obj, extent)
-	return root
+	return minf(available.x / bounds.size.x, available.y / bounds.size.z)
 
 
 func _footprint_centre(obj: SimObject, extent: Vector2i) -> Vector3:
@@ -370,9 +391,40 @@ func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> Stan
 ## only ever be in one of ten places a second.
 func sync(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
 	_sync_lighting(world)
+	_sync_flicker(delta)
 	_sync_objects(world)
 	_sync_hazards(world)
 	_sync_actors(world, delta, tick_alpha)
+
+
+## docs/06's death beat: "a slump, a fall, the light flickers". Deterministic
+## wobble, so a recorded loop looks the same twice.
+func flicker(seconds: float) -> void:
+	if seconds <= 0.0 or _bulb == null:
+		return
+	_flicker_left = seconds
+	_flicker_t = 0.0
+
+
+func is_flickering() -> bool:
+	return _flicker_left > 0.0
+
+
+func _sync_flicker(delta: float) -> void:
+	if _bulb == null:
+		return
+	if _flicker_left <= 0.0:
+		if not is_zero_approx(_bulb.light_energy - _lit_energy) and _lit_state:
+			_bulb.light_energy = _lit_energy
+		return
+	_flicker_left -= delta
+	_flicker_t += delta
+	var rate := visuals.number("death.flicker_hz", 11.0)
+	var depth := visuals.number("death.flicker_depth", 0.75)
+	var wave := absf(sin(_flicker_t * rate)) * absf(cos(_flicker_t * rate * 0.37))
+	_bulb.light_energy = _lit_energy * (1.0 - depth + depth * wave)
+	if _flicker_left <= 0.0:
+		_bulb.light_energy = _lit_energy
 
 
 func _sync_lighting(world: SimWorld) -> void:
@@ -536,6 +588,7 @@ func _make_light(spec: Dictionary) -> OmniLight3D:
 
 
 func _sync_actors(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
+	_expire_once(delta)
 	var turn_rate := visuals.number("actor.turn_per_s", 14.0)
 	var hidden_alpha := visuals.number("actor.hidden_alpha", 0.25)
 	var tick_seconds := 1.0 / maxf(float(world.system("tick_hz", 10.0)), 1.0)
@@ -559,22 +612,50 @@ func _sync_actors(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> voi
 		_fade_actor(node, key, hidden_alpha if actor.is_hidden() else 1.0)
 
 
-## Idle, walk, death. The rig has twenty-four clips; these are the three the sim
-## can already tell the difference between.
+## Idle, walk, down, dead — plus whatever a one-shot has asked for, which beats
+## all of them for as long as it lasts. How a body falls is the death beat's
+## call, and it reads the cause the sim recorded.
 func _drive_animation(node: Node3D, actor: SimActor, down: bool = false) -> void:
 	var player := _animation_player(node)
 	if player == null:
 		return
 	var clip := str(visuals.get_value("actor.clips.idle", "Idle"))
 	if not actor.alive:
-		clip = str(visuals.get_value("actor.clips.death", "Death"))
+		clip = str(DeathBeat.resolve(visuals, _room, actor.death_cause).get("victim_clip", "Death"))
 	elif down:
 		clip = str(visuals.get_value("actor.clips.down", "HitRecieve"))
 	elif not actor.path.is_empty():
 		clip = str(visuals.get_value("actor.clips.walk", "Walk"))
+	var once: Dictionary = _once.get(actor.id, {})
+	if not once.is_empty():
+		clip = str(once["clip"])
 	if not player.has_animation(clip) or player.current_animation == clip:
 		return
 	player.play(clip, visuals.number("actor.clips.blend_s", 0.15))
+
+
+## A swing, a flinch — something that plays through and then hands the figure
+## back. Presentation only: the sim resolved the attack the moment it landed.
+func play_once(actor_id: String, clip: String, seconds: float) -> void:
+	if clip.is_empty() or seconds <= 0.0:
+		return
+	_once[actor_id] = {"clip": clip, "left": seconds}
+
+
+func current_clip(actor_id: String) -> String:
+	var node: Node3D = _actor_nodes.get(actor_id, null)
+	if node == null:
+		return ""
+	var player := _animation_player(node)
+	return player.current_animation if player != null else ""
+
+
+func _expire_once(delta: float) -> void:
+	for id in _once.keys():
+		var entry: Dictionary = _once[id]
+		entry["left"] = float(entry["left"]) - delta
+		if float(entry["left"]) <= 0.0:
+			_once.erase(id)
 
 
 func _animation_player(node: Node) -> AnimationPlayer:

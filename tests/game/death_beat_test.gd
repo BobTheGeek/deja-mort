@@ -151,3 +151,44 @@ func _find_player(node: Node) -> AnimationPlayer:
 		if found != null:
 			return found
 	return null
+
+
+## docs/06: "a slump, a fall, the light flickers". A value in the table that
+## nothing reads is a promise nobody keeps.
+func test_the_light_flickers_for_the_deaths_that_ask_for_it() -> void:
+	var world := F.world()
+	var renderer: RoomRenderer = auto_free(RoomRenderer.new())
+	renderer.build(world, _visuals())
+	var beat := DeathBeat.resolve(_visuals(), world.room, "electrocuted")
+	assert_float(float(beat.get("light_flicker", 0.0))).override_failure_message(
+		"electrocution is the one death that should touch the lights").is_greater(0.0)
+	renderer.flicker(float(beat["light_flicker"]))
+	renderer.sync(world, 0.05, 0.0)
+	assert_bool(renderer.is_flickering()).is_true()
+	renderer.sync(world, float(beat["light_flicker"]) + 0.1, 0.0)
+	assert_bool(renderer.is_flickering()).override_failure_message(
+		"the bulb never settles again").is_false()
+
+
+func test_a_quiet_death_leaves_the_lights_alone() -> void:
+	var world := F.world()
+	var renderer: RoomRenderer = auto_free(RoomRenderer.new())
+	renderer.build(world, _visuals())
+	renderer.flicker(float(DeathBeat.resolve(_visuals(), world.room, "stabbed").get("light_flicker", 0.0)))
+	assert_bool(renderer.is_flickering()).override_failure_message(
+		"a knife in a dark room should not strobe").is_false()
+
+
+## The banner is the last beat, not the first. Naming the ending across the
+## middle of the swing is what made a death read as a spreadsheet entry.
+func test_the_word_comes_after_the_beat_not_across_it() -> void:
+	var v := _visuals()
+	var tail := v.number("death.banner_last_s", 0.0)
+	assert_float(tail).override_failure_message(
+		"nothing reserves time for the ending to be named").is_greater(0.0)
+	var by_cause: Dictionary = v.get_value("death.by_cause", {})
+	for cause in by_cause:
+		var hold := float(DeathBeat.resolve(v, {}, str(cause)).get("hold_s", 0.0))
+		assert_float(tail).override_failure_message(
+			"'%s' holds %.1fs, which leaves no beat before the %.1fs banner" % [cause, hold, tail]) \
+			.is_less(hold * 0.5)
