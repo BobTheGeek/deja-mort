@@ -7,6 +7,9 @@ extends Node3D
 
 const CELL := 1.0
 
+## The child a state marker is drawn as, so it can be found and removed again.
+const STATE_MARKER := "StateMarker"
+
 var visuals: GameVisuals = null
 
 var _floor_root: Node3D = null
@@ -562,6 +565,7 @@ func _place_objects(world: SimWorld) -> void:
 			var emission := float(look.get("emission", 0.0))
 			_override_model(node, look, emission)
 			_sync_object_light(node, look)
+			_sync_object_marker(node, look)
 			continue
 		node.position = Vector3(
 			float(obj.cells[0].x) + float(extent.x) * 0.5,
@@ -575,6 +579,35 @@ func _place_objects(world: SimWorld) -> void:
 			float(look.get("emission", 0.0)),
 		)
 		_sync_object_light(node, look)
+		_sync_object_marker(node, look)
+
+
+## Some states are facts the player acts on and cannot otherwise see: a door
+## that is locked, a chain that is on, a fridge shoved against the way in. They
+## get a small solid mark on the object, described in `state_visual` — size,
+## offset, brand colour — so adding one to a new state is a table entry.
+##
+## Nothing is named here: the mark comes from the state, not from the object.
+func _sync_object_marker(node: Node3D, look: Dictionary) -> void:
+	var spec: Variant = look.get("marker", null)
+	var marker: MeshInstance3D = node.get_node_or_null(NodePath(STATE_MARKER))
+	if not (spec is Dictionary):
+		if marker != null:
+			marker.queue_free()
+			node.remove_child(marker)
+		return
+	var shape: Dictionary = spec
+	if marker == null:
+		marker = MeshInstance3D.new()
+		marker.name = STATE_MARKER
+		marker.mesh = BoxMesh.new()
+		node.add_child(marker)
+	var size := visuals.to_vector3(shape.get("size", null), Vector3(0.12, 0.12, 0.12))
+	(marker.mesh as BoxMesh).size = size
+	marker.position = visuals.to_vector3(shape.get("offset", null), Vector3(0.0, 1.0, 0.0))
+	marker.rotation_degrees = Vector3(0.0, 0.0, float(shape.get("roll_deg", 0.0)))
+	marker.material_override = _material(visuals.to_colour(shape.get("color", null)),
+		visuals.number("object.marker_emission", 0.35))
 
 
 ## A falling object lies down along the way it fell. The tip direction is already

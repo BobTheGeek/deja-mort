@@ -62,7 +62,7 @@ Kenney/Quaternius imports · palette and lighting rig · character figures · st
 
 **Split:** Agent A: imports + materials + lighting. Agent B: animations + particles. Agent C: Blender-scripted bespoke pieces (attacker figure, anything the packs lack).
 
-**Status (12 Sept 2026):** the list is built apart from dust particles and the collectible's model; "every object state has a visual" is **not** met — seven states have no look, and `locked`, `chained` and `braced_by` are facts the player acts on and cannot see. The screenshot set is regenerated and awaiting sign-off. Full accounting, including what was done that M4 did not ask for, in `docs/M4-CLOSEOUT.md`.
+**Status (13 Sept 2026):** the list is built apart from dust particles and the collectible's model. "Every object state has a visual" is met, with two exceptions declared in the table along with their reason. The screenshot set is regenerated and awaiting sign-off. Full accounting, including what was done that M4 did not ask for, in `docs/M4-CLOSEOUT.md`.
 
 ---
 

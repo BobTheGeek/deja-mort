@@ -269,7 +269,8 @@
     "stack_spread": 0.22,
     "pick_tolerance_px": 14.0,
     "min_clickable_px": 400.0,
-    "_pick_comment": "A tap is a finger, not a pixel: a miss looks again within pick_tolerance_px. min_clickable_px is the floor the room has to clear, measured in screen pixels at the 1920x1080 canvas with everything else in the way."
+    "_pick_comment": "A tap is a finger, not a pixel: a miss looks again within pick_tolerance_px. min_clickable_px is the floor the room has to clear, measured in screen pixels at the 1920x1080 canvas with everything else in the way.",
+    "marker_emission": 0.35
   },
   "models": {
     "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",
@@ -326,6 +327,98 @@
         0.42,
         0.5
       ]
+    },
+    "charging": {
+      "marker": {
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ],
+        "offset": [
+          0.0,
+          0.45,
+          0.0
+        ],
+        "color": "$ACCENT"
+      }
+    },
+    "charged": {
+      "marker": {
+        "size": [
+          0.09,
+          0.09,
+          0.09
+        ],
+        "offset": [
+          0.0,
+          0.5,
+          0.0
+        ],
+        "color": "$FG_DARK"
+      }
+    },
+    "cut": {
+      "marker": {
+        "size": [
+          0.5,
+          0.04,
+          0.04
+        ],
+        "offset": [
+          0.0,
+          1.1,
+          0.0
+        ],
+        "color": "$FG_DARK",
+        "roll_deg": 28.0
+      }
+    },
+    "locked": {
+      "marker": {
+        "size": [
+          0.12,
+          0.2,
+          0.12
+        ],
+        "offset": [
+          0.0,
+          1.15,
+          0.0
+        ],
+        "color": "$ACCENT"
+      }
+    },
+    "chained": {
+      "marker": {
+        "size": [
+          0.62,
+          0.05,
+          0.05
+        ],
+        "offset": [
+          0.0,
+          1.35,
+          0.0
+        ],
+        "color": "$ACCENT"
+      }
+    },
+    "braced_by": {
+      "marker": {
+        "size": [
+          1.0,
+          0.1,
+          0.1
+        ],
+        "offset": [
+          0.0,
+          0.85,
+          0.0
+        ],
+        "color": "$FG_DARK",
+        "roll_deg": 34.0
+      }
     }
   },
   "hazard": {
@@ -1114,5 +1207,10 @@
     "door_fade_out_s": 0.4,
     "hud_in_s": 0.3,
     "timer_start_value": 75
-  }
+  },
+  "state_visual_none": [
+    "inspected",
+    "plugged"
+  ],
+  "state_visual_none_comment": "States with no look, on purpose. `inspected` is bookkeeping and drawing it would tell the player what they already know. `plugged` is the starting state of the toaster, the lamp and the hair dryer, so a mark on each is three marks that never change; what matters is a cord pulled out, and that already shows as the trip hazard on the floor. tests/game/state_visual_test.gd fails if a state is neither drawn nor on this list."
 }
