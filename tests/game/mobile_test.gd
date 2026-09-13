@@ -158,3 +158,13 @@ func test_the_game_sizes_its_own_window() -> void:
 	assert_str(source).override_failure_message(
 		"nothing sizes the window, so it opens at whatever project.godot last said") \
 		.contains("UiScale.window_size")
+
+
+## A desktop window has no notch. macOS reports a display safe area that is the
+## screen minus the menu bar, which has nothing to do with a window inside it —
+## taking it pushed the title menu 70px down, into the room strip.
+func test_a_desktop_window_takes_no_safe_area_insets() -> void:
+	var source := FileAccess.get_file_as_string("res://game/ui_scale.gd")
+	assert_str(source).override_failure_message(
+		"the safe area is applied without asking whether this is a handheld") \
+		.contains("if handheld else _none()")

@@ -944,5 +944,172 @@
     "button_disabled_sub_size": 11,
     "button_disabled_sub_tracking_em": 0.14,
     "button_primary_hover_lighten": 0.08
+  },
+  "title": {
+    "_comment": "Claude Design turn 1 plus the three measurements the beat needs. The delivered lockup is placed, never re-set: the wordmark is Archivo with custom-drawn accents and setting it live would be a different wordmark.",
+    "mark_file": "res://assets/brand/mark-1024.png",
+    "lockup_file": "res://assets/brand/lockup-stacked-dark.svg",
+    "lockup_tagline_file": "res://assets/brand/lockup-stacked-dark-tagline.svg",
+    "door_frame_file": "res://assets/ui/title/door-frame-2x.png",
+    "door_leaf_file": "res://assets/ui/title/door-leaf-2x.png",
+    "door_edge_file": "res://assets/ui/title/door-edge-2x.png",
+    "mark_in_lockup_center": [
+      0.2267605633802817,
+      0.17293233082706766
+    ],
+    "mark_in_lockup_diameter": 0.252112676056338,
+    "room_slots": 4,
+    "room_label": "ROOM %d",
+    "new_confirm_label": "ARE YOU SURE?",
+    "menu_labels": {
+      "continue": "CONTINUE",
+      "new": "NEW GAME",
+      "settings": "SETTINGS"
+    },
+    "menu_sub": "Room %d \u00b7 Death %d",
+    "settings_note": "NOT YET",
+    "bg": "$BG_DARK",
+    "lockup_width": 427,
+    "lockup_height": 560,
+    "lockup_left": 746,
+    "lockup_top": 100,
+    "mark_solo_size": 160,
+    "mark_solo_center": [
+      960,
+      540
+    ],
+    "mark_in_s": 0.3,
+    "tick_at_s": 0.6,
+    "tick_scale_min": 0.97,
+    "tick_duration_s": 0.1,
+    "wordmark_at_s": 1,
+    "mark_travel_s": 0.4,
+    "wordmark_fade_s": 0.4,
+    "tagline_at_s": 1.6,
+    "tagline_fade_s": 0.4,
+    "menu_at_s": 2.3,
+    "menu_fade_s": 0.3,
+    "menu_rise_px": 8,
+    "skippable": true,
+    "menu_top": 720,
+    "menu_gap": 22,
+    "menu_item_height": 44,
+    "menu_size": 24,
+    "menu_tracking_em": 0.2,
+    "menu_case": "upper",
+    "menu_color": "$FG_DARK",
+    "menu_alpha": 0.7,
+    "menu_hover_alpha": 1,
+    "menu_focus_color": "$ACCENT",
+    "menu_focus_weight": "Bold",
+    "menu_focus_marker_size": 8,
+    "menu_focus_marker_gap": 14,
+    "menu_sub_size": 14,
+    "menu_sub_tracking_em": 0.14,
+    "menu_sub_alpha": 0.5,
+    "strip_bottom": 56,
+    "strip_gap": 16,
+    "room_cell_width": 300,
+    "room_cell_height": 96,
+    "room_cell_padding_x": 22,
+    "room_cell_radius": 4,
+    "room_cell_border_width": 1.5,
+    "room_cell_border_alpha": 0.35,
+    "room_cell_locked_border_dash": [
+      6,
+      6
+    ],
+    "room_cell_locked_border_alpha": 0.2,
+    "room_cell_locked_alpha": 0.5,
+    "room_label_size": 14,
+    "room_label_weight": "Bold",
+    "room_label_tracking_em": 0.16,
+    "room_star_size": 14,
+    "room_star_gap": 4,
+    "room_star_fill": "$ACCENT",
+    "room_star_unearned_stroke_alpha": 0.4,
+    "room_endings_label_size": 11,
+    "room_endings_dot_size": 10,
+    "room_endings_dot_gap": 10,
+    "room_endings_found_fill": "$FG_DARK",
+    "room_endings_unfound_border_alpha": 0.35,
+    "door_master": [
+      320,
+      420
+    ],
+    "door_size": [
+      480,
+      630
+    ],
+    "door_frame_stroke": "$FG_DARK",
+    "door_frame_stroke_width": 8,
+    "door_leaf_fill": "$BG_LIGHT",
+    "door_edge_fill": "$ACCENT",
+    "door_frame_points": [
+      [
+        58,
+        44
+      ],
+      [
+        262,
+        44
+      ],
+      [
+        262,
+        375
+      ]
+    ],
+    "door_leaf_points": [
+      [
+        58,
+        44
+      ],
+      [
+        215,
+        100
+      ],
+      [
+        215,
+        395
+      ],
+      [
+        58,
+        352
+      ]
+    ],
+    "door_edge_points": [
+      [
+        215,
+        100
+      ],
+      [
+        224,
+        104
+      ],
+      [
+        224,
+        392
+      ],
+      [
+        215,
+        395
+      ]
+    ],
+    "exit_menu_fade_s": 0.25,
+    "door_in_s": 0.3,
+    "door_open_at_s": 0.5,
+    "door_open_s": 0.5,
+    "door_leaf_scale_x_to": 0.08,
+    "door_room_alpha_to": 0.6,
+    "door_through_at_s": 1.1,
+    "door_through_s": 0.6,
+    "door_through_scale_to": 8,
+    "door_through_origin": [
+      0.75,
+      0.5
+    ],
+    "door_fade_out_s": 0.4,
+    "hud_in_s": 0.3,
+    "timer_start_value": 75
   }
 }

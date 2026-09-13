@@ -33,6 +33,10 @@ var _target := ClickTarget.new()
 var _log := SessionLog.new()
 var _finished: bool = false
 
+## Held by the title screen while the door is still opening: the room is built
+## behind the door, and its timer must not start until the cut.
+var held: bool = false
+
 
 func _ready() -> void:
 	content = SimContent.load_from()
@@ -232,7 +236,7 @@ func _process(delta: float) -> void:
 
 
 func _is_paused() -> bool:
-	return _wheel.is_open() or _notebook.is_open() or _win.is_open()
+	return held or _wheel.is_open() or _notebook.is_open() or _win.is_open()
 
 
 func _on_sim_event(event: SimEvent) -> void:

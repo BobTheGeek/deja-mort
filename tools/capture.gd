@@ -9,6 +9,8 @@ extends SceneTree
 ## Not headless: Godot's headless driver has no renderer, so this opens a window.
 
 const SCENE := "res://game/main.tscn"
+
+## `--scene res://game/title.tscn` shoots the title beat instead of the room.
 const OUT_DIR := "user://shots"
 
 var _name := "shot"
@@ -16,6 +18,7 @@ var _capture_at := 1.5
 var _clicks: Array = []
 var _keys: Array = []
 var _solution := ""
+var _scene := SCENE
 var _pending: Array = []
 var _next := 0
 var _elapsed := 0.0
@@ -55,6 +58,14 @@ func _initialize() -> void:
 		elif str(args[i]) == "--solution" and i + 1 < args.size():
 			_solution = str(args[i + 1])
 			i += 2
+		elif str(args[i]) == "--click-at" and i + 1 < args.size():
+			# Default is 60% of the way in; the title beat needs its own timing.
+			for click in _clicks:
+				click["at"] = float(args[i + 1])
+			i += 2
+		elif str(args[i]) == "--scene" and i + 1 < args.size():
+			_scene = str(args[i + 1])
+			i += 2
 		elif str(args[i]) == "--speed" and i + 1 < args.size():
 			# Run the clock fast so a whole 75-second loop fits in a short capture.
 			Engine.time_scale = float(args[i + 1])
@@ -72,9 +83,9 @@ func _initialize() -> void:
 			i += 1
 
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
-	var packed: PackedScene = load(SCENE)
+	var packed: PackedScene = load(_scene)
 	if packed == null:
-		printerr("capture: cannot load %s" % SCENE)
+		printerr("capture: cannot load %s" % _scene)
 		quit(1)
 		return
 	get_root().add_child(packed.instantiate())
@@ -120,7 +131,7 @@ func _process(delta: float) -> bool:
 ## A screenshot alone cannot prove the sim is doing anything. This can.
 func _report_state() -> void:
 	var main := get_root().get_child(get_root().get_child_count() - 1)
-	var world: SimWorld = main.get("world")
+	var world: SimWorld = main.get("world") if main.has_method("_start_loop") else null
 	if world == null:
 		printerr("capture: no world")
 		return

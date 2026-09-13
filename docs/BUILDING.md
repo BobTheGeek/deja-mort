@@ -77,7 +77,14 @@ ever changes.
 ```bash
 godot --path . -s tools/capture.gd -- wheel_fridge 2.0 --cell 2,2
 godot --path . -s tools/capture.gd -- win_screen 85 --speed 10 --solution kill_toaster
+godot --path . -s tools/capture.gd -- title 3.4 --scene res://game/title.tscn
+godot --path . -s tools/capture.gd -- title_door 3.9 --scene res://game/title.tscn \
+    --click 956,808 --click 956,808 --click-at 2.9
 ```
+
+`--scene` shoots something other than the room; `--click-at` overrides when the
+synthetic clicks fire, which the title beat needs because its menu does not
+exist until 2.6s in.
 
 The capture tool is not headless — Godot's headless driver has no renderer, so
 it opens a window. It prints sim state alongside the image, because a screenshot
