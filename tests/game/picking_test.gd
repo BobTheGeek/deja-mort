@@ -228,3 +228,51 @@ func test_with_nothing_picked_it_falls_back_to_the_square() -> void:
 	assert_str(str(picker.choose(world, Vector2i(2, 1), ""))).is_not_empty()
 	assert_object(picker.choose(world, Vector2i(6, 5), "")).override_failure_message(
 		"an empty square should offer nothing to act on").is_null()
+
+
+# --- what you are holding ----------------------------------------------------
+
+## Bob: a lamp that trails after you around the room does not look right. A
+## point-and-click picks things up into your hands, not into your wake.
+func test_what_you_are_holding_is_not_drawn_in_the_room() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	assert_bool(renderer.object_node("floor_lamp").visible).override_failure_message(
+		"the lamp should be in the room before anyone picks it up").is_true()
+	F.give(world, "floor_lamp")
+	renderer.sync(world, 0.1, 0.0)
+	assert_bool(renderer.object_node("floor_lamp").visible).override_failure_message(
+		"the lamp is still standing in the room while the player holds it").is_false()
+
+
+func test_and_it_cannot_be_clicked_while_you_hold_it() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	var ray := _ray_through(renderer.object_bounds("floor_lamp").get_center())
+	assert_str(renderer.pick(ray[0] as Vector3, ray[1] as Vector3)).is_equal("floor_lamp")
+	F.give(world, "floor_lamp")
+	renderer.sync(world, 0.1, 0.0)
+	assert_str(renderer.pick(ray[0] as Vector3, ray[1] as Vector3)).override_failure_message(
+		"picked something the player has in their hands").is_not_equal("floor_lamp")
+
+
+func test_putting_it_down_puts_it_back_on_screen() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	F.give(world, "floor_lamp")
+	renderer.sync(world, 0.1, 0.0)
+	assert_bool(F.act(world, "drop", Vector2i(6, 4))).override_failure_message(
+		"could not put the lamp down").is_true()
+	renderer.sync(world, 0.1, 0.0)
+	assert_bool(renderer.object_node("floor_lamp").visible).override_failure_message(
+		"the lamp was put down and never came back").is_true()
+
+
+## The HUD is where a held thing lives instead.
+func test_the_hud_names_what_you_are_holding() -> void:
+	var world := F.world()
+	var hud: GameHud = auto_free(GameHud.new())
+	hud.setup(GameVisuals.load_table())
+	F.give(world, "floor_lamp")
+	hud.sync(world, 1)
+	assert_str(hud.holding_value()).is_equal(world.objects.by_id("floor_lamp").name)

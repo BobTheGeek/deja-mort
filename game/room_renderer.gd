@@ -459,6 +459,13 @@ func _sync_objects(world: SimWorld) -> void:
 ## it holds while it is shut. No object is named.
 func _hide_what_is_shut_away(world: SimWorld) -> void:
 	_shut_away.clear()
+	# And what someone is holding. The sim keeps carrying it at their cell —
+	# dropping and throwing both need somewhere to start from — but a lamp
+	# trailing after you around the room does not look like carrying a lamp.
+	# The HUD says what is in your hands instead.
+	for actor in world.actors():
+		if not actor.holding.is_empty():
+			_shut_away[actor.holding] = true
 	for obj in world.objects.all():
 		if obj.contains.is_empty() or obj.get_state("open", null) == null:
 			continue

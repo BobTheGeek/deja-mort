@@ -49,3 +49,20 @@ func test_carrying_something_does_not_move_what_it_is_plugged_into() -> void:
 	F.act(w, "grab", "toaster")
 	F.goto(w, Vector2i(5, 4))
 	assert_array(w.objects.by_id("toaster").prop("outlet")).is_equal(outlet)
+
+
+## From Bob's third playtest: "I don't like how when I grab the lamp it follows
+## me around the room. It does not look right. When something is picked up, it
+## should just show that I have it and disappear from the screen until I put it
+## back down or use it."
+##
+## That is a drawing decision, not a simulation one. The sim keeps carrying the
+## object at the actor's cell — dropping it has to put it somewhere, throwing it
+## has to throw it from somewhere, and the solver depends on both. What changes
+## is that presentation stops drawing it.
+func test_the_sim_still_knows_where_a_carried_thing_is() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	assert_bool(F.goto(world, Vector2i(6, 8))).is_true()
+	assert_array(world.objects.by_id("floor_lamp").cells).override_failure_message(
+		"the sim lost track of what the player is holding").is_equal([world.player.pos])
