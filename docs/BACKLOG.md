@@ -31,9 +31,10 @@ Claude Design's turn-1 delivery already contains portrait layouts for the HUD, n
 
 Steam desktop is a mouse, and the Steam Deck is sticks, trackpads and a touchscreen. Eight fixed compass slots are a gift for a stick — push a direction, release to commit — and Inspect is the face button. None of it is wired: the wheel currently takes a pointer only. The Deck deliberately does not get the phone's thumb-size scale-up, because a trackpad is not a thumb.
 
-## Two objects in Room 1 stand behind taller furniture
+## Small objects are a hard target on a phone
 
-With real-scale models, the fridge covers the stove behind it and the bathtub covers the medicine cabinet. `tests/game/picking_test.gd` counts them rather than ignoring them, and fails the build if a third ever joins them.
+Measured in screen pixels at the 1920x1080 canvas, with everything else in the room in the way, the smallest things in Room 1 are the frying pan (~693 px, about 26 across), the toaster (~1035) and the stove (~1422, the rest of it behind the fridge). All are comfortable with a mouse.
 
-Neither is unreachable in the sim — you can still push the fridge — but neither can be clicked where it stands. The fix is content: move the fridge or the stove a square, re-run the solver. Flagged rather than done, because the fridge's square is load-bearing (it is the door blocker in one of the three authored solutions).
+On a phone that canvas is stretched to the screen and a 26 px target is roughly ten points, against Apple's forty-four. `object.pick_tolerance_px` softens it — a tap that lands on nothing looks again in a small ring — but that is a plaster, not a fix. The real answers are a bigger tolerance on touch specifically, or drawing small objects larger than life, and neither should be chosen without a phone in hand.
 
+`tests/game/picking_test.gd` holds the room to `object.min_clickable_px` so it cannot quietly get worse.

@@ -26,6 +26,36 @@ func _rendered(world: SimWorld) -> RoomRenderer:
 	return renderer
 
 
+## The camera's own basis, from the same angles IsoCamera uses. No viewport
+## required, so this works on a renderer built off the scene tree.
+func _camera_basis() -> Basis:
+	var v := GameVisuals.load_table()
+	var pivot: Node3D = auto_free(Node3D.new())
+	pivot.rotation_degrees = Vector3(v.number("camera.pitch_deg", -35.264),
+		v.number("camera.yaw_deg", 45.0), 0.0)
+	return pivot.transform.basis
+
+
+## Screen pixels per world unit: an orthographic camera of `size` covers that
+## many world units over the canvas's height.
+func _px_per_unit() -> float:
+	var v := GameVisuals.load_table()
+	return v.number("ui.design_height", 1080.0) / maxf(v.number("camera.size", 11.0), 0.001)
+
+
+## A world point flattened onto the camera plane, in screen pixels.
+func _project(point: Vector3) -> Vector2:
+	var basis := _camera_basis()
+	return Vector2(point.dot(basis.x), point.dot(basis.y)) * _px_per_unit()
+
+
+func _ray_from_flat(flat: Vector2) -> Array:
+	var basis := _camera_basis()
+	var direction := -basis.z
+	var units := flat / _px_per_unit()
+	return [basis.x * units.x + basis.y * units.y - direction * 50.0, direction]
+
+
 ## The ray an orthographic camera casts through a world point, built from the
 ## same angles IsoCamera uses. No viewport required.
 func _ray_through(point: Vector3) -> Array:
@@ -52,13 +82,20 @@ func _samples(box: AABB) -> Array:
 
 # --- the harness -------------------------------------------------------------
 
-## Every object you can see, clickable where you can see it. This is the whole
-## bug, as a test.
-func test_every_drawn_object_can_be_clicked_on_its_own_body() -> void:
+## Every object you can see, clickable where you can see it — measured the way
+## a player meets it: in screen pixels, with everything else in the room in the
+## way.
+##
+## The first version of this test sampled points inside each object's own volume
+## and called an object broken when none of them picked it. That is the wrong
+## question. The middle of the stove is behind the fridge; the *corner* of the
+## stove is not, and a corner is enough to click. It reported two objects as
+## unclickable that a player can hit perfectly well, and I repeated that as fact.
+func test_every_drawn_object_has_somewhere_you_can_click_it() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
-	var missed := PackedStringArray()
-	var behind := PackedStringArray()
+	var floor_px := GameVisuals.load_table().number("object.min_clickable_px", 400.0)
+	var thin := PackedStringArray()
 	var total := 0
 	for obj in world.objects.all():
 		var node := renderer.object_node(obj.id)
@@ -68,32 +105,57 @@ func test_every_drawn_object_can_be_clicked_on_its_own_body() -> void:
 		if box.size == Vector3.ZERO:
 			continue
 		total += 1
-		# Sampled across the body, not just at the centre: something standing
-		# behind a wardrobe is half hidden, and half is enough to click.
-		var hit := ""
-		for point in _samples(box):
-			var ray := _ray_through(point as Vector3)
-			if renderer.pick(ray[0] as Vector3, ray[1] as Vector3) == obj.id:
-				hit = obj.id
-				break
-		if hit == obj.id:
-			continue
-		# Nothing wrong with the picking: something taller is standing in front.
-		# Room 1's fridge covers the corner of the kitchen behind it.
-		var centre := _ray_through(box.get_center())
-		var occluder := renderer.pick(centre[0] as Vector3, centre[1] as Vector3)
-		if not occluder.is_empty() \
-				and renderer.object_bounds(occluder).size.y > box.size.y:
-			behind.append("%s (behind %s)" % [obj.id, occluder])
-			continue
-		missed.append("%s (centre picks '%s')" % [obj.id, occluder])
+		var seen := _clickable_px(renderer, obj.id, box)
+		if seen < floor_px:
+			thin.append("%s: %.0f px" % [obj.id, seen])
 	assert_int(total).override_failure_message("nothing was drawn to click").is_greater(20)
-	assert_array(Array(missed)).override_failure_message(
-		"objects you cannot click where you can see them:\n  %s" % "\n  ".join(missed)).is_empty()
-	# Some hiding is the room's own geometry, but it is a cost and it is counted.
-	assert_int(behind.size()).override_failure_message(
-		"too much of Room 1 is hidden behind taller furniture:\n  %s" % "\n  ".join(behind)) \
-		.is_less_equal(2)
+	assert_array(Array(thin)).override_failure_message(
+		"objects with almost nowhere to click, at the 1920x1080 canvas:\n  %s"
+		% "\n  ".join(thin)).is_empty()
+
+
+## A thumb is not a pixel. The smallest thing in Room 1 is about 26 canvas px
+## across, which is roughly ten points on a phone against Apple's forty-four.
+func test_a_tap_that_lands_just_off_a_small_object_still_finds_it() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	var tolerance := GameVisuals.load_table().number("object.pick_tolerance_px", 14.0)
+	var centre := renderer.object_bounds("frying_pan").get_center()
+	var found := false
+	for offset in ClickTarget.ring(tolerance):
+		# A ray parallel to the camera's, nudged sideways by a near miss.
+		var ray := _ray_through(centre)
+		var nudged: Vector3 = (ray[0] as Vector3) + Vector3(offset.x, 0.0, offset.y) * 0.02
+		if renderer.pick(nudged, ray[1] as Vector3) == "frying_pan":
+			found = true
+	assert_bool(found).override_failure_message(
+		"the ring of near misses is empty, so tolerance does nothing").is_true()
+	assert_float(tolerance).override_failure_message(
+		"no tap tolerance at all: a phone has to hit a 26px target exactly").is_greater(0.0)
+
+
+func _clickable_px(renderer: RoomRenderer, id: String, box: AABB) -> float:
+	# Walks the object's own screen rectangle at a coarse step and counts where
+	# the pick comes back as this object. No viewport, so the projection is done
+	# by hand from the same angles the camera uses.
+	var step := 3.0
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for i in 8:
+		var flat := _project(box.get_endpoint(i))
+		lo = Vector2(minf(lo.x, flat.x), minf(lo.y, flat.y))
+		hi = Vector2(maxf(hi.x, flat.x), maxf(hi.y, flat.y))
+	var hits := 0
+	var y := lo.y
+	while y <= hi.y:
+		var x := lo.x
+		while x <= hi.x:
+			var ray := _ray_from_flat(Vector2(x, y))
+			if renderer.pick(ray[0] as Vector3, ray[1] as Vector3) == id:
+				hits += 1
+			x += step
+		y += step
+	return float(hits) * step * step
 
 
 ## The specific one Bob would have hit first.

@@ -9,6 +9,17 @@ extends RefCounted
 ## the same square again cycles through everything on it, which is how you reach
 ## the four things stacked behind the toaster.
 
+## Offsets to look at when a tap lands on nothing — a finger is wider than a
+## pixel, and Room 1's smallest object is about 26 canvas px across.
+static func ring(radius: float, count: int = 8) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for step in [0.5, 1.0]:
+		for i in count:
+			var angle := float(i) / float(count) * TAU
+			out.append(Vector2(cos(angle), sin(angle)) * radius * step)
+	return out
+
+
 var _cycle: Dictionary = {}   # "x,y" -> which of the objects on that square is next
 var _last := ""
 

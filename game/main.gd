@@ -343,8 +343,7 @@ func _on_notebook_pressed() -> void:
 ## square under the cursor is the wrong answer for anything tall: from this
 ## camera the middle of the fridge sits over the square behind it.
 func _click_world(screen_point: Vector2) -> void:
-	var picked := _renderer.pick(_camera.project_ray_origin(screen_point),
-		_camera.project_ray_normal(screen_point))
+	var picked := _pick_near(screen_point)
 	var on_screen := world.objects.by_id(picked) if not picked.is_empty() else null
 	var cell := on_screen.origin() if on_screen != null else _camera.cell_under(screen_point)
 	if not world.grid.in_bounds(cell):
