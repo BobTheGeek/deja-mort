@@ -266,7 +266,10 @@
         ]
       }
     },
-    "stack_spread": 0.22
+    "stack_spread": 0.22,
+    "pick_tolerance_px": 14.0,
+    "min_clickable_px": 400.0,
+    "_pick_comment": "A tap is a finger, not a pixel: a miss looks again within pick_tolerance_px. min_clickable_px is the floor the room has to clear, measured in screen pixels at the 1920x1080 canvas with everything else in the way."
   },
   "models": {
     "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",
