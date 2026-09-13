@@ -89,6 +89,10 @@ static func apply(window: Window, visuals: GameVisuals) -> void:
 		return
 	var screen := DisplayServer.window_get_size(window.get_window_id())
 	var dpi := DisplayServer.screen_get_dpi(DisplayServer.window_get_current_screen(window.get_window_id()))
-	window.content_scale_factor = factor(screen, dpi, OS.has_feature("mobile"), visuals)
+	var handheld := OS.has_feature("mobile")
+	window.content_scale_factor = factor(screen, dpi, handheld, visuals)
+	# Only a handheld has a notch. On a desktop the display's "safe area" is the
+	# screen minus the menu bar, which has nothing to do with a window inside it —
+	# taking it pushed the whole title menu 70px down into the room strip.
 	visuals.safe = insets(DisplayServer.get_display_safe_area(), screen,
-		window.get_visible_rect().size)
+		window.get_visible_rect().size) if handheld else _none()

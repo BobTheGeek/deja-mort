@@ -13,7 +13,7 @@ config_version=5
 config/name="DÉJÀ MORT"
 config/description="A die-and-retry room-survival puzzle game. You've died here before."
 config/version="0.0.1"
-run/main_scene="res://game/main.tscn"
+run/main_scene="res://game/title.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://assets/brand/app-icon-1024.png"
 
