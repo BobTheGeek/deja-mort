@@ -73,6 +73,14 @@ func colour_with_alpha(path: String, alpha_path: String, fallback := Color(1, 0,
 	return Color(base.r, base.g, base.b, number(alpha_path, 1.0))
 
 
+## A [x, y, z] from the table, or a fallback. Markers are the only thing that
+## needs one so far.
+func to_vector3(raw: Variant, fallback: Vector3) -> Vector3:
+	if raw is Array and (raw as Array).size() >= 3:
+		return Vector3(float(raw[0]), float(raw[1]), float(raw[2]))
+	return fallback
+
+
 func to_colour(raw: Variant, fallback := Color(1, 0, 1)) -> Color:
 	if raw is Array and (raw as Array).size() >= 3:
 		return Color(float(raw[0]), float(raw[1]), float(raw[2]))

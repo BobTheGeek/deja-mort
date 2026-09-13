@@ -11,7 +11,7 @@ Written 12 Sept 2026, against `docs/07-milestones.md` § M4. Bob has not signed 
 | Kenney / Quaternius imports | **done.** 140 Kenney models (CC0), 2 Quaternius figures (CC0), licences and scale documented in `assets/README.md` |
 | Palette and lighting rig | **done.** One bulb with shadows, warm key, cold fill, global saturation pulled to 0.62, diorama base |
 | Character figures | **done.** Player and Tenant, keyed on the actor's *role* so a new attacker profile needs no code |
-| State visuals for real meshes | **partly.** See below |
+| State visuals for real meshes | **done.** See below |
 | Stylised death animations | **done.** `game/death_beat.gd` — six causes staged, the lights flicker for current and fire, and the ending is named at the end of the beat rather than across it |
 | Particles | **water, fire, shock, gas. No dust.** M4 asked for dust; nothing produces it, and a shelf hitting the floor is where it would go |
 | Diorama base | **done** |
@@ -19,16 +19,16 @@ Written 12 Sept 2026, against `docs/07-milestones.md` § M4. Bob has not signed 
 
 ### State visuals
 
-`content/visuals.json` has looks for eight states: `burning`, `on`, `lit`, `open`, `broken`, `tipped`, `leaning`, `wet`.
+`content/visuals.json` has looks for fourteen states: `burning`, `on`, `lit`, `open`, `broken`, `tipped`, `leaning`, `wet`, plus `charging`, `charged`, `cut`, `locked`, `chained` and `braced_by`.
 
-Room 1's objects carry fifteen: those eight plus `braced_by`, `chained`, `charged`, `charging`, `cut`, `inspected`, `locked`, `plugged`.
+The last three were the gap that mattered: you locked the front door, put the chain on, shoved the fridge against it, and nothing on screen changed. They now carry a small solid mark on the object — size, offset and brand colour from `state_visual`, so a new state is a table entry rather than a code change, and nothing about it names an object.
 
-M4's acceptance line is "every object state has a visual", so **this is not met**. Three of the seven are worth arguing about and four are not:
+Two states deliberately have none, declared in `state_visual_none` with the reason attached:
 
-- `inspected` is bookkeeping and should stay invisible.
-- `charged` / `charging` / `plugged` are legible through the phone's own state and the cord; arguably fine.
-- `locked`, `chained` and `braced_by` are **facts the player acts on and cannot see**. You lock the front door and nothing changes on screen. That is a real gap, not a definitional one.
-- `cut` has no look either.
+- `inspected` is bookkeeping. Drawing it would tell the player what they already know.
+- `plugged` is the *starting* state of the toaster, the lamp and the hair dryer, so a mark on each is three marks that never change. What matters is a cord pulled **out**, and that already shows as the trip hazard on the floor.
+
+`tests/game/state_visual_test.gd` fails the build when a state is neither drawn nor on that list, so the exceptions stay reviewable instead of becoming an oversight.
 
 ---
 
@@ -40,7 +40,7 @@ Bob's first verdict was "it does not meet the style target". Six structural fixe
 
 > Every object state has a visual.
 
-**Not met.** Seven states have no look; three of them matter (§ above).
+**Met**, with two declared exceptions that carry their reason in the table (§ above). `docs/screenshots/m4_secured.png` is the front door locked and chained.
 
 > Bob signs off on a screenshot set (light on / light off / flooded / shelf tipped / death frame).
 
@@ -87,8 +87,7 @@ Worth listing so the milestone doc is not mistaken for the history:
 
 1. Bob plays Room 1 and reaches all three endings, or says which one he cannot reach and why.
 2. Sign-off on the screenshot set, or a list of what still misses the style target.
-3. A decision on the three invisible states (`locked`, `chained`, `braced_by`) — a look each, or an explicit note that the notebook carries them instead.
-4. A phone build, once, even ugly. Everything about touch is currently arithmetic.
+3. A phone build, once, even ugly. Everything about touch is currently arithmetic.
 
 Not blockers, but they are the difference between "M4 is done" and "M4 looks done".
 
@@ -96,7 +95,7 @@ Not blockers, but they are the difference between "M4 is done" and "M4 looks don
 
 ## Numbers as of this commit
 
-- **425 tests**, 0 failures
+- **442 tests**, 0 failures
 - `lint_room` — 13 overlapping (verb, object) pairs, 13 resolved by declared shadowing, 0 left
 - `rule_coverage` — 38 of 38 rule ids have a passing test
 - `verify_all` — 3 of 3 authored solutions, tightness 47.1 / 62.0 / 66.0s
