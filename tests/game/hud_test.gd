@@ -225,3 +225,63 @@ func test_the_game_routes_the_button_before_the_room() -> void:
 	assert_int(press).override_failure_message("the button is never offered the tap").is_greater(-1)
 	assert_int(press).override_failure_message(
 		"the room gets the tap before the HUD does").is_less(click)
+
+
+# --- the banner ---------------------------------------------------------------
+
+## From Bob's third playtest: "after I died the LOSS overlay stayed up even once
+## the new round started."
+##
+## The banner was a string that got set when the loop ended and never unset. The
+## next loop has no ending, so nothing wrote over it, and it sat across a room
+## whose timer was already running again.
+func test_the_ending_is_named_while_the_loop_is_over() -> void:
+	var world := F.world()
+	var hud := _hud()
+	hud.sync(world, 1)
+	assert_str(hud.banner_text()).override_failure_message(
+		"a banner before anything has ended").is_empty()
+	world.kill_actor(world.player, "stabbed", "test")
+	world.step()
+	assert_str(world.ending).override_failure_message(
+		"this test needs the loop to have ended").is_not_empty()
+	hud.sync(world, 1)
+	assert_str(hud.banner_text()).is_equal("LOSS")
+
+
+func test_the_next_loop_starts_with_a_clean_screen() -> void:
+	var over := F.world()
+	over.kill_actor(over.player, "stabbed", "test")
+	over.step()
+	var hud := _hud()
+	hud.sync(over, 1)
+	assert_str(hud.banner_text()).is_not_empty()
+	# A fresh loop: same HUD, new world, nothing has ended.
+	hud.sync(F.world(), 2)
+	assert_str(hud.banner_text()).override_failure_message(
+		"LOSS is still across a room whose timer is running again").is_empty()
+
+
+## The death beat flashes DEAD before the sim has named an ending; that must
+## clear itself too.
+func test_a_flash_clears_when_the_loop_moves_on() -> void:
+	var hud := _hud()
+	hud.flash("DEAD")
+	assert_str(hud.banner_text()).is_equal("DEAD")
+	hud.sync(F.world(), 2)
+	assert_str(hud.banner_text()).is_empty()
+
+
+## The beat flashes DEAD before the ending is named. Clearing on every frame of
+## a finished loop would wipe it.
+func test_the_death_flash_survives_the_beat() -> void:
+	var world := F.world()
+	world.kill_actor(world.player, "stabbed", "test")
+	world.step()
+	var hud := _hud()
+	hud.flash("DEAD")
+	hud.sync(world, 1, true)     # the banner is suppressed early in the beat
+	assert_str(hud.banner_text()).override_failure_message(
+		"DEAD was wiped before anyone could read it").is_equal("DEAD")
+	hud.sync(world, 1, false)    # and the ending is named at the end of it
+	assert_str(hud.banner_text()).is_equal("LOSS")

@@ -103,7 +103,15 @@ func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
 	_holding = held.name if held != null else ""
 	var spot := world.objects.by_id(world.player.hidden_in) if world.player.is_hidden() else null
 	_hidden_in = spot.name if spot != null else ""
-	if not _ending.is_empty() and not panel_open:
+	# Named while the loop is over, and gone the moment the next one starts. It
+	# used to be set and never unset, so LOSS sat across a running room.
+	#
+	# While a loop is ending the banner is left alone, because the death beat
+	# flashes DEAD before the ending gets named and that must survive the frames
+	# in between.
+	if _ending.is_empty():
+		_banner = ""
+	elif not panel_open:
 		_banner = _ending.to_upper()
 	queue_redraw()
 
@@ -340,6 +348,10 @@ func _inspect_lines() -> PackedStringArray:
 	if lines.size() < cap and not line.is_empty():
 		lines.append(line)
 	return lines
+
+
+func banner_text() -> String:
+	return _banner
 
 
 func flash(text: String) -> void:
