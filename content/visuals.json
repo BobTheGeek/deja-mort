@@ -157,7 +157,13 @@
     },
     "flicker_hz": 11.0,
     "flicker_depth": 0.75,
-    "banner_last_s": 0.7
+    "banner_last_s": 0.7,
+    "wait_for_input": true,
+    "retry_prompt": "Click to try again",
+    "retry_prompt_touch": "Tap to try again",
+    "retry_prompt_size": 20.0,
+    "retry_prompt_alpha": 0.6,
+    "retry_prompt_tracking_em": 0.18
   },
   "object": {
     "default": {

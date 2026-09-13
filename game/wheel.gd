@@ -458,7 +458,7 @@ func _describe(world: SimWorld, target: Variant) -> String:
 		if obj != null:
 			return obj.name
 	elif target is Vector2i:
-		return "Floor %s" % [target]
+		return "The floor here" if target == world.player.pos else "The floor at %s" % [target]
 	return str(target)
 
 
