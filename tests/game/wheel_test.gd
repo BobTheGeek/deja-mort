@@ -277,3 +277,66 @@ func test_the_game_puts_the_vignette_under_the_hud() -> void:
 	assert_int(backdrop).override_failure_message("nothing adds the backdrop").is_greater(-1)
 	assert_int(backdrop).override_failure_message(
 		"the backdrop is added after the HUD, so it draws over it").is_less(hud)
+
+
+# --- why a slot is off -------------------------------------------------------
+
+## The session log's one clear finding: Bob tapped the knife, could not grab it,
+## and nothing told him his hands were full of floor lamp.
+func test_hovering_a_slot_that_is_off_says_why() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	var wheel := _open(world, "kitchen_knife")
+	assert_str(wheel.slot_state("grab")).is_equal("unavailable")
+	wheel.hover_at(wheel.slot_centre("grab"))
+	var lines := wheel.caption_lines()
+	assert_str(lines[lines.size() - 1]).override_failure_message(
+		"the wheel still says nothing about why Grab is off: %s" % [lines]).contains("hands are full")
+
+
+func test_the_words_come_from_the_table_not_from_the_sim() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	var wheel := _open(world, "kitchen_knife")
+	assert_str(wheel.reason_for("grab")).is_equal(
+		str((GameVisuals.load_table().get_value("wheel.reasons", {}) as Dictionary)["actor.hands_free"]))
+
+
+## No rule covers toggling a rug. That is not a reason and the wheel does not
+## invent one.
+func test_a_slot_with_no_rule_behind_it_gets_no_excuse() -> void:
+	var world := F.world()
+	var wheel := _open(world, "rug")
+	assert_str(wheel.slot_state("toggle")).is_equal("unavailable")
+	assert_str(wheel.reason_for("toggle")).is_empty()
+	wheel.hover_at(wheel.slot_centre("toggle"))
+	var lines := wheel.caption_lines()
+	assert_str(lines[lines.size() - 1]).override_failure_message(
+		"an excuse was invented for a verb that simply does not apply").is_equal("Toggle")
+
+
+func test_an_available_slot_still_shows_its_cost_rather_than_a_reason() -> void:
+	var world := F.world()
+	var wheel := _open(world, "fridge")
+	wheel.hover_at(wheel.slot_centre("open"))
+	var lines := wheel.caption_lines()
+	assert_str(lines[lines.size() - 1]).contains("s")
+	assert_str(wheel.reason_for("open")).is_empty()
+
+
+## A phone has no hover. Tapping a slot that is off has to say the same thing,
+## or the explanation only ever exists on desktop.
+func test_tapping_a_slot_that_is_off_says_why_too() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	var wheel := _open(world, "kitchen_knife")
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.position = wheel.slot_centre("grab")
+	wheel._gui_input(event)
+	assert_bool(wheel.is_open()).override_failure_message(
+		"tapping an unavailable slot closed the wheel").is_true()
+	var lines := wheel.caption_lines()
+	assert_str(lines[lines.size() - 1]).override_failure_message(
+		"tapped Grab and the wheel said nothing: %s" % [lines]).contains("hands are full")

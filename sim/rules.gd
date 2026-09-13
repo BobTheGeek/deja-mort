@@ -65,6 +65,46 @@ static func from_json(data: Dictionary) -> SimRule:
 	return r
 
 
+## Which gate stopped this rule, or "" when it matched. Same order as matches(),
+## because the first gate to fail is the honest answer. The key is machine-
+## readable on purpose: the sim does not own the words.
+func why_not(ctx: SimRuleContext) -> String:
+	if ctx.verb != verb:
+		return "verb"
+	if not _target_kind_ok(ctx):
+		return "target_kind"
+	if not _held_ok(ctx):
+		return "held_missing" if ctx.held == null else "held"
+	if not _target_ok(ctx):
+		return "target"
+	if not _subject_ok(ctx):
+		return "subject"
+	if not _actor_ok(ctx):
+		return "actor." + _failing_actor_condition(ctx)
+	if not _target_actor_ok(ctx):
+		return "target_actor"
+	if not _container_ok(ctx):
+		return "container"
+	if not _hazard_ok(ctx):
+		return "hazard"
+	if not _zone_ok(ctx):
+		return "zone"
+	if not _range_ok(ctx):
+		return "range"
+	return ""
+
+
+func _failing_actor_condition(ctx: SimRuleContext) -> String:
+	for key in actor_conditions:
+		var one := {}
+		one[key] = actor_conditions[key]
+		var probe := SimRule.new()
+		probe.actor_conditions = one
+		if not probe._actor_ok(ctx):
+			return str(key)
+	return "conditions"
+
+
 func matches(ctx: SimRuleContext) -> bool:
 	if ctx.verb != verb:
 		return false

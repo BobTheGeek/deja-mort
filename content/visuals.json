@@ -596,7 +596,24 @@
     "cost_number_size": 12,
     "backdrop_texture": "res://assets/ui/wheel/wheel-vignette.png",
     "icon_path": "res://assets/ui/icons/verbs/%s-master-128.png",
-    "_comment": "Claude Design, turn 1, direction A (tiles on a ring). Numbers are px at 1920x1080; the project stretches canvas items to that base so they are literal. docs/ui/SPEC.md is the drawing."
+    "_comment": "Claude Design, turn 1, direction A (tiles on a ring). Numbers are px at 1920x1080; the project stretches canvas items to that base so they are literal. docs/ui/SPEC.md is the drawing.",
+    "reasons": {
+      "held": "that is not the right thing to be holding",
+      "held_missing": "your hands are empty",
+      "subject": "what you are holding will not do it",
+      "actor.hands_free": "your hands are full",
+      "actor.holding": "you need something in your hands",
+      "actor.hidden": "not from where you are hiding",
+      "actor.vulnerable": "not while you are like this",
+      "actor.has_status": "not in the state you are in",
+      "actor.lacks_status": "not in the state you are in",
+      "target_actor": "not to him, not like this",
+      "container": "it is shut away",
+      "hazard": "not with what is on the floor here",
+      "zone": "not in this part of the room",
+      "range": "you are too far from it"
+    },
+    "reason_prefix": "\u2014"
   },
   "hud": {
     "_comment": "Claude Design turn 1, the whole hud block. Px at the 1920x1080 canvas the project stretches to; docs/ui/SPEC.md is the drawing. hud_portrait is parked in docs/ui/ui-tokens.json with the rest of the portrait layouts.",

@@ -13,6 +13,41 @@ static func verb_ids(world: SimWorld) -> PackedStringArray:
 
 
 ## Every verb id, available or not — the wheel needs the faded slots too.
+## Every reason the sim can give for a verb being unavailable. The wheel keeps
+## the words; a test fails the build when a key here has none.
+const BLOCKERS: PackedStringArray = [
+	"held", "held_missing", "subject", "actor.hands_free", "actor.holding",
+	"actor.hidden", "actor.vulnerable", "actor.has_status", "actor.lacks_status",
+	"target_actor", "container", "hazard", "zone", "range",
+]
+
+
+## Why this verb is not available on this target — a key from BLOCKERS, or "" if
+## it is available, or "" when no rule is about this thing at all. The absence of
+## a rule is not a reason; inventing one would be worse than saying nothing.
+##
+## Rules whose *target* side does not fit are skipped: "toggle" has nothing to do
+## with a rug, and the rug is not the problem.
+static func blocker(world: SimWorld, actor: SimActor, verb: String, target: Variant) -> String:
+	var resolved: Dictionary = world._resolve_target(target)
+	if resolved.is_empty():
+		return ""
+	var ctx := world._context(verb, resolved, actor)
+	var best := ""
+	var furthest := -1
+	for rule in world.rules.rules:
+		if rule.verb != verb or rule.trigger != "verb":
+			continue
+		var why := rule.why_not(ctx)
+		if why.is_empty():
+			return ""
+		var rank := BLOCKERS.find(why)
+		if rank > furthest:
+			furthest = rank
+			best = why
+	return best if furthest >= 0 else ""
+
+
 static func availability(world: SimWorld, actor: SimActor, target: Variant) -> Dictionary:
 	var out := {}
 	for verb in verb_ids(world):
