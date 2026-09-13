@@ -50,6 +50,8 @@ Decision gate: tune `timer_s`, breach costs, patience, spread rate against the s
 
 **Split:** Agent A: camera/renderer/state visuals. Agent B: wheel + HUD + input (mouse/touch/controller). Agent C: notebook + win screen + save. Agent D: AudioDirector + audio map + placeholder cues.
 
+**Status (12 Sept 2026):** built, and three acceptance lines are still open — Bob has not reached all three endings in play, there has been no phone build, and locating the attacker by ear is untested (he has one footstep cue, not one per zone material). The UI was rebuilt a second time in M4 against Claude Design's delivery. See `docs/M4-CLOSEOUT.md`.
+
 ---
 
 ## M4 — Art pass, Room 1 (≈4–6 days)
@@ -59,6 +61,8 @@ Kenney/Quaternius imports · palette and lighting rig · character figures · st
 **Accept:** Room 1 looks like the style target under the lighting rig. Every object state has a visual. Bob signs off on a screenshot set (light on / light off / flooded / shelf tipped / death frame).
 
 **Split:** Agent A: imports + materials + lighting. Agent B: animations + particles. Agent C: Blender-scripted bespoke pieces (attacker figure, anything the packs lack).
+
+**Status (12 Sept 2026):** the list is built apart from dust particles and the collectible's model; "every object state has a visual" is **not** met — seven states have no look, and `locked`, `chained` and `braced_by` are facts the player acts on and cannot see. The screenshot set is regenerated and awaiting sign-off. Full accounting, including what was done that M4 did not ask for, in `docs/M4-CLOSEOUT.md`.
 
 ---
 

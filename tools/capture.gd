@@ -26,6 +26,10 @@ var _done := false
 
 
 func _initialize() -> void:
+	# The capture tool owns the window: the game sizes its own window on start,
+	# and resizing under a --resolution given on the command line hands back an
+	# empty framebuffer.
+	Engine.set_meta("capture", true)
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		_name = str(args[0])

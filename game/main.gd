@@ -357,6 +357,22 @@ func _click_world(screen_point: Vector2) -> void:
 	_log.walk(cell, world.walk_to(cell))
 
 
+## What is under the tap, and failing that what is beside it. A finger is wider
+## than a pixel and the smallest object in Room 1 is about 26 canvas px across,
+## so a near miss looks again in a small ring rather than walking you somewhere.
+func _pick_near(screen_point: Vector2) -> String:
+	var hit := _renderer.pick(_camera.project_ray_origin(screen_point),
+		_camera.project_ray_normal(screen_point))
+	if not hit.is_empty():
+		return hit
+	for offset in ClickTarget.ring(visuals.number("object.pick_tolerance_px", 14.0)):
+		var point := screen_point + offset
+		hit = _renderer.pick(_camera.project_ray_origin(point), _camera.project_ray_normal(point))
+		if not hit.is_empty():
+			return hit
+	return ""
+
+
 ## A refusal keeps the wheel open and says so. Closing silently was
 ## indistinguishable from a character who would not move.
 func _on_verb_chosen(verb: String, target: Variant, rule_id: String) -> void:
