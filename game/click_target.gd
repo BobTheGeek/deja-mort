@@ -49,11 +49,22 @@ static func options_for(world: SimWorld, cell: Vector2i) -> Array:
 	var beside: bool = _is_beside(world.player.pos, cell) and bool(world.walkable(cell))
 	if holding and (standing_here or beside):
 		options.append(cell)
-	for obj in world.objects.at_cell(cell):
-		options.append(obj.id)
+	for id in in_the_room(world, cell):
+		options.append(id)
 	if standing_here and not holding:
 		options.append(cell)
 	return options
+
+
+## The objects on a square that are actually in the room: not inside a shut
+## cupboard, not in somebody's hands. Same list the renderer draws.
+static func in_the_room(world: SimWorld, cell: Vector2i) -> PackedStringArray:
+	var hidden := world.out_of_sight()
+	var out := PackedStringArray()
+	for obj in world.objects.at_cell(cell):
+		if not hidden.has(obj.id):
+			out.append(obj.id)
+	return out
 
 
 func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
@@ -64,8 +75,8 @@ func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
 	var within_reach: bool = standing_here or (holding and beside)
 	if holding and within_reach:
 		options.append(cell)
-	for obj in world.objects.at_cell(cell):
-		options.append(obj.id)
+	for id in in_the_room(world, cell):
+		options.append(id)
 	if standing_here and not holding:
 		options.append(cell)
 	if options.is_empty():
@@ -97,7 +108,5 @@ func _cycle_through(options: Array, cell: Vector2i, picked: String) -> Variant:
 ## Which of the things on this square is being offered, and how many there are —
 ## the wheel's caption says so out loud.
 func position_on(world: SimWorld, cell: Vector2i) -> Array:
-	var count := world.objects.at_cell(cell).size()
-	if world.player.pos == cell:
-		count += 1
-	return [int(_cycle.get("%d,%d" % [cell.x, cell.y], 0)) + 1, count]
+	var count := options_for(world, cell).size()
+	return [mini(int(_cycle.get("%d,%d" % [cell.x, cell.y], 0)) + 1, maxi(count, 1)), count]

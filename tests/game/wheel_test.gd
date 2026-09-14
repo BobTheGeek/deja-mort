@@ -351,7 +351,12 @@ func test_tapping_a_slot_that_is_off_says_why_too() -> void:
 ## Tapping the square again cycled, and nothing on screen said so except a line
 ## of text. Five things share the counter square.
 
+## The drawer has to be open: what is shut inside a cupboard is not drawn and is
+## not on the list you page through, which is the ninth playtest's fix. Open, the
+## counter square carries the drawer, the charger, the oil and the toaster.
 func _stacked(world: SimWorld) -> ActionWheel:
+	if not bool(world.objects.by_id("counter_drawer").get_state("open", false)):
+		assert_bool(F.act(world, "open", "counter_drawer")).is_true()
 	var cell := world.objects.by_id("toaster").origin()
 	var options := ClickTarget.options_for(world, cell)
 	assert_int(options.size()).override_failure_message(
@@ -416,7 +421,7 @@ func test_the_verbs_follow_the_selection() -> void:
 	for id in seen:
 		states[str(seen[id])] = true
 	assert_int(states.size()).override_failure_message(
-		"every one of five different things offers exactly the same Grab").is_greater(1)
+		"every one of the things on this square offers exactly the same Grab").is_greater(1)
 
 
 ## The description is the reward for Inspect. Browsing shows it for things you

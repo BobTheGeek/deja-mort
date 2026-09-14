@@ -785,6 +785,10 @@
     "holding_label_alpha": 0.55,
     "holding_value_size": 22,
     "holding_value_weight": "Bold",
+    "holding_rule_height": 1.5,
+    "holding_rule_alpha": 0.28,
+    "holding_rule_hover_alpha": 0.9,
+    "holding_rule_gap": 6.0,
     "hidden_gap_above": 14,
     "hidden_padding": [
       8,

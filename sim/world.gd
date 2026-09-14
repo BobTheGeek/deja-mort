@@ -160,6 +160,37 @@ func blocks_sight(cell: Vector2i) -> bool:
 	return false
 
 
+## Everything that is not in the room to look at: what is inside a shut
+## container, and what someone is carrying. The sim keeps both at a square —
+## contents follow their cupboard, a held thing follows the hand that holds it,
+## and dropping and throwing need somewhere to start from — but neither is
+## scenery.
+##
+## One list, because the renderer and the click both have to mean the same thing
+## by "in the room". Bob paged through a shut drawer onto a charger that was not
+## drawn and could not be picked up, which reads as a broken game rather than a
+## shut drawer.
+##
+## Generic: an object that lists `contains` and has an `open` state hides what it
+## holds while it is shut. No object is named.
+func out_of_sight() -> Dictionary:
+	var hidden: Dictionary = {}
+	for actor in actors():
+		if not actor.holding.is_empty():
+			hidden[actor.holding] = true
+	for obj in objects.all():
+		if obj.contains.is_empty() or obj.get_state("open", null) == null:
+			continue
+		if bool(obj.get_state("open", false)):
+			continue
+		for id in obj.contains:
+			var inside := objects.by_id(str(id))
+			# Once it is out of the cupboard it has its own place in the room.
+			if inside != null and inside.on.is_empty():
+				hidden[str(id)] = true
+	return hidden
+
+
 func actors() -> Array[SimActor]:
 	var out: Array[SimActor] = [player]
 	out.append_array(_other_actors)

@@ -318,8 +318,13 @@ func test_what_you_are_holding_puts_the_floor_first() -> void:
 		.override_failure_message("holding the lamp, the floor should come first").is_true()
 
 
-## And the thing in your hands is still reachable, one tap further round.
-func test_cycling_still_reaches_what_you_hold() -> void:
+## The thing in your hands used to be one more tap round the square. It is not
+## drawn there — the renderer hides what you carry — so paging onto it was paging
+## onto nothing, which is the same fault as paging into a shut drawer.
+##
+## It lives on the HUD chip that names it now. See
+## tests/game/hud_test.gd: the chip is a button.
+func test_what_you_hold_is_not_on_the_floor_you_stand_on() -> void:
 	var world := F.world()
 	F.give(world, "floor_lamp")
 	world.step()   # carrying moves it to the player's square
@@ -328,7 +333,8 @@ func test_cycling_still_reaches_what_you_hold() -> void:
 	var second: Variant = picker.choose(world, world.player.pos, "")
 	assert_bool(first is Vector2i).is_true()
 	assert_str(str(second)).override_failure_message(
-		"tapping again did not reach the lamp: %s" % [second]).is_equal("floor_lamp")
+		"the lamp in your hands is being offered as something on the floor").is_not_equal(
+		"floor_lamp")
 
 
 func test_a_square_you_are_not_on_still_just_walks() -> void:
@@ -404,3 +410,29 @@ func test_the_oil_can_be_poured_on_the_square_in_front_of_the_door() -> void:
 	world.step_until_idle()
 	assert_bool(world.hazards.has("slippery", doorway)).override_failure_message(
 		"poured the oil and the floor is not slippery").is_true()
+
+
+# --- one list, one count ------------------------------------------------------
+
+## The caption says "2 of 5" and the arrows walk a list of 2. That was true while
+## `position_on` counted everything the sim keeps on the square, including what
+## is shut inside the drawer, and the arrows walked what you can see.
+##
+## Both come off `options_for` now, so the number in the caption is the number of
+## things the arrows will show you.
+func test_the_count_in_the_caption_is_the_length_of_the_list() -> void:
+	var world := F.world()
+	var picker := ClickTarget.new()
+	for cell in [Vector2i(3, 1), Vector2i(7, 1), world.player.pos]:
+		var options := ClickTarget.options_for(world, cell)
+		var chosen: Variant = picker.choose(world, cell, "")
+		if chosen == null:
+			continue
+		var at := picker.position_on(world, cell)
+		assert_int(int(at[1])).override_failure_message(
+			"at %s the caption counts %d and the arrows walk %d: %s"
+			% [cell, int(at[1]), options.size(), options]).is_equal(options.size())
+		assert_int(int(at[0])).is_between(1, options.size())
+		assert_str(str(options[int(at[0]) - 1])).override_failure_message(
+			"the caption's position points at a different thing than the wheel opened on") \
+			.is_equal(str(chosen))
