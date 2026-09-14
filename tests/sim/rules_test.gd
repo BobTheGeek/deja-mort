@@ -66,8 +66,8 @@ func test_rule_push() -> void:
 func test_rule_push_heavy() -> void:
 	var w := F.world()
 	assert_bool(F.goto(w, Vector2i(3, 2))).is_true()
-	assert_bool(F.act(w, "push", "fridge", "push_heavy")).is_true()
-	assert_vector(w.objects.by_id("fridge").origin()).is_equal(Vector2i(1, 2))
+	assert_bool(F.act(w, "push", "moving_boxes", "push_heavy")).is_true()
+	assert_vector(w.objects.by_id("moving_boxes").origin()).is_equal(Vector2i(1, 2))
 
 
 func test_rule_tip_first() -> void:
@@ -100,8 +100,8 @@ func test_tipped_shelf_pins_whoever_is_under_it() -> void:
 func test_rule_push_to_brace() -> void:
 	var w := F.world()
 	assert_bool(F.goto(w, Vector2i(3, 2))).is_true()
-	assert_bool(F.act(w, "push", "fridge", "push_heavy")).is_true()
-	assert_str(str(w.objects.by_id("front_door").get_state("braced_by"))).is_equal("fridge")
+	assert_bool(F.act(w, "push", "moving_boxes", "push_heavy")).is_true()
+	assert_str(str(w.objects.by_id("front_door").get_state("braced_by"))).is_equal("moving_boxes")
 	assert_bool(F.fired(w, "push_to_brace")).is_true()
 	assert_array(Array(w.discoveries)).contains(["brace_door"])
 

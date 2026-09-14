@@ -101,10 +101,14 @@ func _lint_layout(path: String) -> void:
 		# fault — so this asks only of the things you operate at arm's length.
 		var operated := tags.has("openable") or tags.has("container") \
 			or tags.has("wet-source") or tags.has("gas-source")
-		if drawn and fixture and operated and blockers.has(key) \
-				and not excused.has(str(blockers[key])):
-			_layout_issue(path, excused, oid, "no-room-to-use",
-				"opens onto '%s' with nowhere to stand" % blockers[key])
+		if drawn and fixture and operated and blockers.has(key):
+			var blocker := str(blockers[key])
+			if excused.has(blocker):
+				_warnings.append("%s: object '%s' opens onto '%s' [no-room-to-use] — declared: %s"
+					% [path, oid, blocker, excused[blocker]])
+			else:
+				_layout_issue(path, excused, oid, "no-room-to-use",
+					"opens onto '%s' with nowhere to stand" % blocker)
 
 		if not carryable and not fixture and not _touches_a_wall(footprint, cells) \
 				and not _touches_furniture(oid, footprint, blockers):

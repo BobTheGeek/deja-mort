@@ -745,7 +745,12 @@
       "zone": "not in this part of the room",
       "range": "you are too far from it"
     },
-    "reason_prefix": "\u2014"
+    "reason_prefix": "\u2014",
+    "arrow_size": 48.0,
+    "arrow_gap": 10.0,
+    "arrow_color": "$FG_DARK",
+    "arrow_alpha": 0.85,
+    "arrow_glyph_size": 24.0
   },
   "hud": {
     "_comment": "Claude Design turn 1, the whole hud block. Px at the 1920x1080 canvas the project stretches to; docs/ui/SPEC.md is the drawing. hud_portrait is parked in docs/ui/ui-tokens.json with the rest of the portrait layouts.",

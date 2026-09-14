@@ -115,7 +115,7 @@ func test_completion_counts_what_the_room_can_offer() -> void:
 func test_discoveries_are_recorded_once() -> void:
 	var w := F.world()
 	F.goto(w, Vector2i(3, 2))
-	F.act(w, "push", "fridge", "push_heavy")
+	F.act(w, "push", "moving_boxes", "push_heavy")
 	assert_array(Array(w.discoveries)).contains(["brace_door"])
 	assert_int(w.discoveries.size()).is_equal(1)
 
