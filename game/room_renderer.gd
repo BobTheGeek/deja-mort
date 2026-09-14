@@ -207,6 +207,8 @@ func _build_objects(world: SimWorld) -> void:
 			continue
 		var look := visuals.object_look(obj.tags)
 		var node := _add_model(obj, look)
+		if node == null and str(look.get("shape", "")) == "panels":
+			node = _add_panels(obj, look)
 		if node == null:
 			var height := float(look.get("height", 0.5))
 			node = _add_box(
@@ -218,6 +220,34 @@ func _build_objects(world: SimWorld) -> void:
 			_model_nodes[obj.id] = true
 		node.name = obj.id
 		_object_nodes[obj.id] = node
+
+
+## Hanging cloth: two tall thin panels with a gap between them, rather than a
+## box filling the square. Nothing in the furniture kit is a curtain, and a
+## brown cube is what the greybox made of one.
+##
+## Keyed off the `cloth` tag, like every other look — no object is named.
+func _add_panels(obj: SimObject, look: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	_object_root.add_child(root)
+	var extent := _extent(obj)
+	var height := float(look.get("height", 2.35))
+	var depth := float(look.get("panel_depth", 0.1))
+	var gap := float(look.get("panel_gap", 0.22))
+	var span := float(extent.x) - float(look.get("inset", 0.08)) * 2.0
+	var width := maxf((span - gap) * 0.5, 0.05)
+	var colour := visuals.to_colour(look.get("color", null))
+	for side in [-1.0, 1.0]:
+		var panel := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(width, height, depth)
+		panel.mesh = mesh
+		panel.position = Vector3(side * (gap + width) * 0.5, height * 0.5,
+			-float(extent.y) * 0.5 + depth)
+		panel.material_override = _material(colour)
+		root.add_child(panel)
+	_model_nodes[obj.id] = true
+	return root
 
 
 ## Instantiates the object's model at the size the thing really is. A pack is
@@ -645,7 +675,7 @@ func _place_objects(world: SimWorld) -> void:
 		if _model_nodes.has(obj.id):
 			# A model carries its own flat materials. Only state that genuinely
 			# changes the look — burning, broken — overrides them.
-			node.position = _footprint_centre(obj, extent)
+			node.position = _footprint_centre(obj, extent) + _mounting(obj)
 			node.rotation_degrees = _object_rotation(obj, look)
 			var emission := float(look.get("emission", 0.0))
 			_override_model(node, look, emission)
@@ -656,7 +686,7 @@ func _place_objects(world: SimWorld) -> void:
 			float(obj.cells[0].x) + float(extent.x) * 0.5,
 			height * 0.5,
 			float(obj.cells[0].y) + float(extent.y) * 0.5,
-		)
+		) + _mounting(obj)
 		node.rotation_degrees = _object_rotation(obj, look)
 		node.scale = Vector3(1.0, float(look.get("scale_y", 1.0)), 1.0)
 		(node as MeshInstance3D).material_override = _material(
@@ -693,6 +723,14 @@ func _sync_object_marker(node: Node3D, look: Dictionary) -> void:
 	marker.rotation_degrees = Vector3(0.0, 0.0, float(shape.get("roll_deg", 0.0)))
 	marker.material_override = _material(visuals.to_colour(shape.get("color", null)),
 		visuals.number("object.marker_emission", 0.35))
+
+
+## A wall cabinet is on the wall and a light switch is at hand height. Drawn on
+## the floor they are furniture, and the thing standing in front of them hides
+## them — which is what happened to both. `mount_y` is the object's own, in
+## metres off the floor.
+func _mounting(obj: SimObject) -> Vector3:
+	return Vector3(0.0, float(obj.prop("mount_y", 0.0)), 0.0)
 
 
 ## A falling object lies down along the way it fell. The tip direction is already

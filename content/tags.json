@@ -1,10 +1,63 @@
 {
-  "handling": ["carryable", "light", "heavy", "movable", "throwable", "fragile", "breakable", "cuttable"],
-  "weapon": ["blunt", "sharp", "weapon-improvised"],
-  "spatial": ["blocks-door", "blocks-sight", "hides-player", "hides-object", "chokepoint", "entry", "exit", "climbable", "window", "tippable"],
-  "hazard": ["flammable", "ignites", "hot", "conductive", "plug-in", "pourable", "wet-source", "gas-source", "aerosol", "slippery-source"],
-  "signal": ["noisy", "bright", "lure", "light-switch"],
-  "access": ["openable", "lockable", "chainable", "flimsy", "toggleable", "container"],
-  "comms": ["phone", "charger"],
-  "meta": ["collectible"]
+  "handling": [
+    "carryable",
+    "light",
+    "heavy",
+    "movable",
+    "throwable",
+    "fragile",
+    "breakable",
+    "cuttable",
+    "cloth"
+  ],
+  "weapon": [
+    "blunt",
+    "sharp",
+    "weapon-improvised"
+  ],
+  "spatial": [
+    "blocks-door",
+    "blocks-sight",
+    "hides-player",
+    "hides-object",
+    "chokepoint",
+    "entry",
+    "exit",
+    "climbable",
+    "window",
+    "tippable"
+  ],
+  "hazard": [
+    "flammable",
+    "ignites",
+    "hot",
+    "conductive",
+    "plug-in",
+    "pourable",
+    "wet-source",
+    "gas-source",
+    "aerosol",
+    "slippery-source"
+  ],
+  "signal": [
+    "noisy",
+    "bright",
+    "lure",
+    "light-switch"
+  ],
+  "access": [
+    "openable",
+    "lockable",
+    "chainable",
+    "flimsy",
+    "toggleable",
+    "container"
+  ],
+  "comms": [
+    "phone",
+    "charger"
+  ],
+  "meta": [
+    "collectible"
+  ]
 }

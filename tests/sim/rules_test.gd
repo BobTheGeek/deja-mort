@@ -237,7 +237,7 @@ func test_rule_toggle_stove_ignite() -> void:
 	var w := F.world()
 	F.act(w, "toggle", "stove", "toggle_gas_source")
 	assert_bool(F.act(w, "toggle", "stove", "toggle_stove_ignite")).is_true()
-	assert_bool(w.hazards.has("hot", Vector2i(1, 1))).is_true()
+	assert_bool(w.hazards.has("hot", w.objects.by_id("stove").origin())).is_true()
 
 
 func test_rule_toggle_burner_off() -> void:
@@ -336,9 +336,10 @@ func test_rule_aerosol_flash() -> void:
 	var w := F.world()
 	F.act(w, "toggle", "stove", "toggle_gas_source")
 	F.act(w, "toggle", "stove", "toggle_stove_ignite")
-	var mark := F.target_actor(w, Vector2i(1, 2))
+	var burner := w.objects.by_id("stove").origin()
+	var mark := F.target_actor(w, Vector2i(1, 2))   # a clear square beside the burner
 	F.give(w, "hairspray")
-	assert_bool(F.act(w, "use-held-on", Vector2i(1, 1), "aerosol_flash")).is_true()
+	assert_bool(F.act(w, "use-held-on", burner, "aerosol_flash")).is_true()
 	assert_bool(mark.has_status("blinded")).is_true()
 	assert_array(Array(w.discoveries)).contains(["aerosol_flash"])
 

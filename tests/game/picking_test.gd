@@ -204,10 +204,10 @@ func test_the_nearer_of_two_things_wins() -> void:
 func test_a_picked_object_wins_over_whatever_else_shares_its_square() -> void:
 	var world := F.world()
 	# The counter holds five things; the toaster is the one you can see.
-	var here := world.objects.at_cell(Vector2i(2, 1))
+	var here := world.objects.at_cell(Vector2i(3, 1))
 	assert_int(here.size()).is_greater(2)
 	var picker := ClickTarget.new()
-	assert_str(str(picker.choose(world, Vector2i(2, 1), "toaster"))).override_failure_message(
+	assert_str(str(picker.choose(world, Vector2i(3, 1), "toaster"))).override_failure_message(
 		"the thing under the cursor lost to the first thing on the square").is_equal("toaster")
 
 
@@ -216,8 +216,8 @@ func test_a_picked_object_wins_over_whatever_else_shares_its_square() -> void:
 func test_tapping_the_same_square_still_cycles() -> void:
 	var world := F.world()
 	var picker := ClickTarget.new()
-	var first: Variant = picker.choose(world, Vector2i(2, 1), "toaster")
-	var second: Variant = picker.choose(world, Vector2i(2, 1), "toaster")
+	var first: Variant = picker.choose(world, Vector2i(3, 1), "toaster")
+	var second: Variant = picker.choose(world, Vector2i(3, 1), "toaster")
 	assert_str(str(second)).override_failure_message(
 		"the second tap on a stacked square offered the same object").is_not_equal(str(first))
 
@@ -225,7 +225,7 @@ func test_tapping_the_same_square_still_cycles() -> void:
 func test_with_nothing_picked_it_falls_back_to_the_square() -> void:
 	var world := F.world()
 	var picker := ClickTarget.new()
-	assert_str(str(picker.choose(world, Vector2i(2, 1), ""))).is_not_empty()
+	assert_str(str(picker.choose(world, Vector2i(3, 1), ""))).is_not_empty()
 	# A bare square that is not the one the player is standing on.
 	assert_object(picker.choose(world, Vector2i(5, 5), "")).override_failure_message(
 		"an empty square should offer nothing to act on").is_null()
