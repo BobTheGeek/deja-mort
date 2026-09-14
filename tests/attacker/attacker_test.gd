@@ -57,8 +57,8 @@ func test_locking_and_chaining_the_door_costs_him_the_profile_seconds() -> void:
 func test_a_braced_door_costs_more_than_a_locked_one() -> void:
 	var w := F.world()
 	F.goto(w, Vector2i(3, 2))
-	F.act(w, "push", "fridge", "push_heavy")
-	assert_str(str(w.objects.by_id("front_door").get_state("braced_by"))).is_equal("fridge")
+	F.act(w, "push", "moving_boxes", "push_heavy")
+	assert_str(str(w.objects.by_id("front_door").get_state("braced_by"))).is_equal("moving_boxes")
 	_at_arrival(w)
 	var seconds := _seconds_until_inside(w)
 	assert_float(seconds).is_greater(w.attacker.profile.breach_cost("braced_heavy", 0.0))

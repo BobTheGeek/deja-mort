@@ -29,7 +29,7 @@ func test_notice_looks_near_whatever_has_been_moved() -> void:
 	var w := _with_memory(SimAttackerMemory.MODE_NOTICE)
 	assert_str(w.attacker.memory.search_order[0]).is_equal("closet")
 	F.goto(w, Vector2i(3, 2))
-	F.act(w, "push", "fridge", "push_heavy")
+	F.act(w, "push", "moving_boxes", "push_heavy")
 	w.attacker.memory.on_arrival(w, w.attacker)
 	# The fridge now sits two cells from nothing that hides a person, so the
 	# order is unchanged — but the machinery ran and produced a full ordering.

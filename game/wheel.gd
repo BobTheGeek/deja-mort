@@ -44,6 +44,7 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"caption_sub_alpha", "caption_verb_size", "caption_verb_color", "caption_verb_alpha",
 	"refused_color", "refused_border_width", "refused_hold_s", "refused_shake_px",
 	"refused_shake_duration_s", "hover_scale", "pressed_scale", "states", "icon_path",
+	"arrow_size", "arrow_gap", "arrow_color", "arrow_alpha", "arrow_glyph_size",
 ]
 
 var visuals: GameVisuals = null
@@ -55,6 +56,8 @@ var _order: PackedStringArray = PackedStringArray()
 var _tap := Vector2.ZERO           # where the player actually tapped
 var _centre := Vector2.ZERO        # where the wheel ended up, after clamping
 var _caption: PackedStringArray = PackedStringArray()
+var _candidates: Array = []
+var _index: int = 0
 var _stack_line := ""
 var _hover := ""
 var _pressed := ""
@@ -142,9 +145,11 @@ func frame() -> Vector2:
 # --- opening and closing -----------------------------------------------------
 
 func open_at(world: SimWorld, target: Variant, screen_point: Vector2,
-		index: int = 1, count: int = 1) -> void:
+		index: int = 1, count: int = 1, candidates: Array = []) -> void:
 	_world = world
 	_target = target
+	_candidates = candidates
+	_index = maxi(index - 1, 0)
 	_tap = screen_point
 	_hover = ""
 	_pressed = ""
@@ -185,6 +190,46 @@ func is_open() -> bool:
 
 func target() -> Variant:
 	return _target
+
+
+# --- browsing what is on the square -----------------------------------------
+
+## Five things share the counter square in Room 1. Tapping again cycles, and an
+## arrow either side says so without needing to be told.
+func arrow_rect(side: String) -> Rect2:
+	if _candidates.size() < 2:
+		return Rect2()
+	var box := visuals.number("wheel.arrow_size", 48.0)
+	var caption := _caption_rect()
+	var gap := visuals.number("wheel.arrow_gap", 10.0)
+	var y := caption.position.y + (caption.size.y - box) * 0.5
+	var x := caption.position.x - gap - box if side == "prev" else caption.end.x + gap
+	return Rect2(Vector2(x, y), Vector2(box, box))
+
+
+## Moves the selection without closing: the wheel is a browser as well as a menu.
+func step(by: int) -> void:
+	if _candidates.size() < 2:
+		return
+	_index = wrapi(_index + by, 0, _candidates.size())
+	_target = _candidates[_index]
+	_hover = ""
+	_refused_verb = ""
+	_refused_left = 0.0
+	_compose_caption(_world, _target, _index + 1, _candidates.size())
+	_refresh(_world)
+	queue_redraw()
+
+
+## Returns true when the press was the wheel's own business.
+func press_at(point: Vector2) -> bool:
+	if not visible:
+		return false
+	for side in ["prev", "next"]:
+		if arrow_rect(str(side)).has_point(point):
+			step(-1 if side == "prev" else 1)
+			return true
+	return false
 
 
 ## Drives the open tween and the refusal hold. Real seconds: the sim is stopped
@@ -355,6 +400,8 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 		return
 	accept_event()
+	if click.button_index == MOUSE_BUTTON_LEFT and press_at(click.position):
+		return
 	if click.button_index == MOUSE_BUTTON_RIGHT:
 		close()
 		dismissed.emit()
@@ -426,10 +473,13 @@ func _compose_caption(world: SimWorld, target: Variant, index: int, count: int) 
 	if world == null:
 		return
 	if index > 0 and count > 0:
-		_stack_line = "%d of %d here — tap again to cycle" % [index, count] if count > 1 else ""
+		_stack_line = "%d of %d here" % [index, count] if count > 1 else ""
 	var lines := PackedStringArray([_describe(world, target)])
 	if not _stack_line.is_empty():
 		lines.append(_stack_line)
+	var known := _known_description(world, target)
+	if not known.is_empty():
+		lines.append(known)
 	if not _refused_verb.is_empty():
 		lines.append("%s — can't do that from here" % _label_of(_refused_verb))
 	elif not _hover.is_empty():
@@ -446,6 +496,22 @@ func _hover_line() -> String:
 		return "%s %s %s" % [label, str(visuals.get_value("wheel.reason_prefix", "—")), reason]
 	var cost := cost_label(_hover)
 	return "%s · %s" % [label, cost] if not cost.is_empty() else label
+
+
+## The description is what Inspect is for, so the wheel only repeats one the
+## player has already earned. Browsing a square you have studied reads back what
+## you learned; browsing a new one gives nothing away.
+func _known_description(world: SimWorld, target: Variant) -> String:
+	if not (target is String):
+		return ""
+	var obj := world.objects.by_id(str(target))
+	if obj == null or obj.inspect.is_empty():
+		return ""
+	for done in world.interactions:
+		if str((done as Dictionary).get("verb", "")) == "inspect" \
+				and str((done as Dictionary).get("object", "")) == obj.id:
+			return obj.inspect
+	return ""
 
 
 func _label_of(verb: String) -> String:
@@ -481,6 +547,7 @@ func _draw() -> void:
 	for verb in _order:
 		_draw_slot(str(verb))
 	_draw_caption()
+	_draw_arrows()
 
 
 func _draw_slot(verb: String) -> void:
@@ -554,6 +621,22 @@ func _draw_caption() -> void:
 		draw_string(font, Vector2(box.get_center().x - width * 0.5, y), line,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, size, colour)
 		y += font.get_descent(size) + 4.0
+
+
+func _draw_arrows() -> void:
+	if _candidates.size() < 2 or _font_bold == null:
+		return
+	var colour := visuals.colour_with_alpha("wheel.arrow_color", "wheel.arrow_alpha")
+	colour.a *= _eased()
+	var size := int(visuals.number("wheel.arrow_glyph_size", 24.0))
+	for side in ["prev", "next"]:
+		var box := arrow_rect(str(side))
+		var panel := _caption_box(visuals.colour_with_alpha("wheel.caption_color", "wheel.caption_alpha"))
+		draw_style_box(panel, box)
+		var glyph := "<" if side == "prev" else ">"
+		var width := _font_bold.get_string_size(glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		draw_string(_font_bold, box.get_center() + Vector2(-width * 0.5, float(size) * 0.36),
+			glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, size, colour)
 
 
 func _caption_size(index: int) -> float:

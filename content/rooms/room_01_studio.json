@@ -437,7 +437,7 @@
       ],
       "footprint": [
         [
-          1,
+          7,
           1
         ]
       ],
@@ -465,7 +465,7 @@
       ],
       "footprint": [
         [
-          1,
+          7,
           1
         ]
       ],
@@ -492,8 +492,8 @@
       ],
       "footprint": [
         [
-          2,
-          2
+          1,
+          1
         ]
       ],
       "state": {
@@ -503,11 +503,33 @@
         "soda_cans"
       ],
       "push_axes": [
+        "E"
+      ],
+      "inspect": "Humming. Heavy. Wedged in the corner.",
+      "mesh": "kenney/kitchenFridge",
+      "mesh_yaw": 0
+    },
+    {
+      "id": "moving_boxes",
+      "name": "Moving boxes",
+      "tags": [
+        "heavy",
+        "movable",
+        "blocks-door",
+        "blocks-sight"
+      ],
+      "footprint": [
+        [
+          2,
+          2
+        ]
+      ],
+      "push_axes": [
         "W",
         "E"
       ],
-      "inspect": "Humming. Heavy. Exactly as wide as the doorway.",
-      "mesh": "kenney/kitchenFridge",
+      "inspect": "Still taped shut from the move. Heavy, and exactly as wide as the doorway.",
+      "mesh": "kenney/cardboardBoxClosed",
       "mesh_yaw": 0
     },
     {
@@ -520,8 +542,8 @@
       ],
       "footprint": [
         [
-          2,
-          2
+          1,
+          1
         ]
       ],
       "inspect": "Four cans, still in the plastic."
@@ -1171,7 +1193,7 @@
           "intent": "verb_on",
           "args": [
             "push",
-            "fridge",
+            "moving_boxes",
             "push_heavy"
           ]
         },
@@ -1432,7 +1454,7 @@
     "chokepoint"
   ],
   "layout_exceptions": {
-    "fridge": "Free-standing on purpose: evade_phone pushes it one square into the doorway to brace the door, and (2,2) is the only square that can reach the doorway in one push without being where the oil goes and the bookshelf lands. See docs/08-room-layout.md."
+    "moving_boxes": "In the way on purpose: they are what you shove into the doorway to brace the door, and the only square one push from it is this one. Being in the way is the point, and you can push them out of it."
   },
   "lighting": {
     "bulb": {

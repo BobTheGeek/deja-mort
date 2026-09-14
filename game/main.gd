@@ -387,7 +387,8 @@ func _click_world(screen_point: Vector2) -> void:
 	var target: Variant = _target.choose(world, cell, picked)
 	if target != null:
 		var at := _target.position_on(world, cell)
-		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]))
+		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]),
+			ClickTarget.options_for(world, cell))
 		return
 	_log.walk(cell, world.walk_to(cell))
 

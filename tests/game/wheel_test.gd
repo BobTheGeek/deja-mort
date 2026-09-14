@@ -340,3 +340,98 @@ func test_tapping_a_slot_that_is_off_says_why_too() -> void:
 	var lines := wheel.caption_lines()
 	assert_str(lines[lines.size() - 1]).override_failure_message(
 		"tapped Grab and the wheel said nothing: %s" % [lines]).contains("hands are full")
+
+
+# --- browsing a stacked square -----------------------------------------------
+
+## Bob: "when there are multiple items available, like in the counter drawer,
+## can we put left/right arrows to allow the user to easily scroll through them,
+## see their descriptions, and choose an action on the currently visible item?"
+##
+## Tapping the square again cycled, and nothing on screen said so except a line
+## of text. Five things share the counter square.
+
+func _stacked(world: SimWorld) -> ActionWheel:
+	var cell := world.objects.by_id("toaster").origin()
+	var options := ClickTarget.options_for(world, cell)
+	assert_int(options.size()).override_failure_message(
+		"this test needs a square with several things on it").is_greater(2)
+	var wheel := _wheel(world)
+	wheel.open_at(world, options[0], Vector2(960, 540), 1, options.size(), options)
+	wheel.advance(1.0)
+	return wheel
+
+
+func test_a_stacked_square_gets_arrows() -> void:
+	var world := F.world()
+	var wheel := _stacked(world)
+	var v := GameVisuals.load_table()
+	for side in ["prev", "next"]:
+		var box := wheel.arrow_rect(str(side))
+		assert_float(box.size.x).override_failure_message(
+			"the %s arrow is %.0f across, under the touch minimum" % [side, box.size.x]) \
+			.is_greater_equal(v.number("wheel.min_touch_target"))
+
+
+func test_one_thing_on_a_square_gets_no_arrows() -> void:
+	var world := F.world()
+	var wheel := _open(world, "couch")
+	assert_float(wheel.arrow_rect("next").size.x).override_failure_message(
+		"arrows for a square with one thing on it").is_equal_approx(0.0, 0.001)
+
+
+func test_the_arrows_walk_through_what_is_there() -> void:
+	var world := F.world()
+	var wheel := _stacked(world)
+	var first: Variant = wheel.target()
+	assert_bool(wheel.press_at(wheel.arrow_rect("next").get_center())).is_true()
+	assert_str(str(wheel.target())).override_failure_message(
+		"the arrow did not move the selection").is_not_equal(str(first))
+	assert_bool(wheel.is_open()).override_failure_message(
+		"the arrow closed the wheel").is_true()
+	assert_str(wheel.caption_lines()[1]).contains("2 of")
+
+
+func test_they_wrap_round_rather_than_stopping() -> void:
+	var world := F.world()
+	var wheel := _stacked(world)
+	var first: Variant = wheel.target()
+	wheel.press_at(wheel.arrow_rect("prev").get_center())
+	assert_str(wheel.caption_lines()[1]).override_failure_message(
+		"stepping back from the first should land on the last").contains(
+			"%d of" % ClickTarget.options_for(world, world.objects.by_id("toaster").origin()).size())
+	wheel.press_at(wheel.arrow_rect("next").get_center())
+	assert_str(str(wheel.target())).is_equal(str(first))
+
+
+## What each verb can do follows the selection, or the arrows are decoration.
+func test_the_verbs_follow_the_selection() -> void:
+	var world := F.world()
+	var wheel := _stacked(world)
+	var seen := {}
+	for _step in ClickTarget.options_for(world, world.objects.by_id("toaster").origin()).size():
+		seen[str(wheel.target())] = wheel.slot_state("grab")
+		wheel.press_at(wheel.arrow_rect("next").get_center())
+	var states := {}
+	for id in seen:
+		states[str(seen[id])] = true
+	assert_int(states.size()).override_failure_message(
+		"every one of five different things offers exactly the same Grab").is_greater(1)
+
+
+## The description is the reward for Inspect. Browsing shows it for things you
+## have already looked at, and stays quiet about the rest.
+func test_the_caption_carries_a_description_once_you_have_looked() -> void:
+	var world := F.world()
+	var wheel := _stacked(world)
+	var quiet := " ".join(wheel.caption_lines())
+	var toaster := world.objects.by_id("toaster")
+	assert_str(quiet).override_failure_message(
+		"the wheel is giving away what Inspect is for").not_contains(toaster.inspect)
+
+	assert_bool(F.act(world, "inspect", "toaster")).is_true()
+	var after := _stacked(world)
+	while str(after.target()) != "toaster":
+		after.press_at(after.arrow_rect("next").get_center())
+	assert_str(" ".join(after.caption_lines())).override_failure_message(
+		"it has been inspected and the wheel still will not repeat it").contains(toaster.inspect)

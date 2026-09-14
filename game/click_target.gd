@@ -40,6 +40,22 @@ func reset() -> void:
 ##
 ## The cost is that carrying something you cannot step one square by tapping it.
 ## Tapping two squares away still walks.
+## Everything on a square, in the order the wheel offers it. The wheel needs the
+## whole list so its arrows can walk through it without tapping the room again.
+static func options_for(world: SimWorld, cell: Vector2i) -> Array:
+	var options: Array = []
+	var standing_here := world.player.pos == cell
+	var holding := not world.player.holding.is_empty()
+	var beside: bool = _is_beside(world.player.pos, cell) and bool(world.walkable(cell))
+	if holding and (standing_here or beside):
+		options.append(cell)
+	for obj in world.objects.at_cell(cell):
+		options.append(obj.id)
+	if standing_here and not holding:
+		options.append(cell)
+	return options
+
+
 func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
 	var options: Array = []
 	var standing_here := world.player.pos == cell

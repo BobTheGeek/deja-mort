@@ -797,9 +797,13 @@ func _context(verb: String, resolved: Dictionary, a: SimActor = null) -> SimRule
 func reach_cells(obj: SimObject, cell: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	if obj == null:
+		# A bare square is reached from itself or from anything touching it,
+		# corners included. Four-connectivity left the cooker's own square with
+		# no way to stand: a fridge one side, a counter the other, a wall behind
+		# and boxes in front, and nothing could be poured or thrown onto it.
 		if walkable(cell):
 			out.append(cell)
-		for n in grid.neighbours(cell, 4):
+		for n in grid.neighbours(cell, 8):
 			if walkable(n) and not out.has(n):
 				out.append(n)
 		return out
