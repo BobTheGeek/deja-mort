@@ -307,7 +307,7 @@ func test_the_square_you_stand_on_can_be_acted_on() -> void:
 ## down. Empty handed, the thing on the square is what you want first.
 func test_what_you_are_holding_puts_the_floor_first() -> void:
 	var world := F.world()
-	assert_bool(F.goto(world, Vector2i(7, 5))).is_true()   # the lamp's square
+	assert_bool(F.goto(world, world.objects.by_id("floor_lamp").origin())).is_true()
 	var empty := ClickTarget.new()
 	assert_str(str(empty.choose(world, world.player.pos, "floor_lamp"))).override_failure_message(
 		"empty handed, the lamp should be the first thing offered").is_equal("floor_lamp")

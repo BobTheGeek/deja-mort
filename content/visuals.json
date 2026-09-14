@@ -329,7 +329,19 @@
       }
     },
     "open": {
-      "yaw_deg": 65.0
+      "marker": {
+        "size": [
+          0.5,
+          0.04,
+          0.12
+        ],
+        "offset": [
+          0.0,
+          0.62,
+          0.34
+        ],
+        "color": "$FG_DARK"
+      }
     },
     "broken": {
       "scale_y": 0.3,
