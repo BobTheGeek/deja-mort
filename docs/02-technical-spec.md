@@ -118,7 +118,8 @@ Verb availability for the wheel = "does any rule match this verb, this actor's h
 |---|---|---|---|
 | inspect | inspect | any | reveals `inspect` text + tag hints; 0s; no noise |
 | grab | grab | target `carryable`, hands free, container open if needed | held = target; 0.5s |
-| drop | drop | holding | place on target/cell; 0.5s |
+| drop | drop | holding, target is a cell | put it down on that square; 0.5s |
+| drop_onto | drop | holding, target is an object | put it down on that object's square; 0.5s |
 | place_in_container | drop | target `container` open | contains; 0.5s |
 | push | push | target `movable`, not `heavy` | move 1 tile; 1s; noise 2 |
 | push_heavy | push | target `movable`+`heavy` | move 1 tile; 2s; noise 3 |
