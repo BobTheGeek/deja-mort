@@ -10,6 +10,9 @@ const CELL := 1.0
 ## The child a state marker is drawn as, so it can be found and removed again.
 const STATE_MARKER := "StateMarker"
 
+## The ring under whatever the pointer is over.
+const HOVER_RING := "HoverRing"
+
 var visuals: GameVisuals = null
 
 var _floor_root: Node3D = null
@@ -23,6 +26,9 @@ var _object_nodes: Dictionary = {}   # object id -> Node3D (a model root, or a g
 var _model_nodes: Dictionary = {}    # object ids drawn from a .glb rather than a box
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
+var _highlight_id: String = ""
+var _ring: Node3D = null
+var _ring_size: Vector2 = Vector2.ZERO
 var _shut_away: Dictionary = {}  # ids inside a closed container, this frame
 var _spread: Array = []          # objects stacked onto furniture this frame
 var _once: Dictionary = {}           # actor id -> {clip, left} one-shot animation
@@ -40,6 +46,8 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	for child in get_children():
 		child.queue_free()
 	_object_nodes.clear()
+	_ring = null
+	_highlight_id = ""
 	_model_nodes.clear()
 	_actor_nodes.clear()
 	_hazard_nodes.clear()
@@ -394,8 +402,85 @@ func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> Stan
 ## `tick_alpha` is how far through the current sim tick we are, 0 to 1. The sim
 ## runs at 10 Hz and the screen at whatever it likes, so without it a figure can
 ## only ever be in one of ten places a second.
+## What the pointer is over. Thirty-nine objects in a twelve-by-ten room, seen
+## from across it: the room is not going to get less crowded, so it says which
+## one you are about to act on.
+func highlight(id: String) -> void:
+	_highlight_id = id
+
+
+func highlight_node() -> Node3D:
+	return _ring
+
+
+func highlight_visible() -> bool:
+	return _ring != null and _ring.visible
+
+
+## Where the ring is, on the floor plane.
+func highlight_rect() -> Rect2:
+	if _ring == null or not _ring.visible:
+		return Rect2()
+	return Rect2(Vector2(_ring.position.x - _ring_size.x * 0.5,
+		_ring.position.z - _ring_size.y * 0.5), _ring_size)
+
+
+func _sync_highlight(world: SimWorld) -> void:
+	if _ring == null:
+		# Four bars, not a slab: a filled rectangle over an object hides the
+		# object, and a translucent one over a pale couch cannot be seen at all.
+		_ring = Node3D.new()
+		_ring.name = HOVER_RING
+		var paint := _material(visuals.colour("object.highlight_color"),
+			visuals.number("object.highlight_emission", 0.6),
+			visuals.number("object.highlight_alpha", 1.0))
+		for i in 4:
+			var bar := MeshInstance3D.new()
+			bar.mesh = BoxMesh.new()
+			bar.material_override = paint
+			_ring.add_child(bar)
+		_floor_root.add_child(_ring)
+	var obj := world.objects.by_id(_highlight_id) if not _highlight_id.is_empty() else null
+	var node: Node3D = _object_nodes.get(_highlight_id, null)
+	if obj == null or obj.cells.is_empty() or node == null or not node.visible:
+		_ring.visible = false
+		return
+	var extent := _extent(obj)
+	var margin := visuals.number("object.highlight_margin", 0.12)
+	_ring_size = Vector2(float(extent.x) + margin * 2.0, float(extent.y) + margin * 2.0)
+	_shape_ring()
+	# Over the object, not under it: a ring on the floor is hidden by the very
+	# thing it is pointing at, which is how the first cut of this failed.
+	var bounds := object_bounds(_highlight_id)
+	var top := bounds.end.y if bounds.size != Vector3.ZERO else 0.5
+	_ring.position = _footprint_centre(obj, extent) + Vector3(0.0,
+		top + visuals.number("object.highlight_lift", 0.08), 0.0)
+	_ring.visible = true
+
+
+## Four bars around the footprint: two along x, two along z.
+func _shape_ring() -> void:
+	var thick := visuals.number("object.highlight_thickness", 0.07)
+	var tall := visuals.number("object.highlight_height", 0.02)
+	var half := _ring_size * 0.5
+	var bars: Array = _ring.get_children()
+	var sizes: Array = [
+		Vector3(_ring_size.x, tall, thick), Vector3(_ring_size.x, tall, thick),
+		Vector3(thick, tall, _ring_size.y), Vector3(thick, tall, _ring_size.y),
+	]
+	var spots: Array = [
+		Vector3(0.0, 0.0, -half.y), Vector3(0.0, 0.0, half.y),
+		Vector3(-half.x, 0.0, 0.0), Vector3(half.x, 0.0, 0.0),
+	]
+	for i in bars.size():
+		var bar: MeshInstance3D = bars[i]
+		(bar.mesh as BoxMesh).size = sizes[i]
+		bar.position = spots[i]
+
+
 func sync(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
 	_sync_lighting(world)
+	_sync_highlight(world)
 	_sync_flicker(delta)
 	_sync_objects(world)
 	_sync_hazards(world)
