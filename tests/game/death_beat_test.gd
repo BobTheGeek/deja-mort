@@ -192,3 +192,31 @@ func test_the_word_comes_after_the_beat_not_across_it() -> void:
 		assert_float(tail).override_failure_message(
 			"'%s' holds %.1fs, which leaves no beat before the %.1fs banner" % [cause, hold, tail]) \
 			.is_less(hold * 0.5)
+
+
+# --- the loop does not restart on its own ------------------------------------
+
+## From the fourth playtest: "instead of having it automatically restart the next
+## round I would like the user to have to click or tap to continue."
+##
+## The beat used to run and then reset the room under you. Now it ends on a
+## prompt and waits.
+func test_the_beat_ends_on_a_prompt_rather_than_a_reset() -> void:
+	var v := _visuals()
+	assert_bool(v.flag("death.wait_for_input", false)).override_failure_message(
+		"the loop still restarts on its own").is_true()
+	assert_str(str(v.get_value("death.retry_prompt", ""))).override_failure_message(
+		"waiting for a click with nothing on screen saying so").is_not_empty()
+	assert_str(str(v.get_value("death.retry_prompt_touch", ""))).override_failure_message(
+		"a phone has nothing to click").is_not_empty()
+
+
+func test_the_game_waits_for_a_press_instead_of_restarting() -> void:
+	var source := FileAccess.get_file_as_string("res://game/main.gd")
+	assert_str(source).override_failure_message(
+		"nothing gates the restart on input").contains("_awaiting_retry")
+	var gate := source.find("_awaiting_retry")
+	var restart := source.find("loop_index += 1")
+	assert_int(gate).is_greater(-1)
+	assert_int(gate).override_failure_message(
+		"the loop counter advances before anything waits for a press").is_less(restart)

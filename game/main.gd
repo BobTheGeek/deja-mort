@@ -27,6 +27,7 @@ var _audio: AudioDirector = null
 var _accumulator: float = 0.0
 var _tick_seconds: float = 0.1
 var _reset_at: float = -1.0
+var _awaiting_retry: bool = false
 var _banner_at: float = 0.0
 var _elapsed: float = 0.0
 var _target := ClickTarget.new()
@@ -188,6 +189,7 @@ func _start_loop() -> void:
 	_tick_seconds = 1.0 / float(world.system("tick_hz"))
 	_accumulator = 0.0
 	_reset_at = -1.0
+	_awaiting_retry = false
 	_target.reset()
 
 	_finished = false
@@ -205,9 +207,15 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 
 	if _reset_at >= 0.0:
-		if _elapsed >= _reset_at:
-			loop_index += 1
-			_start_loop()
+		# The beat plays, and then the loop waits. Restarting the room under the
+		# player was one decision they never got to make.
+		if _elapsed >= _reset_at and not _awaiting_retry:
+			if visuals.flag("death.wait_for_input", true):
+				_awaiting_retry = true
+				_hud.show_prompt(_retry_prompt())
+			else:
+				loop_index += 1
+				_start_loop()
 		_renderer.sync(world, delta, _accumulator / _tick_seconds)
 		_hud.advance(delta)
 		# The word LOSS across the middle of the beat is the thing that made a
@@ -283,6 +291,12 @@ func _on_replay() -> void:
 	_start_loop()
 
 
+## What to press. A phone has nothing to click.
+func _retry_prompt() -> String:
+	var key := "death.retry_prompt_touch" if OS.has_feature("mobile") else "death.retry_prompt"
+	return str(visuals.get_value(key, "Click to try again"))
+
+
 ## Long enough to watch him die, short enough to keep "one more try" — and a
 ## click cuts it short, so the beat never costs you a retry you did not want.
 func _schedule_reset() -> void:
@@ -301,7 +315,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if world == null:
 		return
 	if _reset_at >= 0.0:
-		if event.is_pressed():
+		if not event.is_pressed():
+			return
+		if _awaiting_retry:
+			loop_index += 1
+			_start_loop()
+		else:
+			# Mid-beat: skip to the end of it, and wait there.
 			_reset_at = _elapsed
 		return
 	if _win.is_open():

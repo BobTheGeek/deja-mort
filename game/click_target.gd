@@ -29,29 +29,49 @@ func reset() -> void:
 	_last = ""
 
 
-## Returns an object id, or null when there is nothing on the square to act on.
+## An object id, the cell itself, or null when there is nothing here to act on.
+##
+## The square you are standing on always offers the floor, because that is where
+## a cell-targeted rule lives — dropping what you hold, pouring oil on the boards
+## — and it is the one tap with nothing else to do, since you cannot walk to
+## where you already are. Holding something, the floor comes first; empty handed
+## it comes last, behind whatever is actually on the square.
 func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
-	var here := world.objects.at_cell(cell)
-	if here.is_empty():
+	var options: Array = []
+	var standing_here := world.player.pos == cell
+	var holding := not world.player.holding.is_empty()
+	if standing_here and holding:
+		options.append(cell)
+	for obj in world.objects.at_cell(cell):
+		options.append(obj.id)
+	if standing_here and not holding:
+		options.append(cell)
+	if options.is_empty():
 		return null
+	return _cycle_through(options, cell, picked)
+
+
+func _cycle_through(options: Array, cell: Vector2i, picked: String) -> Variant:
 	var key := "%d,%d" % [cell.x, cell.y]
 	var index := 0
 	var repeat := _last == key
 	if not picked.is_empty() and not repeat:
 		# First tap on this square with something plainly under the cursor.
-		for i in here.size():
-			if here[i].id == picked:
+		for i in options.size():
+			if str(options[i]) == picked:
 				index = i
 				break
 	else:
-		index = (int(_cycle.get(key, -1)) + 1) % here.size()
+		index = (int(_cycle.get(key, -1)) + 1) % options.size()
 	_cycle[key] = index
 	_last = key
-	return here[index].id
+	return options[index]
 
 
 ## Which of the things on this square is being offered, and how many there are —
 ## the wheel's caption says so out loud.
 func position_on(world: SimWorld, cell: Vector2i) -> Array:
-	var here := world.objects.at_cell(cell)
-	return [int(_cycle.get("%d,%d" % [cell.x, cell.y], 0)) + 1, here.size()]
+	var count := world.objects.at_cell(cell).size()
+	if world.player.pos == cell:
+		count += 1
+	return [int(_cycle.get("%d,%d" % [cell.x, cell.y], 0)) + 1, count]

@@ -226,7 +226,8 @@ func test_with_nothing_picked_it_falls_back_to_the_square() -> void:
 	var world := F.world()
 	var picker := ClickTarget.new()
 	assert_str(str(picker.choose(world, Vector2i(2, 1), ""))).is_not_empty()
-	assert_object(picker.choose(world, Vector2i(6, 5), "")).override_failure_message(
+	# A bare square that is not the one the player is standing on.
+	assert_object(picker.choose(world, Vector2i(5, 5), "")).override_failure_message(
 		"an empty square should offer nothing to act on").is_null()
 
 
@@ -276,3 +277,76 @@ func test_the_hud_names_what_you_are_holding() -> void:
 	F.give(world, "floor_lamp")
 	hud.sync(world, 1)
 	assert_str(hud.holding_value()).is_equal(world.objects.by_id("floor_lamp").name)
+
+
+# --- acting on the floor you stand on ----------------------------------------
+
+## From the fourth playtest: "once I picked up the lamp, I could not put it down.
+## I was considering placing it on the floor near the door."
+##
+## He could not, and the log shows him trying for sixty seconds — fourteen taps
+## on bare floor around the doorway, every one of which walked him there. The
+## `drop` rule targets a *cell*, and a cell was never a target: a tap on bare
+## floor walked, and a tap on a floor with something on it chose the something.
+## `pour_slippery` is the same shape, which means the oil in the authored
+## solution could not be poured either.
+##
+## The square you are standing on is the one tap that has nothing else to do —
+## you cannot walk to where you already are — so that is where acting on the
+## floor lives.
+func test_the_square_you_stand_on_can_be_acted_on() -> void:
+	var world := F.world()
+	var picker := ClickTarget.new()
+	var target: Variant = picker.choose(world, world.player.pos, "")
+	assert_bool(target is Vector2i).override_failure_message(
+		"standing on a bare square offered '%s' instead of the floor" % [target]).is_true()
+	assert_object(target).is_equal(world.player.pos)
+
+
+## Holding something, the floor is what you want first — that is where it goes
+## down. Empty handed, the thing on the square is what you want first.
+func test_what_you_are_holding_puts_the_floor_first() -> void:
+	var world := F.world()
+	assert_bool(F.goto(world, Vector2i(7, 5))).is_true()   # the lamp's square
+	var empty := ClickTarget.new()
+	assert_str(str(empty.choose(world, world.player.pos, "floor_lamp"))).override_failure_message(
+		"empty handed, the lamp should be the first thing offered").is_equal("floor_lamp")
+
+	F.give(world, "floor_lamp")
+	var holding := ClickTarget.new()
+	assert_bool(holding.choose(world, world.player.pos, "") is Vector2i) \
+		.override_failure_message("holding the lamp, the floor should come first").is_true()
+
+
+## And the thing in your hands is still reachable, one tap further round.
+func test_cycling_still_reaches_what_you_hold() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	world.step()   # carrying moves it to the player's square
+	var picker := ClickTarget.new()
+	var first: Variant = picker.choose(world, world.player.pos, "")
+	var second: Variant = picker.choose(world, world.player.pos, "")
+	assert_bool(first is Vector2i).is_true()
+	assert_str(str(second)).override_failure_message(
+		"tapping again did not reach the lamp: %s" % [second]).is_equal("floor_lamp")
+
+
+func test_a_square_you_are_not_on_still_just_walks() -> void:
+	var world := F.world()
+	var away := Vector2i(5, 5)
+	assert_bool(away != world.player.pos).is_true()
+	assert_object(ClickTarget.new().choose(world, away, "")).override_failure_message(
+		"a tap on distant bare floor should walk, not open a wheel").is_null()
+
+
+## The point of all of it: Drop is available once the floor is the target.
+func test_drop_is_available_on_the_floor_you_stand_on() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	assert_bool(SimVerbs.is_available(world, world.player, "drop", world.player.pos)) \
+		.override_failure_message("holding a lamp and standing on bare floor, Drop is off") \
+		.is_true()
+	assert_bool(world.verb_on("drop", world.player.pos)).is_true()
+	world.step_until_idle()
+	assert_str(world.player.holding).override_failure_message(
+		"dropped it and still holding it").is_empty()

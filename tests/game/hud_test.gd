@@ -285,3 +285,13 @@ func test_the_death_flash_survives_the_beat() -> void:
 		"DEAD was wiped before anyone could read it").is_equal("DEAD")
 	hud.sync(world, 1, false)    # and the ending is named at the end of it
 	assert_str(hud.banner_text()).is_equal("LOSS")
+
+
+## The prompt that waits for a press after a death.
+func test_the_retry_prompt_shows_and_then_clears() -> void:
+	var hud := _hud()
+	hud.show_prompt("Click to try again")
+	assert_str(hud.prompt_text()).is_equal("Click to try again")
+	hud.sync(F.world(), 2)
+	assert_str(hud.prompt_text()).override_failure_message(
+		"the prompt is still up in a room whose timer is running").is_empty()

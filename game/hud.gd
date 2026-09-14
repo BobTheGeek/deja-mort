@@ -63,6 +63,7 @@ var _inspect_left: float = 0.0
 var _inspect_alpha: float = 1.0
 var _elapsed: float = 0.0
 var _notebook_hover: bool = false
+var _prompt: String = ""
 
 
 func setup(table: GameVisuals) -> void:
@@ -111,6 +112,7 @@ func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
 	# in between.
 	if _ending.is_empty():
 		_banner = ""
+		_prompt = ""
 	elif not panel_open:
 		_banner = _ending.to_upper()
 	queue_redraw()
@@ -354,6 +356,17 @@ func banner_text() -> String:
 	return _banner
 
 
+## Shown under the banner while the game waits for a press. Cleared by the next
+## loop, like everything else about a finished one.
+func show_prompt(text: String) -> void:
+	_prompt = text
+	queue_redraw()
+
+
+func prompt_text() -> String:
+	return _prompt
+
+
 func flash(text: String) -> void:
 	_banner = text
 	queue_redraw()
@@ -521,6 +534,14 @@ func _draw_banner() -> void:
 	_draw_tracked(_font_bold, _banner, frame() * 0.5 + Vector2(0.0, float(text_size) * 0.36),
 		text_size, visuals.number("hud.banner_tracking_em", 0.28),
 		visuals.colour("hud.banner_color"), true)
+	if _prompt.is_empty():
+		return
+	var prompt_size := int(visuals.number("death.retry_prompt_size", 20.0))
+	_draw_tracked(_font, _prompt,
+		frame() * 0.5 + Vector2(0.0, float(text_size) * 0.95), prompt_size,
+		visuals.number("death.retry_prompt_tracking_em", 0.18),
+		_alpha(visuals.colour("hud.banner_color"), visuals.number("death.retry_prompt_alpha", 0.6)),
+		true)
 
 
 ## Letter spacing, which draw_string does not do. Tracked capitals are most of
