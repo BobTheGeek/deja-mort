@@ -289,12 +289,7 @@
     "_pick_comment": "A tap is a finger, not a pixel: a miss looks again within pick_tolerance_px. min_clickable_px is the floor the room has to clear, measured in screen pixels at the 1920x1080 canvas with everything else in the way.",
     "marker_emission": 0.35,
     "highlight_color": "$ACCENT",
-    "highlight_alpha": 1.0,
-    "highlight_emission": 0.6,
-    "highlight_margin": 0.12,
-    "highlight_height": 0.05,
-    "highlight_lift": 0.08,
-    "highlight_thickness": 0.07
+    "highlight_pixels": 2.0
   },
   "models": {
     "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",

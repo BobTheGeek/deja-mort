@@ -28,12 +28,12 @@ func _rendered(world: SimWorld) -> RoomRenderer:
 
 # --- the ring ----------------------------------------------------------------
 
-func test_nothing_is_ringed_until_something_is_pointed_at() -> void:
+func test_nothing_is_outlined_until_something_is_pointed_at() -> void:
 	var renderer := _rendered(F.world())
 	assert_bool(renderer.highlight_visible()).is_false()
 
 
-func test_pointing_at_something_rings_it() -> void:
+func test_pointing_at_something_outlines_it() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
 	renderer.highlight("fridge")
@@ -47,14 +47,14 @@ func test_pointing_at_something_rings_it() -> void:
 		.override_failure_message("the ring is not on the thing it is about").is_less(0.6)
 
 
-func test_a_two_square_thing_gets_a_two_square_ring() -> void:
+func test_a_two_square_thing_is_outlined_across_both() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
 	renderer.highlight("couch")
 	renderer.sync(world, 0.1, 0.0)
-	var ring := renderer.highlight_rect()
-	assert_float(maxf(ring.size.x, ring.size.y)).override_failure_message(
-		"the couch is two squares long and its ring is %s" % [ring.size]).is_greater(1.5)
+	var drawn := renderer.highlight_rect()
+	assert_float(maxf(drawn.size.x, drawn.size.y)).override_failure_message(
+		"the couch is two squares long and its outline is %s" % [drawn.size]).is_greater(1.5)
 
 
 func test_pointing_away_takes_it_off_again() -> void:
@@ -69,7 +69,7 @@ func test_pointing_away_takes_it_off_again() -> void:
 
 
 ## The ring is the accent, like everything else that says "this one".
-func test_the_ring_is_a_brand_colour() -> void:
+func test_the_outline_colour_is_a_brand_token() -> void:
 	var v := _visuals()
 	assert_object(v.colour("object.highlight_color")).is_equal(Brand.ACCENT)
 
@@ -125,15 +125,82 @@ func test_the_game_wires_the_pointer_to_both() -> void:
 			"main.gd never calls %s" % call).contains(call)
 
 
-## A ring on the floor is hidden by the very thing it points at — the counter
-## drawer sits on its own square and covers it completely.
-func test_the_ring_sits_above_the_thing_not_under_it() -> void:
+## The frame is gone. Bob: "it is too big and thick and still does not
+## accurately tell me what I am going to interact with." An outline traces the
+## object's own silhouette instead of drawing a box round its square, which at a
+## counter run is a box round its neighbours too.
+func test_the_outline_hugs_the_object_rather_than_boxing_its_square() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
 	renderer.highlight("counter_drawer")
 	renderer.sync(world, 0.1, 0.0)
-	var ring := renderer.highlight_node()
-	var bounds := renderer.object_bounds("counter_drawer")
-	assert_float(ring.position.y).override_failure_message(
-		"the ring is at y=%.2f and the drawer's top is at %.2f" % [ring.position.y, bounds.end.y]) \
-		.is_greater_equal(bounds.end.y)
+	var outline := renderer.highlight_node()
+	assert_object(outline).is_not_null()
+	assert_int(_meshes_in(outline)).override_failure_message(
+		"the outline traces nothing").is_greater(0)
+	# It is the object's own meshes, so it is the object's own shape.
+	var mine := renderer.object_bounds("counter_drawer")
+	var drawn := renderer.highlight_rect()
+	assert_float(drawn.size.x).is_equal_approx(mine.size.x, 0.05)
+	assert_float(drawn.size.y).is_equal_approx(mine.size.z, 0.05)
+
+
+## A hairline, not a bar. One and a half pixels at the design canvas.
+func test_the_outline_is_a_hairline() -> void:
+	var v := _visuals()
+	var renderer := _rendered(F.world())
+	var metres_per_pixel := v.number("camera.size") / v.number("ui.design_height")
+	assert_float(renderer.outline_thickness()).override_failure_message(
+		"the outline is %.4f m, which is %.1f pixels" % [renderer.outline_thickness(),
+			renderer.outline_thickness() / metres_per_pixel]) \
+		.is_equal_approx(metres_per_pixel * v.number("object.highlight_pixels"), 0.0005)
+	assert_float(v.number("object.highlight_pixels")).is_less_equal(2.0)
+
+
+## Drawn inside out, so only the sliver past the real object shows.
+func test_it_is_an_inverted_hull_and_not_a_coat_of_paint() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	renderer.highlight("fridge")
+	renderer.sync(world, 0.1, 0.0)
+	var copy := _first_mesh(renderer.highlight_node())
+	var paint := copy.material_override as StandardMaterial3D
+	assert_object(paint).is_not_null()
+	assert_int(paint.cull_mode).override_failure_message(
+		"front faces are not culled, so this paints over the object").is_equal(
+			BaseMaterial3D.CULL_FRONT)
+	assert_bool(paint.grow).is_true()
+	assert_int(paint.shading_mode).is_equal(BaseMaterial3D.SHADING_MODE_UNSHADED)
+
+
+## BRAND.md forbids red outright. Bob asked for a thin red line; this is the same
+## amber that marks a locked door and a refused action, at the same hairline.
+func test_the_outline_is_the_accent_because_the_brand_has_no_red() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	renderer.highlight("fridge")
+	renderer.sync(world, 0.1, 0.0)
+	var paint := _first_mesh(renderer.highlight_node()).material_override as StandardMaterial3D
+	assert_object(paint.albedo_color).is_equal(Brand.ACCENT)
+	assert_bool(paint.albedo_color.r > paint.albedo_color.g \
+		and paint.albedo_color.g > paint.albedo_color.b).override_failure_message(
+			"the accent should read warm, not red").is_true()
+
+
+func _meshes_in(node: Node) -> int:
+	var total := 0
+	if node is MeshInstance3D:
+		total += 1
+	for child in node.get_children():
+		total += _meshes_in(child)
+	return total
+
+
+func _first_mesh(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for child in node.get_children():
+		var found := _first_mesh(child)
+		if found != null:
+			return found
+	return null
