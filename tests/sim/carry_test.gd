@@ -13,7 +13,7 @@ func test_a_held_object_comes_with_you() -> void:
 	var w := F.world()
 	assert_bool(F.act(w, "grab", "floor_lamp")).is_true()
 	assert_str(w.player.holding).is_equal("floor_lamp")
-	assert_bool(F.goto(w, Vector2i(3, 7))).is_true()
+	assert_bool(F.goto(w, Vector2i(6, 5))).is_true()
 	assert_vector(w.objects.by_id("floor_lamp").origin()).override_failure_message(
 		"the lamp stayed behind while the player walked off with it").is_equal(w.player.pos)
 
@@ -37,7 +37,7 @@ func test_putting_it_down_leaves_it_where_you_put_it() -> void:
 	assert_bool(F.act(w, "drop", Vector2i(4, 5), "drop")).is_true()
 	assert_str(w.player.holding).is_empty()
 	assert_vector(w.objects.by_id("floor_lamp").origin()).is_equal(Vector2i(4, 5))
-	F.goto(w, Vector2i(6, 7))
+	F.goto(w, Vector2i(6, 5))
 	assert_vector(w.objects.by_id("floor_lamp").origin()).override_failure_message(
 		"a dropped object followed the player anyway").is_equal(Vector2i(4, 5))
 

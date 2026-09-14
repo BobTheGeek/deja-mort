@@ -111,3 +111,34 @@ func test_nothing_against_a_wall_faces_into_it() -> void:
 			wrong.append("%s faces %s into a wall" % [obj.id, facing])
 	assert_array(Array(wrong)).override_failure_message(
 		"furniture showing its back to the room:\n  %s" % "\n  ".join(wrong)).is_empty()
+
+
+## The layout standard is only worth having if the build checks it.
+func test_the_lint_carries_the_layout_rules() -> void:
+	var source := FileAccess.get_file_as_string("res://tools/lint_room.gd")
+	for code in ["fixture-off-wall", "faces-a-wall", "no-room-to-use", "marooned"]:
+		assert_str(source).override_failure_message(
+			"the lint does not check %s" % code).contains(code)
+	assert_str(source).override_failure_message(
+		"a room cannot declare an exception, so a violation has nowhere to go but a fix") \
+		.contains("layout_exceptions")
+
+
+## Every exception is a decision somebody wrote down, with the reason attached.
+func test_every_declared_exception_says_why() -> void:
+	var json := JSON.new()
+	json.parse(FileAccess.get_file_as_string("res://content/rooms/room_01_studio.json"))
+	var declared: Dictionary = (json.data as Dictionary).get("layout_exceptions", {})
+	for id in declared:
+		assert_int(str(declared[id]).length()).override_failure_message(
+			"'%s' is excused with no reason" % id).is_greater(40)
+
+
+func test_the_fixtures_are_tagged_as_fixtures() -> void:
+	var world := F.world()
+	var untagged := PackedStringArray()
+	for id in ["stove", "sink", "fridge", "bathtub", "bed", "closet", "bookshelf", "toilet"]:
+		if not world.objects.by_id(str(id)).has_tag("fixture"):
+			untagged.append(str(id))
+	assert_array(Array(untagged)).override_failure_message(
+		"these belong against a wall and nothing says so: %s" % [untagged]).is_empty()

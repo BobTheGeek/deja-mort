@@ -25,7 +25,8 @@
     "exit",
     "climbable",
     "window",
-    "tippable"
+    "tippable",
+    "fixture"
   ],
   "hazard": [
     "flammable",

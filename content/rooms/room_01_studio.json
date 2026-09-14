@@ -183,7 +183,8 @@
         "flammable",
         "cuttable",
         "hides-player",
-        "cloth"
+        "cloth",
+        "fixture"
       ],
       "footprint": [
         [
@@ -212,7 +213,8 @@
         "toggleable",
         "gas-source",
         "ignites",
-        "hot"
+        "hot",
+        "fixture"
       ],
       "footprint": [
         [
@@ -254,7 +256,8 @@
       "name": "Counter drawer",
       "tags": [
         "container",
-        "openable"
+        "openable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -365,7 +368,8 @@
       "name": "Sink",
       "tags": [
         "toggleable",
-        "wet-source"
+        "wet-source",
+        "fixture"
       ],
       "footprint": [
         [
@@ -385,7 +389,8 @@
       "id": "counter_knife",
       "name": "Knife block",
       "tags": [
-        "container"
+        "container",
+        "fixture"
       ],
       "footprint": [
         [
@@ -427,7 +432,8 @@
       "name": "Cabinet",
       "tags": [
         "container",
-        "openable"
+        "openable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -481,7 +487,8 @@
         "blocks-door",
         "blocks-sight",
         "container",
-        "openable"
+        "openable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -544,7 +551,8 @@
         "heavy",
         "movable",
         "blocks-sight",
-        "tippable"
+        "tippable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -609,7 +617,7 @@
       "category": "behind_furniture",
       "inspect": "Too heavy to move fast. Big enough to hide behind.",
       "mesh": "kenney/loungeSofaLong",
-      "mesh_yaw": 90
+      "mesh_yaw": 0
     },
     {
       "id": "coffee_table",
@@ -621,8 +629,8 @@
       ],
       "footprint": [
         [
-          5,
-          6
+          3,
+          7
         ]
       ],
       "state": {
@@ -642,12 +650,13 @@
         "lure",
         "fragile",
         "bright",
-        "breakable"
+        "breakable",
+        "fixture"
       ],
       "footprint": [
         [
-          6,
-          7
+          3,
+          8
         ]
       ],
       "state": {
@@ -657,7 +666,7 @@
       "lure_noise": 3,
       "inspect": "Left on standby. The remote is gone.",
       "mesh": "kenney/televisionModern",
-      "mesh_yaw": 270
+      "mesh_yaw": 180
     },
     {
       "id": "floor_lamp",
@@ -671,8 +680,8 @@
       ],
       "footprint": [
         [
-          7,
-          5
+          2,
+          6
         ]
       ],
       "state": {
@@ -681,8 +690,8 @@
       },
       "weight": 2,
       "outlet": [
-        7,
-        5
+        2,
+        6
       ],
       "cord_range": 3,
       "inspect": "A tall lamp with a long cord.",
@@ -694,7 +703,8 @@
       "tags": [
         "hides-player",
         "container",
-        "openable"
+        "openable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -784,7 +794,8 @@
       "id": "bed",
       "name": "Bed",
       "tags": [
-        "hides-player"
+        "hides-player",
+        "fixture"
       ],
       "footprint": [
         [
@@ -820,7 +831,8 @@
       "name": "Nightstand",
       "tags": [
         "container",
-        "openable"
+        "openable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -904,7 +916,8 @@
       "id": "bathtub",
       "name": "Bathtub",
       "tags": [
-        "hides-player"
+        "hides-player",
+        "fixture"
       ],
       "footprint": [
         [
@@ -932,7 +945,8 @@
       "name": "Medicine cabinet",
       "tags": [
         "container",
-        "openable"
+        "openable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -1006,7 +1020,8 @@
       "id": "toilet",
       "name": "Toilet",
       "tags": [
-        "toggleable"
+        "toggleable",
+        "fixture"
       ],
       "footprint": [
         [
@@ -1416,6 +1431,9 @@
   "marker_zones": [
     "chokepoint"
   ],
+  "layout_exceptions": {
+    "fridge": "Free-standing on purpose: evade_phone pushes it one square into the doorway to brace the door, and (2,2) is the only square that can reach the doorway in one push without being where the oil goes and the bookshelf lands. See docs/08-room-layout.md."
+  },
   "lighting": {
     "bulb": {
       "cell": [

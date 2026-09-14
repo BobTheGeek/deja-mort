@@ -30,6 +30,7 @@ func _initialize() -> void:
 
 	for path in targets:
 		_lint_room(path, known_tags)
+		_lint_layout(path)
 		_lint_ambiguity(path)
 
 	for w in _warnings:
@@ -43,6 +44,119 @@ func _initialize() -> void:
 	else:
 		printerr("lint: FAIL — %d error(s), %d warning(s)." % [_errors.size(), _warnings.size()])
 		quit(1)
+
+
+## Furniture placement, against the standard in docs/08-room-layout.md. Bob has
+## reported the same class of problem three playtests running — a fridge in front
+## of the stove, cabinets showing their backs, a lamp marooned mid-floor — and
+## none of it was decided. It accumulated. This is where it stops accumulating.
+##
+## A room may declare `layout_exceptions: {"<id>": "<reason>"}`. The check still
+## runs and still reports; a declared exception does not fail the build. A
+## violation is either fixed or it is a decision somebody wrote down.
+func _lint_layout(path: String) -> void:
+	var room: Variant = _read_json(path)
+	if not (room is Dictionary):
+		return
+	var grid: Dictionary = (room as Dictionary).get("grid", {})
+	var cells: Array = grid.get("cells", [])
+	if cells.is_empty():
+		return
+	var excused: Dictionary = (room as Dictionary).get("layout_exceptions", {})
+	# Per square: who blocks it. Something you can walk over or pick up does not.
+	var blockers := {}
+	for raw_obj in (room as Dictionary).get("objects", []):
+		var o: Dictionary = raw_obj
+		var o_tags: Array = o.get("tags", [])
+		if bool(o.get("walk_over", false)) or o_tags.has("carryable"):
+			continue
+		for c in o.get("footprint", []):
+			blockers["%d,%d" % [int(c[0]), int(c[1])]] = str(o.get("id", ""))
+
+	for raw in (room as Dictionary).get("objects", []):
+		var obj: Dictionary = raw
+		var oid := str(obj.get("id", ""))
+		var tags: Array = obj.get("tags", [])
+		var footprint: Array = obj.get("footprint", [])
+		if footprint.is_empty():
+			continue
+		var fixture := tags.has("fixture")
+		var carryable := tags.has("carryable")
+
+		if fixture and not _touches_a_wall(footprint, cells):
+			_layout_issue(path, excused, oid, "fixture-off-wall",
+				"is a fixture and touches no wall")
+
+		# Only a drawn model has a front. A chain, a switch, a towel in a basket
+		# do not, and asking which way they face is asking nothing.
+		var drawn := not str(obj.get("mesh", "")).is_empty()
+		var front := _front_of(obj)
+		var ahead := Vector2i(int(footprint[0][0]) + front.x, int(footprint[0][1]) + front.y)
+		var key := "%d,%d" % [ahead.x, ahead.y]
+		if drawn and _is_wall(ahead, cells):
+			_layout_issue(path, excused, oid, "faces-a-wall",
+				"faces %s, which is a wall" % [front])
+		# You stand at a cupboard, a sink, a cooker. You do not stand at a
+		# television — a coffee table in front of one is a living room, not a
+		# fault — so this asks only of the things you operate at arm's length.
+		var operated := tags.has("openable") or tags.has("container") \
+			or tags.has("wet-source") or tags.has("gas-source")
+		if drawn and fixture and operated and blockers.has(key) \
+				and not excused.has(str(blockers[key])):
+			_layout_issue(path, excused, oid, "no-room-to-use",
+				"opens onto '%s' with nowhere to stand" % blockers[key])
+
+		if not carryable and not fixture and not _touches_a_wall(footprint, cells) \
+				and not _touches_furniture(oid, footprint, blockers):
+			_warnings.append("%s: object '%s' is marooned — it touches neither a wall nor "
+				% [path, oid] + "any other furniture")
+
+
+func _layout_issue(path: String, excused: Dictionary, oid: String, code: String,
+		detail: String) -> void:
+	var line := "%s: object '%s' %s [%s]" % [path, oid, detail, code]
+	if excused.has(oid):
+		_warnings.append("%s — declared: %s" % [line, excused[oid]])
+	else:
+		_errors.append(line)
+
+
+## Kenney's furniture faces +Z at yaw 0; see docs/08-room-layout.md.
+func _front_of(obj: Dictionary) -> Vector2i:
+	var yaw := int(round(float(obj.get("mesh_yaw", 0.0)))) % 360
+	match yaw:
+		90: return Vector2i(1, 0)
+		180: return Vector2i(0, -1)
+		270: return Vector2i(-1, 0)
+		_: return Vector2i(0, 1)
+
+
+func _is_wall(cell: Vector2i, cells: Array) -> bool:
+	if cell.y < 0 or cell.y >= cells.size():
+		return true
+	var row := str(cells[cell.y])
+	if cell.x < 0 or cell.x >= row.length():
+		return true
+	return row[cell.x] == "#"
+
+
+func _touches_a_wall(footprint: Array, cells: Array) -> bool:
+	for c in footprint:
+		var cell := Vector2i(int(c[0]), int(c[1]))
+		for step in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if _is_wall(cell + step, cells):
+				return true
+	return false
+
+
+func _touches_furniture(oid: String, footprint: Array, occupied: Dictionary) -> bool:
+	for c in footprint:
+		var cell := Vector2i(int(c[0]), int(c[1]))
+		for step in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var key := "%d,%d" % [cell.x + step.x, cell.y + step.y]
+			if occupied.has(key) and str(occupied[key]) != oid:
+				return true
+	return false
 
 
 ## The wheel must never have to ask which rule the player meant. Any

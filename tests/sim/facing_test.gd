@@ -17,18 +17,20 @@ const F := preload("res://tests/support/sim_fixture.gd")
 
 func test_you_turn_to_face_what_you_act_on() -> void:
 	var world := F.world()
+	var lamp := world.objects.by_id("floor_lamp").origin()
 	assert_bool(F.act(world, "toggle", "floor_lamp")).is_true()
-	_assert_faces(world.player, Vector2i(7, 5), "the floor lamp")
+	_assert_faces(world.player, lamp, "the floor lamp")
 
 
 ## The bad case: no walking happens at all, so nothing used to set facing.
 func test_you_turn_even_when_you_do_not_have_to_walk() -> void:
 	var world := F.world()
-	# Approached from the south, so he is already facing away from the set.
-	assert_bool(F.goto(world, Vector2i(6, 8))).is_true()
+	# Approached from the far side, so he is already facing away from the set.
+	var set_at := world.objects.by_id("tv").origin()
+	assert_bool(F.goto(world, set_at + Vector2i(1, 0))).is_true()
 	var before := world.player.facing
 	assert_bool(F.act(world, "toggle", "tv")).is_true()
-	_assert_faces(world.player, Vector2i(6, 7), "the television")
+	_assert_faces(world.player, set_at, "the television")
 	assert_str(str(world.player.facing)).override_failure_message(
 		"facing never changed; it is still %s" % [before]).is_not_equal(str(before))
 
