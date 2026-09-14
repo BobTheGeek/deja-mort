@@ -454,6 +454,9 @@ func test_the_caption_carries_a_description_once_you_have_looked() -> void:
 ## walks every object in the room so it cannot come back for a few of them.
 func test_drop_is_live_on_anything_while_your_hands_are_full() -> void:
 	var world := F.world()
+	# The bathroom is behind a shut door, and you cannot put something down in a
+	# room you cannot walk into. That is the tenth playtest's other fix.
+	assert_bool(F.act(world, "open", "bath_door")).is_true()
 	F.give(world, "glass_jar")
 	var dead := PackedStringArray()
 	for obj in world.objects.all():
@@ -474,3 +477,16 @@ func test_drop_is_off_and_says_so_when_your_hands_are_empty() -> void:
 	assert_str(wheel.slot_state("drop")).is_equal("unavailable")
 	assert_str(wheel.reason_for("drop")).override_failure_message(
 		"Drop is off and the wheel does not say why").is_not_empty()
+
+
+## And behind a shut door it is off with the reason said out loud, rather than
+## dead and silent — which is what had Bob choosing Hide on a bathtub he could
+## not reach and watching nothing happen.
+func test_behind_a_shut_door_it_says_you_cannot_get_there() -> void:
+	var world := F.world()
+	F.give(world, "glass_jar")
+	var wheel := _open(world, "bathtub")
+	assert_str(wheel.slot_state("drop")).is_equal("unavailable")
+	assert_str(wheel.reason_for("drop")).override_failure_message(
+		"the tub is behind a shut door and the wheel will not say so").is_equal(
+		str((GameVisuals.load_table().get_value("wheel.reasons", {}) as Dictionary)["unreachable"]))

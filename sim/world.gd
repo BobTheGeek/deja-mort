@@ -382,15 +382,10 @@ func verb_on(verb: String, target: Variant, rule_id: String = "") -> bool:
 	var rule := rules.first_match(ctx, rule_id)
 	if rule == null or rule.trigger != "verb":
 		return false
-	var route: Array[Vector2i] = []
-	if rule.reach == "adjacent":
-		var spots := reach_cells(resolved["object"], resolved["cell"])
-		if spots.is_empty():
-			return false
-		if not spots.has(player.pos):
-			route = _path_to_any(spots)
-			if route.is_empty():
-				return false
+	var walk := route_to_use(rule, resolved)
+	if not bool(walk["possible"]):
+		return false
+	var route: Array[Vector2i] = walk["route"]
 	var act := SimAction.new()
 	act.kind = SimAction.KIND_VERB
 	act.verb = verb
@@ -404,6 +399,26 @@ func verb_on(verb: String, target: Variant, rule_id: String = "") -> bool:
 	player.path = route
 	player.action = act
 	return true
+
+
+## Where the player has to stand to use this rule on this target, and whether
+## they can get there from where they are. `verb_on` used to be the only thing
+## that knew, so the wheel lit Hide on a bathtub behind a shut bath door and then
+## did nothing when Bob chose it.
+##
+## Returns {"possible": bool, "route": Array[Vector2i]} — an empty route means
+## they are already standing somewhere that will do.
+func route_to_use(rule: SimRule, resolved: Dictionary) -> Dictionary:
+	var none: Array[Vector2i] = []
+	if rule.reach != "adjacent":
+		return {"possible": true, "route": none}
+	var spots := reach_cells(resolved["object"], resolved["cell"])
+	if spots.is_empty():
+		return {"possible": false, "route": none}
+	if spots.has(player.pos):
+		return {"possible": true, "route": none}
+	var route := _path_to_any(spots)
+	return {"possible": not route.is_empty(), "route": route}
 
 
 func wait(seconds: float) -> bool:

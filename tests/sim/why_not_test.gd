@@ -83,3 +83,55 @@ func test_every_reason_the_sim_can_give_has_words_for_it() -> void:
 			missing.append(str(key))
 	assert_array(Array(missing)).override_failure_message(
 		"reasons with no copy in visuals.json: %s" % [missing]).is_empty()
+
+
+# --- things you cannot get to -------------------------------------------------
+
+## Bob's tenth playtest, loop 1, t=96.1s: he chose Hide on the bathtub and the
+## sim refused. The bath door was shut. The wheel had the slot lit, because
+## availability asked whether the rule matched and never asked whether he could
+## get there — `verb_on` was the only thing that knew, and by then the wheel had
+## already promised.
+##
+## Twelve seconds and a loop went into that.
+func test_a_thing_you_cannot_walk_to_is_not_available() -> void:
+	var world := F.world()
+	world.player.pos = Vector2i(6, 2)
+	assert_bool(world.objects.by_id("bath_door").get_state("open", false)).override_failure_message(
+		"this test needs the bath door shut").is_false()
+	assert_bool(SimVerbs.is_available(world, world.player, "hide", "bathtub")) \
+		.override_failure_message("the wheel would light Hide on a tub behind a shut door") \
+		.is_false()
+	assert_str(_blocker(world, "hide", "bathtub")).is_equal("unreachable")
+
+
+func test_opening_the_door_makes_it_available_again() -> void:
+	var world := F.world()
+	world.player.pos = Vector2i(6, 2)
+	assert_bool(F.act(world, "open", "bath_door")).is_true()
+	assert_bool(SimVerbs.is_available(world, world.player, "hide", "bathtub")) \
+		.override_failure_message("the door is open and the tub is still refused").is_true()
+
+
+## The claim, stated once: if the wheel lights it, the sim does it. This walks
+## every object in the room and every verb on it, in two states, and fails on the
+## first slot that promises something the sim then refuses.
+func test_everything_the_wheel_offers_actually_happens() -> void:
+	for world: SimWorld in [F.world(), _with_hands_full()]:
+		var broken := PackedStringArray()
+		for obj in world.objects.all():
+			for verb in SimVerbs.verb_ids(world):
+				if not SimVerbs.is_available(world, world.player, verb, obj.id):
+					continue
+				if world.verb_on(verb, obj.id):
+					world.player.cancel_action()
+				else:
+					broken.append("%s on %s" % [verb, obj.id])
+		assert_array(Array(broken)).override_failure_message(
+			"the wheel offers these and the sim refuses them: %s" % [broken]).is_empty()
+
+
+func _with_hands_full() -> SimWorld:
+	var world := F.world()
+	F.give(world, "glass_jar")
+	return world

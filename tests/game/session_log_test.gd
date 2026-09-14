@@ -204,3 +204,30 @@ func test_the_game_records_the_notebook_being_opened() -> void:
 	var source := FileAccess.get_file_as_string("res://game/main.gd")
 	assert_str(source).override_failure_message(
 		"nothing records whether the hint system is ever used").contains("_log.panel(")
+
+
+## A tap whose ray missed is not a tap that did nothing: it can still open a
+## wheel on the square, or on the door behind the wall it hit. Reading the tenth
+## playtest, seven of the twenty-two "taps that picked nothing" had opened a
+## wheel, which made the report exaggerate to my own face.
+##
+## So the record carries what the tap actually resolved to.
+func test_a_tap_records_what_it_opened_on_not_just_what_the_ray_hit() -> void:
+	var log := _log()
+	log.click(Vector2(10, 10), Vector2i(0, 2), "", "front_door")
+	log.close()
+	var record: Dictionary = log.records()[0]
+	assert_str(str(record["picked"])).is_empty()
+	assert_str(str(record["opened_on"])).is_equal("front_door")
+
+
+func test_only_a_tap_that_opened_nothing_and_walked_nowhere_counts_as_dead() -> void:
+	var opened := SessionLog.summarise([
+		{"kind": "click", "picked": "", "opened_on": "front_door", "loop": 1},
+	])
+	assert_int(int(opened["taps_on_nothing"])).override_failure_message(
+		"a tap that opened a wheel was counted as a dead tap").is_equal(0)
+	var dead := SessionLog.summarise([
+		{"kind": "click", "picked": "", "opened_on": "", "loop": 1},
+	])
+	assert_int(int(dead["taps_on_nothing"])).is_equal(1)

@@ -323,3 +323,37 @@ func test_empty_handed_the_chip_is_not_a_button() -> void:
 	assert_str(hud.holding_value()).is_empty()
 	assert_bool(hud.press_at(hud.holding_rect().get_center())).override_failure_message(
 		"an empty chip swallowed a click on the room behind it").is_false()
+
+
+# --- a tap that can do nothing -----------------------------------------------
+
+## Bob's tenth playtest, t=216.3s: three taps on a wall square inside half a
+## second. No walk, no wheel, no sound, no word. He tapped again because the
+## game had said nothing, and then again.
+##
+## A tap that can do nothing now leaves a mark where it landed and fades.
+func test_a_tap_that_can_do_nothing_leaves_a_mark() -> void:
+	var hud := _hud()
+	assert_float(hud.refusal_alpha()).override_failure_message(
+		"a fresh HUD is already showing a refusal").is_equal_approx(0.0, 0.001)
+	hud.refuse_at(Vector2(560, 400))
+	assert_float(hud.refusal_alpha()).is_greater(0.0)
+	assert_object(hud.refusal_rect().get_center()).is_equal(Vector2(560, 400))
+
+
+func test_the_mark_fades_by_itself() -> void:
+	var hud := _hud()
+	hud.refuse_at(Vector2(560, 400))
+	hud.advance(hud.visuals.number("hud.refusal_hold_s", 0.45) + 0.05)
+	assert_float(hud.refusal_alpha()).override_failure_message(
+		"the mark is still on screen after its hold").is_equal_approx(0.0, 0.001)
+
+
+## And it grows as it goes, so three taps in the same spot read as three.
+func test_the_mark_opens_out() -> void:
+	var hud := _hud()
+	hud.refuse_at(Vector2(560, 400))
+	var early := hud.refusal_rect().size.x
+	hud.advance(hud.visuals.number("hud.refusal_hold_s", 0.45) * 0.5)
+	assert_float(hud.refusal_rect().size.x).override_failure_message(
+		"the mark is the same size the whole way through").is_greater(early)
