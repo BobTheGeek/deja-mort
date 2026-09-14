@@ -16,7 +16,7 @@ const F := preload("res://tests/support/sim_fixture.gd")
 
 func test_the_room_really_does_stack_objects_on_one_cell() -> void:
 	var world := F.world()
-	assert_int(world.objects.at_cell(Vector2i(2, 1)).size()).override_failure_message(
+	assert_int(world.objects.at_cell(Vector2i(3, 1)).size()).override_failure_message(
 		"this test is about stacked objects; the room no longer stacks any").is_greater(2)
 
 

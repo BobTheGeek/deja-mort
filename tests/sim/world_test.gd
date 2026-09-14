@@ -20,8 +20,10 @@ func test_a_rug_is_walked_over_not_around() -> void:
 
 func test_counter_objects_are_reachable_diagonally() -> void:
 	var w := F.world()
-	assert_array(w.reach_cells(w.objects.by_id("counter_drawer"), Vector2i(2, 1))) \
-		.contains([Vector2i(1, 2), Vector2i(3, 2)])
+	# The counter runs along the top wall, so it is reached from the row below it
+	# and from the squares either side.
+	assert_array(w.reach_cells(w.objects.by_id("counter_drawer"), Vector2i(3, 1))) \
+		.contains([Vector2i(3, 2), Vector2i(4, 2)])
 
 
 func test_walking_costs_time_at_the_authored_speed() -> void:

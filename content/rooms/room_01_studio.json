@@ -150,7 +150,9 @@
       "state": {
         "on": true
       },
-      "inspect": "One switch for the whole room."
+      "inspect": "One switch for the whole room.",
+      "mount_y": 1.1,
+      "walk_over": true
     },
     {
       "id": "window",
@@ -180,7 +182,8 @@
       "tags": [
         "flammable",
         "cuttable",
-        "hides-player"
+        "hides-player",
+        "cloth"
       ],
       "footprint": [
         [
@@ -213,7 +216,7 @@
       ],
       "footprint": [
         [
-          1,
+          2,
           1
         ]
       ],
@@ -237,7 +240,7 @@
       ],
       "footprint": [
         [
-          1,
+          2,
           1
         ]
       ],
@@ -255,7 +258,7 @@
       ],
       "footprint": [
         [
-          2,
+          3,
           1
         ]
       ],
@@ -280,7 +283,7 @@
       ],
       "footprint": [
         [
-          2,
+          3,
           1
         ]
       ],
@@ -297,7 +300,7 @@
       ],
       "footprint": [
         [
-          2,
+          3,
           1
         ]
       ],
@@ -318,7 +321,7 @@
       ],
       "footprint": [
         [
-          2,
+          3,
           1
         ]
       ],
@@ -350,7 +353,7 @@
       ],
       "footprint": [
         [
-          2,
+          3,
           1
         ]
       ],
@@ -366,7 +369,7 @@
       ],
       "footprint": [
         [
-          3,
+          4,
           1
         ]
       ],
@@ -386,7 +389,7 @@
       ],
       "footprint": [
         [
-          4,
+          5,
           1
         ]
       ],
@@ -412,7 +415,7 @@
       ],
       "footprint": [
         [
-          4,
+          5,
           1
         ]
       ],
@@ -428,7 +431,7 @@
       ],
       "footprint": [
         [
-          5,
+          1,
           1
         ]
       ],
@@ -441,7 +444,9 @@
       "reach": 8,
       "inspect": "Mugs, a jar, and dust.",
       "mesh": "kenney/kitchenCabinetUpper",
-      "mesh_yaw": 180
+      "mesh_yaw": 180,
+      "mount_y": 1.35,
+      "walk_over": true
     },
     {
       "id": "glass_jar",
@@ -454,7 +459,7 @@
       ],
       "footprint": [
         [
-          5,
+          1,
           1
         ]
       ],
@@ -946,7 +951,9 @@
       ],
       "inspect": "Mirror, painkillers, and worse ideas.",
       "mesh": "kenney/bathroomCabinet",
-      "mesh_yaw": 180
+      "mesh_yaw": 180,
+      "mount_y": 1.2,
+      "walk_over": true
     },
     {
       "id": "hairspray",

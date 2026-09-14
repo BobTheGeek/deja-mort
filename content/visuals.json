@@ -270,6 +270,17 @@
           0.5,
           0.48
         ]
+      },
+      "cloth": {
+        "height": 2.35,
+        "color": [
+          0.62,
+          0.56,
+          0.5
+        ],
+        "shape": "panels",
+        "panel_depth": 0.1,
+        "panel_gap": 0.12
       }
     },
     "stack_spread": 0.22,
