@@ -58,7 +58,25 @@
       }
     ],
     "shadows": [
-      "drop"
+      "drop",
+      "drop_onto"
+    ]
+  },
+  {
+    "id": "drop_onto",
+    "verb": "drop",
+    "target": {
+      "kind": "object"
+    },
+    "actor_conditions": {
+      "holding": true
+    },
+    "duration_s": 0.5,
+    "effects": [
+      {
+        "op": "drop",
+        "where": "target_cell"
+      }
     ]
   },
   {

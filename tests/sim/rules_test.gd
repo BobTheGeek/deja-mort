@@ -376,3 +376,48 @@ func test_rule_strike_exposed() -> void:
 	assert_bool(F.act(w, "use-held-on", "dummy", "strike_exposed")).is_true()
 	assert_bool(mark.alive).is_true()
 	assert_bool(w.player.has_status("exposed")).is_true()
+
+
+## From Bob's eighth playtest: "I picked up the jar and then I could not put it
+## down."
+##
+## He could not, and the log shows why: after grabbing it he tapped the stove,
+## the pan, the boxes, the fridge, the drawer — nine taps on objects, no taps on
+## bare floor. `drop` targets a *square*, so every one of those wheels had Drop
+## greyed out, and a tap on floor two squares away walks you there rather than
+## offering it.
+##
+## Putting something down beside a thing you are looking at is what people mean
+## by putting it down. Drop works on an object now: it goes on that object's
+## square.
+func test_rule_drop_onto() -> void:
+	var w := F.world()
+	F.give(w, "glass_jar")
+	assert_bool(F.act(w, "drop", "stove", "drop_onto")).override_failure_message(
+		"holding a jar, standing at the cooker, and Drop is not available").is_true()
+	assert_str(w.player.holding).is_empty()
+	assert_bool(w.objects.by_id("glass_jar").cells.has(w.objects.by_id("stove").origin())) \
+		.override_failure_message("dropped it at the cooker and it went somewhere else").is_true()
+
+
+## An open container still wins: putting a jar in an open cupboard is putting it
+## in the cupboard, not on top of it.
+func test_an_open_container_still_takes_it_in() -> void:
+	var w := F.world()
+	assert_bool(F.act(w, "open", "counter_drawer")).is_true()
+	F.give(w, "glass_jar")
+	assert_bool(F.act(w, "drop", "counter_drawer")).is_true()
+	var holder := w.objects.container_of("glass_jar")
+	assert_object(holder).override_failure_message(
+		"it should be inside the drawer, not on the floor beside it").is_not_null()
+	assert_str(holder.id).is_equal("counter_drawer")
+
+
+## And the bare square still works, because that is where you put things down
+## when there is nothing to put them on.
+func test_the_floor_still_takes_it() -> void:
+	var w := F.world()
+	F.give(w, "glass_jar")
+	assert_bool(w.verb_on("drop", w.player.pos)).is_true()
+	w.step_until_idle()
+	assert_str(w.player.holding).is_empty()

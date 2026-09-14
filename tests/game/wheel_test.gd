@@ -435,3 +435,37 @@ func test_the_caption_carries_a_description_once_you_have_looked() -> void:
 		after.press_at(after.arrow_rect("next").get_center())
 	assert_str(" ".join(after.caption_lines())).override_failure_message(
 		"it has been inspected and the wheel still will not repeat it").contains(toaster.inspect)
+
+
+# --- putting it down ---------------------------------------------------------
+
+## Bob, eighth playtest: "I picked up the jar and then I could not put it down."
+##
+## He was holding it and he kept tapping things — the cooker, the pan, the boxes,
+## the fridge, the drawer. Every one of those wheels had Drop greyed out, because
+## Drop wanted a bare floor square and he never tapped one.
+##
+## While your hands are full, Drop is live on whatever you are looking at. This
+## walks every object in the room so it cannot come back for a few of them.
+func test_drop_is_live_on_anything_while_your_hands_are_full() -> void:
+	var world := F.world()
+	F.give(world, "glass_jar")
+	var dead := PackedStringArray()
+	for obj in world.objects.all():
+		if obj.id == "glass_jar":
+			continue
+		var wheel := _open(world, obj.id)
+		if wheel.slot_state("drop") != "available":
+			dead.append(obj.id)
+	assert_array(Array(dead)).override_failure_message(
+		"holding the jar and Drop is dead on: %s" % [dead]).is_empty()
+
+
+## And with empty hands it is off everywhere, with the reason said out loud
+## rather than a silent dead slot.
+func test_drop_is_off_and_says_so_when_your_hands_are_empty() -> void:
+	var world := F.world()
+	var wheel := _open(world, "fridge")
+	assert_str(wheel.slot_state("drop")).is_equal("unavailable")
+	assert_str(wheel.reason_for("drop")).override_failure_message(
+		"Drop is off and the wheel does not say why").is_not_empty()
