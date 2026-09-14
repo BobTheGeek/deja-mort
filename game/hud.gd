@@ -64,6 +64,8 @@ var _inspect_alpha: float = 1.0
 var _elapsed: float = 0.0
 var _notebook_hover: bool = false
 var _prompt: String = ""
+var _hover: String = ""
+var _hover_at: Vector2 = Vector2.ZERO
 
 
 func setup(table: GameVisuals) -> void:
@@ -110,6 +112,8 @@ func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
 	# While a loop is ending the banner is left alone, because the death beat
 	# flashes DEAD before the ending gets named and that must survive the frames
 	# in between.
+	if panel_open:
+		_hover = ""
 	if _ending.is_empty():
 		_banner = ""
 		_prompt = ""
@@ -356,6 +360,35 @@ func banner_text() -> String:
 	return _banner
 
 
+## What the pointer is over, at the pointer. The room is crowded and the pack's
+## pieces are simple; from across the room a drawer and a cupboard look alike.
+func show_hover(name: String, at: Vector2) -> void:
+	if name == _hover and at.distance_to(_hover_at) < 1.0:
+		return
+	_hover = name
+	_hover_at = at
+	queue_redraw()
+
+
+func hover_text() -> String:
+	return _hover
+
+
+func hover_rect() -> Rect2:
+	if _hover.is_empty() or _font == null:
+		return Rect2()
+	var size := int(visuals.number("hud.hover_size", 20.0))
+	var padding: Array = visuals.get_value("hud.hover_padding", [6.0, 10.0])
+	var offset: Array = visuals.get_value("hud.hover_offset", [18.0, -14.0])
+	var run := _font.get_string_size(_hover, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var box := Vector2(run + float(padding[1]) * 2.0, float(size) * 1.3 + float(padding[0]) * 2.0)
+	var at := _hover_at + Vector2(float(offset[0]), float(offset[1]))
+	var frame_size := frame()
+	at.x = clampf(at.x, 0.0, maxf(frame_size.x - box.x, 0.0))
+	at.y = clampf(at.y, 0.0, maxf(frame_size.y - box.y, 0.0))
+	return Rect2(at, box)
+
+
 ## Shown under the banner while the game waits for a press. Cleared by the next
 ## loop, like everything else about a finished one.
 func show_prompt(text: String) -> void:
@@ -390,6 +423,8 @@ func _draw() -> void:
 	if hidden_visible():
 		_draw_hidden()
 	_draw_notebook_button()
+	if not _hover.is_empty():
+		_draw_hover()
 	if not _inspect_body.is_empty():
 		_draw_inspect()
 	if not _banner.is_empty():
@@ -457,6 +492,19 @@ func _draw_hidden() -> void:
 	draw_string(_font, box.position + Vector2(float(padding[1]) + icon + 10.0,
 		box.size.y * 0.5 + float(text_size) * 0.36), hidden_text(),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, colour)
+
+
+func _draw_hover() -> void:
+	var box := hover_rect()
+	var style := StyleBoxFlat.new()
+	style.bg_color = visuals.colour_with_alpha("hud.hover_fill", "hud.hover_fill_alpha")
+	style.set_corner_radius_all(int(visuals.number("hud.inspect_radius", 4)))
+	draw_style_box(style, box)
+	var size := int(visuals.number("hud.hover_size", 20.0))
+	var padding: Array = visuals.get_value("hud.hover_padding", [6.0, 10.0])
+	draw_string(_font, box.position + Vector2(float(padding[1]), float(padding[0]) + float(size)),
+		_hover, HORIZONTAL_ALIGNMENT_LEFT, -1, size,
+		_alpha(visuals.colour("hud.timer_color"), visuals.number("hud.hover_alpha", 0.9)))
 
 
 func _chip_style(alpha: float) -> StyleBoxFlat:

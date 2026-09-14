@@ -276,7 +276,14 @@
     "pick_tolerance_px": 14.0,
     "min_clickable_px": 400.0,
     "_pick_comment": "A tap is a finger, not a pixel: a miss looks again within pick_tolerance_px. min_clickable_px is the floor the room has to clear, measured in screen pixels at the 1920x1080 canvas with everything else in the way.",
-    "marker_emission": 0.35
+    "marker_emission": 0.35,
+    "highlight_color": "$ACCENT",
+    "highlight_alpha": 1.0,
+    "highlight_emission": 0.6,
+    "highlight_margin": 0.12,
+    "highlight_height": 0.05,
+    "highlight_lift": 0.08,
+    "highlight_thickness": 0.07
   },
   "models": {
     "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",
@@ -818,7 +825,19 @@
     "paused_timer_alpha": 0.45,
     "paused_label_size": 13,
     "paused_label_tracking_em": 0.24,
-    "paused_label_alpha": 0.55
+    "paused_label_alpha": 0.55,
+    "hover_size": 20.0,
+    "hover_alpha": 0.9,
+    "hover_offset": [
+      18.0,
+      -14.0
+    ],
+    "hover_padding": [
+      6.0,
+      10.0
+    ],
+    "hover_fill": "$BG_DARK",
+    "hover_fill_alpha": 0.85
   },
   "vignette": {
     "strength": 0.55,

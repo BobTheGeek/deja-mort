@@ -31,16 +31,22 @@ func reset() -> void:
 
 ## An object id, the cell itself, or null when there is nothing here to act on.
 ##
-## The square you are standing on always offers the floor, because that is where
-## a cell-targeted rule lives — dropping what you hold, pouring oil on the boards
-## — and it is the one tap with nothing else to do, since you cannot walk to
-## where you already are. Holding something, the floor comes first; empty handed
-## it comes last, behind whatever is actually on the square.
+## The floor is a target when a cell-targeted rule could apply to it: dropping
+## what you hold, pouring oil on the boards. Carrying something, that is the
+## square you stand on and the four you can reach, because those are the squares
+## you could put it on — Bob stood beside the doorway, tapped the floor in front
+## of it, and walked there instead, four times over. Empty handed it is your own
+## square only, and it comes last, behind whatever is actually on it.
+##
+## The cost is that carrying something you cannot step one square by tapping it.
+## Tapping two squares away still walks.
 func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
 	var options: Array = []
 	var standing_here := world.player.pos == cell
 	var holding := not world.player.holding.is_empty()
-	if standing_here and holding:
+	var beside: bool = _is_beside(world.player.pos, cell) and bool(world.walkable(cell))
+	var within_reach: bool = standing_here or (holding and beside)
+	if holding and within_reach:
 		options.append(cell)
 	for obj in world.objects.at_cell(cell):
 		options.append(obj.id)
@@ -49,6 +55,10 @@ func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
 	if options.is_empty():
 		return null
 	return _cycle_through(options, cell, picked)
+
+
+static func _is_beside(from: Vector2i, cell: Vector2i) -> bool:
+	return absi(from.x - cell.x) + absi(from.y - cell.y) == 1
 
 
 func _cycle_through(options: Array, cell: Vector2i, picked: String) -> Variant:

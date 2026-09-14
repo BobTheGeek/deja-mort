@@ -38,3 +38,16 @@ Measured in screen pixels at the 1920x1080 canvas, with everything else in the r
 On a phone that canvas is stretched to the screen and a 26 px target is roughly ten points, against Apple's forty-four. `object.pick_tolerance_px` softens it — a tap that lands on nothing looks again in a small ring — but that is a plaster, not a fix. The real answers are a bigger tolerance on touch specifically, or drawing small objects larger than life, and neither should be chosen without a phone in hand.
 
 `tests/game/picking_test.gd` holds the room to `object.min_clickable_px` so it cannot quietly get worse.
+
+## Room 1 is crowded, and the pack's pieces are simple
+
+Bob, fifth playtest: "the layout of the room is too cluttered making it hard to see things. Also, the fidelity of the assets is a problem. Often I can't tell what I am looking at."
+
+Naming what the pointer is over fixes the immediate question and does not fix this one. Thirty-nine objects in a twelve-by-ten room, ten of which sit on top of another object, drawn from a CC0 kit whose pieces are deliberately plain and seen from across the room. Three ways out, none of them small:
+
+- **Fewer objects.** Every one is interactable and several carry an authored solution, so the solver has to re-verify and the completion counts move.
+- **Better models** for the load-bearing ones — the counter run in particular, where the drawer, the oil, the toaster and the token share one square.
+- **A closer camera**, or one that can be nudged, which changes the diorama framing `docs/06` is built on.
+
+The first two are content and art decisions for Bob; the third is a design one. Worth doing before Rooms 2–4 set the same pattern four more times.
+

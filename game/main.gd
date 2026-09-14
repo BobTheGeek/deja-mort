@@ -336,7 +336,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_log.panel("notebook", _notebook.is_open())
 		return
 	if event is InputEventMouseMotion:
-		_hud.hover_at((event as InputEventMouseMotion).position)
+		var at := (event as InputEventMouseMotion).position
+		_hud.hover_at(at)
+		_name_what_is_under_the_pointer(at)
 		return
 	if not (event is InputEventMouseButton):
 		return
@@ -352,6 +354,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _hud.press_at(click.position):
 		return
 	_click_world(click.position)
+
+
+## The room is crowded and the pack's pieces are simple. A ring under what the
+## pointer is over, and its name at the pointer.
+func _name_what_is_under_the_pointer(at: Vector2) -> void:
+	if _is_paused():
+		_renderer.highlight("")
+		_hud.show_hover("", at)
+		return
+	var id := _pick_near(at)
+	var obj := world.objects.by_id(id) if not id.is_empty() else null
+	_renderer.highlight(id if obj != null else "")
+	_hud.show_hover(obj.name if obj != null else "", at)
 
 
 func _on_notebook_pressed() -> void:

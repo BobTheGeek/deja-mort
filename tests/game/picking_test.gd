@@ -350,3 +350,57 @@ func test_drop_is_available_on_the_floor_you_stand_on() -> void:
 	world.step_until_idle()
 	assert_str(world.player.holding).override_failure_message(
 		"dropped it and still holding it").is_empty()
+
+
+## From the fifth playtest: "once I had the cooking oil, there was no way for me
+## to pour it on the floor in front of the door. Clicking on the floor near the
+## door either just moved my character there, or brought up the wheel for the
+## door itself."
+##
+## Tapping the square you are standing on was the answer and nobody could be
+## expected to find it. Carrying something, the squares you can reach are the
+## squares you can put it on — so a tap on bare floor within reach opens the
+## wheel there instead of walking.
+func test_holding_something_makes_the_floor_within_reach_a_target() -> void:
+	var world := F.world()
+	F.give(world, "cooking_oil")
+	var picker := ClickTarget.new()
+	var beside := world.player.pos + Vector2i(0, -1)
+	assert_bool(world.walkable(beside)).override_failure_message(
+		"this test needs a bare walkable square next to the player").is_true()
+	assert_bool(picker.choose(world, beside, "") is Vector2i).override_failure_message(
+		"the square next to me is where I would put this down, and it is not offered") \
+		.is_true()
+
+
+func test_empty_handed_that_same_square_still_just_walks() -> void:
+	var world := F.world()
+	var picker := ClickTarget.new()
+	var beside := world.player.pos + Vector2i(0, -1)
+	assert_object(picker.choose(world, beside, "")).override_failure_message(
+		"walking one square stopped working").is_null()
+
+
+func test_far_floor_still_walks_even_when_carrying() -> void:
+	var world := F.world()
+	F.give(world, "cooking_oil")
+	var picker := ClickTarget.new()
+	assert_object(picker.choose(world, Vector2i(7, 6), "")).override_failure_message(
+		"carrying something should not strand you where you stand").is_null()
+
+
+## The whole point: the oil goes on the floor in front of the door.
+func test_the_oil_can_be_poured_on_the_square_in_front_of_the_door() -> void:
+	var world := F.world()
+	F.give(world, "cooking_oil")
+	assert_bool(F.goto(world, Vector2i(1, 4))).is_true()
+	var doorway := Vector2i(1, 3)
+	var picker := ClickTarget.new()
+	assert_bool(picker.choose(world, doorway, "") is Vector2i).override_failure_message(
+		"standing next to the doorway square and it is still not a target").is_true()
+	assert_bool(SimVerbs.is_available(world, world.player, "use-held-on", doorway)) \
+		.override_failure_message("Use held on is not available on the square").is_true()
+	assert_bool(world.verb_on("use-held-on", doorway)).is_true()
+	world.step_until_idle()
+	assert_bool(world.hazards.has("slippery", doorway)).override_failure_message(
+		"poured the oil and the floor is not slippery").is_true()

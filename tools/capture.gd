@@ -16,6 +16,7 @@ const OUT_DIR := "user://shots"
 var _name := "shot"
 var _capture_at := 1.5
 var _clicks: Array = []
+var _hovers: Array = []
 var _keys: Array = []
 var _solution := ""
 var _scene := SCENE
@@ -61,6 +62,16 @@ func _initialize() -> void:
 			i += 2
 		elif str(args[i]) == "--solution" and i + 1 < args.size():
 			_solution = str(args[i + 1])
+			i += 2
+		elif str(args[i]) == "--hover-cell" and i + 1 < args.size():
+			var coords := str(args[i + 1]).split(",")
+			_hovers.append({"at": _capture_at * 0.6, "point": Vector2.ZERO,
+				"cell": Vector2i(int(coords[0]), int(coords[1])), "done": false})
+			i += 2
+		elif str(args[i]) == "--hover" and i + 1 < args.size():
+			var hover := str(args[i + 1]).split(",")
+			_hovers.append({"at": _capture_at * 0.6, "point": Vector2(float(hover[0]), float(hover[1])),
+				"done": false})
 			i += 2
 		elif str(args[i]) == "--click-at" and i + 1 < args.size():
 			# Default is 60% of the way in; the title beat needs its own timing.
@@ -111,6 +122,19 @@ func _process(delta: float) -> bool:
 				printerr("capture: cannot place cell %s on screen" % [click["cell"]])
 				continue
 		_send_click(point)
+
+	for hover in _hovers:
+		if bool(hover["done"]) or _elapsed < float(hover["at"]):
+			continue
+		hover["done"] = true
+		var point: Vector2 = hover["point"]
+		if hover.has("cell"):
+			point = _cell_to_screen(hover["cell"])
+		var motion := InputEventMouseMotion.new()
+		motion.position = point
+		motion.global_position = point
+		get_root().push_input(motion, true)
+		print("capture: hovered %s at t=%.2fs" % [point, _elapsed])
 
 	for key in _keys:
 		if bool(key["done"]) or _elapsed < float(key["at"]):
