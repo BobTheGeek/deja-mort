@@ -11,7 +11,7 @@ const CELL := 1.0
 const STATE_MARKER := "StateMarker"
 
 ## The ring under whatever the pointer is over.
-const HOVER_RING := "HoverRing"
+const HOVER_OUTLINE := "HoverOutline"
 
 var visuals: GameVisuals = null
 
@@ -27,8 +27,7 @@ var _model_nodes: Dictionary = {}    # object ids drawn from a .glb rather than 
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
 var _highlight_id: String = ""
-var _ring: Node3D = null
-var _ring_size: Vector2 = Vector2.ZERO
+var _outline: Node3D = null
 var _shut_away: Dictionary = {}  # ids inside a closed container, this frame
 var _spread: Array = []          # objects stacked onto furniture this frame
 var _once: Dictionary = {}           # actor id -> {clip, left} one-shot animation
@@ -46,7 +45,7 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	for child in get_children():
 		child.queue_free()
 	_object_nodes.clear()
-	_ring = null
+	_outline = null
 	_highlight_id = ""
 	_model_nodes.clear()
 	_actor_nodes.clear()
@@ -435,77 +434,98 @@ func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> Stan
 ## What the pointer is over. Thirty-nine objects in a twelve-by-ten room, seen
 ## from across it: the room is not going to get less crowded, so it says which
 ## one you are about to act on.
+##
+## An outline, not a frame. The first cut drew a box round the footprint, and a
+## box round a counter unit is a box round its neighbours too — Bob: "it is too
+## big and thick and still does not accurately tell me what I am going to
+## interact with." This traces the object's own silhouette: a copy of its meshes,
+## grown a hair along their normals, drawn inside out so only the sliver that
+## pokes past the real thing is visible. A hairline, exactly on the shape.
+##
+## It is the accent, not red. `docs/brand/BRAND.md` forbids red outright, and
+## this is the same amber that marks a locked door and a refused action.
 func highlight(id: String) -> void:
+	if id == _highlight_id:
+		return
 	_highlight_id = id
+	_rebuild_outline()
 
 
 func highlight_node() -> Node3D:
-	return _ring
+	return _outline
 
 
 func highlight_visible() -> bool:
-	return _ring != null and _ring.visible
+	return _outline != null and _outline.visible
 
 
-## Where the ring is, on the floor plane.
+## What the outline covers, on the floor plane — the object's own footprint on
+## screen rather than a rectangle drawn around it.
 func highlight_rect() -> Rect2:
-	if _ring == null or not _ring.visible:
+	if not highlight_visible():
 		return Rect2()
-	return Rect2(Vector2(_ring.position.x - _ring_size.x * 0.5,
-		_ring.position.z - _ring_size.y * 0.5), _ring_size)
+	var box := object_bounds(_highlight_id)
+	return Rect2(Vector2(box.position.x, box.position.z), Vector2(box.size.x, box.size.z))
+
+
+## One hairline at the design canvas: the orthographic camera covers `size`
+## metres over the canvas height, so a pixel is that many metres.
+func outline_thickness() -> float:
+	var metres_per_pixel := visuals.number("camera.size", 11.0) \
+		/ maxf(visuals.number("ui.design_height", 1080.0), 1.0)
+	return metres_per_pixel * visuals.number("object.highlight_pixels", 1.5)
+
+
+func _outline_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = visuals.colour("object.highlight_color")
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_FRONT
+	material.grow = true
+	material.grow_amount = outline_thickness()
+	material.disable_receive_shadows = true
+	material.no_depth_test = false
+	return material
+
+
+func _rebuild_outline() -> void:
+	if _outline != null:
+		if _outline.get_parent() != null:
+			_outline.get_parent().remove_child(_outline)
+		_outline.free()
+		_outline = null
+	var node: Node3D = _object_nodes.get(_highlight_id, null)
+	if _highlight_id.is_empty() or node == null:
+		return
+	_outline = Node3D.new()
+	_outline.name = HOVER_OUTLINE
+	var paint := _outline_material()
+	for child in _descendants(node):
+		if not (child is MeshInstance3D) or (child as MeshInstance3D).mesh == null:
+			continue
+		var source := child as MeshInstance3D
+		var copy := MeshInstance3D.new()
+		copy.mesh = source.mesh
+		copy.transform = _chain_from(source, node)
+		copy.material_override = paint
+		copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_outline.add_child(copy)
+	# A sibling of the object, not a child of it: _override_model walks the
+	# object's descendants every frame and clears material_override on each, so
+	# an outline parented under it lost its paint on the next sync.
+	_object_root.add_child(_outline)
+	_outline.visible = false
 
 
 func _sync_highlight(world: SimWorld) -> void:
-	if _ring == null:
-		# Four bars, not a slab: a filled rectangle over an object hides the
-		# object, and a translucent one over a pale couch cannot be seen at all.
-		_ring = Node3D.new()
-		_ring.name = HOVER_RING
-		var paint := _material(visuals.colour("object.highlight_color"),
-			visuals.number("object.highlight_emission", 0.6),
-			visuals.number("object.highlight_alpha", 1.0))
-		for i in 4:
-			var bar := MeshInstance3D.new()
-			bar.mesh = BoxMesh.new()
-			bar.material_override = paint
-			_ring.add_child(bar)
-		_floor_root.add_child(_ring)
+	if _outline == null:
+		return
 	var obj := world.objects.by_id(_highlight_id) if not _highlight_id.is_empty() else null
 	var node: Node3D = _object_nodes.get(_highlight_id, null)
-	if obj == null or obj.cells.is_empty() or node == null or not node.visible:
-		_ring.visible = false
-		return
-	var extent := _extent(obj)
-	var margin := visuals.number("object.highlight_margin", 0.12)
-	_ring_size = Vector2(float(extent.x) + margin * 2.0, float(extent.y) + margin * 2.0)
-	_shape_ring()
-	# Over the object, not under it: a ring on the floor is hidden by the very
-	# thing it is pointing at, which is how the first cut of this failed.
-	var bounds := object_bounds(_highlight_id)
-	var top := bounds.end.y if bounds.size != Vector3.ZERO else 0.5
-	_ring.position = _footprint_centre(obj, extent) + Vector3(0.0,
-		top + visuals.number("object.highlight_lift", 0.08), 0.0)
-	_ring.visible = true
-
-
-## Four bars around the footprint: two along x, two along z.
-func _shape_ring() -> void:
-	var thick := visuals.number("object.highlight_thickness", 0.07)
-	var tall := visuals.number("object.highlight_height", 0.02)
-	var half := _ring_size * 0.5
-	var bars: Array = _ring.get_children()
-	var sizes: Array = [
-		Vector3(_ring_size.x, tall, thick), Vector3(_ring_size.x, tall, thick),
-		Vector3(thick, tall, _ring_size.y), Vector3(thick, tall, _ring_size.y),
-	]
-	var spots: Array = [
-		Vector3(0.0, 0.0, -half.y), Vector3(0.0, 0.0, half.y),
-		Vector3(-half.x, 0.0, 0.0), Vector3(half.x, 0.0, 0.0),
-	]
-	for i in bars.size():
-		var bar: MeshInstance3D = bars[i]
-		(bar.mesh as BoxMesh).size = sizes[i]
-		bar.position = spots[i]
+	_outline.visible = obj != null and not obj.cells.is_empty() and node != null and node.visible
+	if _outline.visible:
+		# Follows what it outlines: pushed, tipped, opened.
+		_outline.transform = node.transform
 
 
 func sync(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
