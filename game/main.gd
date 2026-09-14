@@ -198,6 +198,8 @@ func _start_loop() -> void:
 	_wheel.setup(visuals, world)
 	if not _wheel.chosen.is_connected(_on_verb_chosen):
 		_wheel.chosen.connect(_on_verb_chosen)
+	if not _hud.held_pressed.is_connected(_on_held_pressed):
+		_hud.held_pressed.connect(_on_held_pressed)
 	_wheel.close()
 
 
@@ -369,6 +371,16 @@ func _name_what_is_under_the_pointer(at: Vector2) -> void:
 	_hud.show_hover(obj.name if obj != null else "", at)
 
 
+## The thing in your hands, opened from the HUD chip that names it. It is not in
+## the room to be clicked — nothing draws it there — and it still has actions:
+## put it down, switch the lamp on, open the toaster.
+func _on_held_pressed() -> void:
+	var held := world.player.holding
+	if held.is_empty() or _is_paused():
+		return
+	_wheel.open_at(world, held, _hud.holding_rect().get_center(), 1, 1, [held])
+
+
 func _on_notebook_pressed() -> void:
 	_notebook.toggle(world, _save.room(room_id))
 	_log.panel("notebook", _notebook.is_open())
@@ -386,9 +398,9 @@ func _click_world(screen_point: Vector2) -> void:
 	_log.click(screen_point, cell, picked)
 	var target: Variant = _target.choose(world, cell, picked)
 	if target != null:
+		var options := ClickTarget.options_for(world, cell)
 		var at := _target.position_on(world, cell)
-		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]),
-			ClickTarget.options_for(world, cell))
+		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]), options)
 		return
 	_log.walk(cell, world.walk_to(cell))
 

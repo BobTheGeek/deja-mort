@@ -295,3 +295,31 @@ func test_the_retry_prompt_shows_and_then_clears() -> void:
 	hud.sync(F.world(), 2)
 	assert_str(hud.prompt_text()).override_failure_message(
 		"the prompt is still up in a room whose timer is running").is_empty()
+
+
+# --- the thing in your hands --------------------------------------------------
+
+## Bob, ninth playtest, on consistency: the actions you get have to match the
+## thing you are looking at. What you carry is not in the room — the renderer
+## hides it, or a lamp trails after you across the floor — so the chip that names
+## it is where you act on it. Toggling the lamp you are holding and opening the
+## toaster you are holding are both real actions and had nowhere to live.
+func test_the_holding_chip_is_a_button_when_you_are_holding_something() -> void:
+	var world := F.world()
+	F.give(world, "floor_lamp")
+	var hud := _hud()
+	hud.sync(world, 1, false)
+	var pressed := [false]
+	hud.held_pressed.connect(func() -> void: pressed[0] = true)
+	assert_bool(hud.press_at(hud.holding_rect().get_center())).override_failure_message(
+		"the chip did not take the press").is_true()
+	assert_bool(pressed[0]).is_true()
+
+
+func test_empty_handed_the_chip_is_not_a_button() -> void:
+	var world := F.world()
+	var hud := _hud()
+	hud.sync(world, 1, false)
+	assert_str(hud.holding_value()).is_empty()
+	assert_bool(hud.press_at(hud.holding_rect().get_center())).override_failure_message(
+		"an empty chip swallowed a click on the room behind it").is_false()

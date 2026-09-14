@@ -12,6 +12,12 @@ extends Control
 
 signal notebook_pressed()
 
+## What you are holding is not in the room — the renderer hides it, because a
+## lamp trailing after you does not look like carrying a lamp. So this chip is
+## where you act on it: put it down, switch it on, open it. Bob could not find
+## the thing in his own hands any other way.
+signal held_pressed()
+
 const BRAND := preload("res://game/theme/brand.gd")
 
 ## Read by the HUD, so a test fails the build when the table loses one rather
@@ -23,7 +29,8 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"tally_stroke_height", "tally_gap", "tally_group_gap", "tally_rotation_jitter_deg",
 	"tally_alpha", "loop_label_size", "loop_label_alpha", "loop_label_gap",
 	"holding_label_size", "holding_label_tracking_em", "holding_label_alpha",
-	"holding_value_size", "hidden_gap_above", "hidden_padding", "hidden_border_width",
+	"holding_value_size", "holding_rule_height", "holding_rule_alpha",
+	"holding_rule_hover_alpha", "holding_rule_gap", "hidden_gap_above", "hidden_padding", "hidden_border_width",
 	"hidden_border_alpha", "hidden_fill", "hidden_fill_alpha", "hidden_radius",
 	"hidden_icon_size", "hidden_text_size", "hidden_breathe_alpha_min",
 	"hidden_breathe_period_s", "inspect_size", "inspect_line_height", "inspect_max_width",
@@ -53,6 +60,7 @@ var _hide_icon: Texture2D = null
 var _remaining: float = 0.0
 var _deaths: int = 0
 var _holding: String = ""
+var _holding_hover := false
 var _hidden_in: String = ""
 var _paused: bool = false
 var _ending: String = ""
@@ -287,16 +295,20 @@ func notebook_button_rect() -> Rect2:
 
 
 func press_at(point: Vector2) -> bool:
-	if not notebook_button_rect().has_point(point):
-		return false
-	notebook_pressed.emit()
-	return true
+	if notebook_button_rect().has_point(point):
+		notebook_pressed.emit()
+		return true
+	if not holding_value().is_empty() and holding_rect().has_point(point):
+		held_pressed.emit()
+		return true
+	return false
 
 
 func hover_at(point: Vector2) -> void:
-	var was := _notebook_hover
+	var was := [_notebook_hover, _holding_hover]
 	_notebook_hover = notebook_button_rect().has_point(point)
-	if was != _notebook_hover:
+	_holding_hover = not holding_value().is_empty() and holding_rect().has_point(point)
+	if was != [_notebook_hover, _holding_hover]:
 		queue_redraw()
 
 
@@ -472,9 +484,18 @@ func _draw_holding() -> void:
 		value = "—"
 	var value_size := int(visuals.number("hud.holding_value_size", 22.0))
 	var run := _font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, value_size).x
-	draw_string(_font_bold,
-		Vector2(box.end.x - run, box.position.y + float(label_size) * 1.9 + float(value_size)),
+	var baseline := box.position.y + float(label_size) * 1.9 + float(value_size)
+	draw_string(_font_bold, Vector2(box.end.x - run, baseline),
 		value, HORIZONTAL_ALIGNMENT_LEFT, -1, value_size, visuals.colour("hud.timer_color"))
+	if holding_value().is_empty():
+		return
+	# A rule under the name: this is a thing you can press, which is where you
+	# put it down, switch it on, or open it. It brightens under the pointer.
+	var rule := visuals.number("hud.holding_rule_height", 1.5)
+	draw_rect(Rect2(Vector2(box.end.x - run, baseline + visuals.number("hud.holding_rule_gap", 6.0)),
+		Vector2(run, rule)),
+		_alpha(visuals.colour("hud.timer_color"), visuals.number(
+			"hud.holding_rule_hover_alpha" if _holding_hover else "hud.holding_rule_alpha", 0.28)))
 
 
 func _draw_hidden() -> void:

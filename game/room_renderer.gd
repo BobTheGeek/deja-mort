@@ -589,31 +589,12 @@ func _sync_objects(world: SimWorld) -> void:
 	_stack_small_objects(world)
 
 
-## What is inside a shut cupboard is not on screen. It used to be drawn at its
-## own square regardless, so a jar inside a closed cabinet was visible, clickable
-## and refused — which reads as a broken game rather than a shut cabinet.
-##
-## Generic: any object that lists `contains` and has an `open` state hides what
-## it holds while it is shut. No object is named.
+## What is inside a shut cupboard, and what someone is carrying, is not on
+## screen. The list comes from the sim (`SimWorld.out_of_sight`) so that the
+## click and the render can never disagree about what is in the room — paging
+## onto something that is not drawn is what made a shut drawer look broken.
 func _hide_what_is_shut_away(world: SimWorld) -> void:
-	_shut_away.clear()
-	# And what someone is holding. The sim keeps carrying it at their cell —
-	# dropping and throwing both need somewhere to start from — but a lamp
-	# trailing after you around the room does not look like carrying a lamp.
-	# The HUD says what is in your hands instead.
-	for actor in world.actors():
-		if not actor.holding.is_empty():
-			_shut_away[actor.holding] = true
-	for obj in world.objects.all():
-		if obj.contains.is_empty() or obj.get_state("open", null) == null:
-			continue
-		if bool(obj.get_state("open", false)):
-			continue
-		for id in obj.contains:
-			var inside := world.objects.by_id(str(id))
-			# Once it is out of the cupboard it has its own place in the room.
-			if inside != null and inside.on.is_empty():
-				_shut_away[str(id)] = true
+	_shut_away = world.out_of_sight()
 
 
 ## A toaster on a counter is on the counter. Everything used to be drawn at
