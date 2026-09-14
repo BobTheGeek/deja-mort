@@ -84,3 +84,30 @@ func test_a_wall_cabinet_hangs_on_the_wall() -> void:
 			"%s is still sitting on the floor" % id).is_greater(0.9)
 		assert_float(renderer.object_bounds(str(id)).position.y).override_failure_message(
 			"%s is mounted in the data and drawn on the floor" % id).is_greater(0.5)
+
+
+## Bob, sixth playtest: "much like the bed earlier, the stove, sink, counter are
+## all turned the wrong way. Their fronts are against the wall."
+##
+## They were: every one of them carried mesh_yaw 180. Kenney's furniture faces
+## +Z at yaw 0 — checked by rendering the models with a marker on their +Z side —
+## so a piece against the north wall faces 0, not 180. The room was full of
+## furniture showing its back.
+func test_nothing_against_a_wall_faces_into_it() -> void:
+	var world := F.world()
+	var wrong := PackedStringArray()
+	for obj in world.objects.all():
+		if str(obj.prop("mesh", "")).is_empty() or obj.cells.is_empty():
+			continue
+		var yaw := int(round(float(obj.prop("mesh_yaw", 0.0)))) % 360
+		# Which way the front points, given Kenney faces +Z at yaw 0.
+		var facing := Vector2i(0, 1)
+		match yaw:
+			90: facing = Vector2i(1, 0)
+			180: facing = Vector2i(0, -1)
+			270: facing = Vector2i(-1, 0)
+		var ahead: Vector2i = obj.origin() + facing
+		if not world.grid.in_bounds(ahead) or world.grid.cell_type(ahead) == SimGrid.WALL:
+			wrong.append("%s faces %s into a wall" % [obj.id, facing])
+	assert_array(Array(wrong)).override_failure_message(
+		"furniture showing its back to the room:\n  %s" % "\n  ".join(wrong)).is_empty()
