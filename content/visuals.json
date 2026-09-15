@@ -728,6 +728,7 @@
       "held": "that is not the right thing to be holding",
       "held_missing": "your hands are empty",
       "subject": "what you are holding will not do it",
+      "target_state": "not the way it is now",
       "actor.hands_free": "your hands are full",
       "actor.holding": "you need something in your hands",
       "actor.hidden": "not from where you are hiding",

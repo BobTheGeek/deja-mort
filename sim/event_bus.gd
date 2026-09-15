@@ -27,6 +27,21 @@ func log_all() -> Array[SimEvent]:
 	return _log.duplicate()
 
 
+## How many events have happened. A listener keeps this as a mark and reads on
+## from it, so what it hears does not depend on where in the tick the noise was
+## made — the attacker used to listen at step 3 and the television made its noise
+## at step 5, which meant the television could not be heard at all.
+func count() -> int:
+	return _log.size()
+
+
+func from_index(index: int) -> Array[SimEvent]:
+	var out: Array[SimEvent] = []
+	for i in range(maxi(index, 0), _log.size()):
+		out.append(_log[i])
+	return out
+
+
 func since(tick: int) -> Array[SimEvent]:
 	var out: Array[SimEvent] = []
 	for e in _log:

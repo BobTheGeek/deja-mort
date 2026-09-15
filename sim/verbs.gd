@@ -18,7 +18,7 @@ static func verb_ids(world: SimWorld) -> PackedStringArray:
 const BLOCKERS: PackedStringArray = [
 	"held", "held_missing", "subject", "actor.hands_free", "actor.holding",
 	"actor.hidden", "actor.vulnerable", "actor.has_status", "actor.lacks_status",
-	"target_actor", "container", "hazard", "zone", "range", "unreachable",
+	"target_state", "target_actor", "container", "hazard", "zone", "range", "unreachable",
 ]
 
 

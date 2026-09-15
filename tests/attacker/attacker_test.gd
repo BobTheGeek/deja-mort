@@ -183,3 +183,92 @@ func test_help_arriving_sends_him_home() -> void:
 	w.step_seconds(20.0)
 	assert_array(Array(w.fired_timers)).contains(["help_arrives"])
 	assert_bool(w.attacker.left).is_true()
+
+
+# --- he hears what the room does, not only what you do ------------------------
+
+## Bob's eleventh playtest, loop 2: he switched the television on, hid in the
+## bathtub, and the Tenant walked past a blaring television without turning his
+## head. Searched the closet, the couch, the curtains, the bed, the tub, and
+## killed him.
+##
+## The tick runs in order: the attacker listens at step 3, and the lure makes its
+## noise at step 5. `since(world.tick)` then drops it, because by the next tick
+## the tick number has moved on. The lure tag was decoration.
+##
+## He listens from wherever he got to last time now, so the order a noise was
+## made in stops deciding whether it exists.
+func test_a_lure_is_actually_heard() -> void:
+	var w := F.world()
+	_at_arrival(w)
+	var tv := w.objects.by_id("tv")
+	assert_bool(F.act(w, "toggle", "tv")).is_true()
+	w.attacker.pos = tv.origin() + Vector2i(2, 0)
+	w.attacker.perception.clear_investigation()
+	var heard := false
+	for _i in 40:
+		w.step()
+		if w.attacker.perception.investigate_target == tv.origin():
+			heard = true
+			break
+	assert_bool(heard).override_failure_message(
+		"the television is two squares away, on, and he cannot hear it").is_true()
+
+
+## And a noise made before he arrived is not news. He listens from the moment he
+## comes through the door, or he walks in already knowing about every jar you
+## dropped in the first minute.
+func test_he_does_not_arrive_knowing_about_the_noise_you_made_earlier() -> void:
+	var w := F.world()
+	w.emit(SimEvent.TYPE_NOISE, {"cell": Vector2i(9, 3), "loudness": 9.0, "actor": "prop"})
+	_at_arrival(w)
+	assert_bool(w.attacker.perception.has_investigate).override_failure_message(
+		"he came through the door already investigating a noise from before he was there") \
+		.is_false()
+
+
+## But a television he is standing next to is a television. Once he can see what
+## made the noise, and what made it is a thing rather than a person, it stops
+## being news for a while and he goes back to looking for you.
+##
+## Without this, switching the set on and getting in the bath wins the loop every
+## time: he walks to it and stares at it for seventy-five seconds.
+func test_a_lure_he_has_seen_stops_pulling_him() -> void:
+	var w := F.world()
+	assert_bool(F.act(w, "toggle", "tv")).is_true()
+	assert_bool(F.act(w, "open", "bath_door")).is_true()
+	assert_bool(F.act(w, "hide", "bathtub")).is_true()
+	var searched := PackedStringArray()
+	w.events.subscribe(func(e: SimEvent) -> void:
+		if e.type == SimEvent.TYPE_INTERACTION and e.meta.has("searched"):
+			searched.append(str(e.meta["searched"])))
+	while w.ending.is_empty() and w.time_s() < 200.0:
+		w.step()
+	assert_array(Array(searched)).override_failure_message(
+		"the television held him for the whole loop and he never looked for you") \
+		.is_not_empty()
+
+
+## And it still costs him. A lure that changes nothing is a decoration.
+func test_the_lure_buys_you_time() -> void:
+	var quiet := _how_long_until_he_reaches_the_tub(false)
+	var loud := _how_long_until_he_reaches_the_tub(true)
+	assert_float(loud).override_failure_message(
+		"with the television on he searched the tub at %.1fs, off he searched it at %.1fs"
+		% [loud, quiet]).is_greater(quiet)
+
+
+func _how_long_until_he_reaches_the_tub(tv_on: bool) -> float:
+	var w := F.world()
+	if tv_on:
+		assert_bool(F.act(w, "toggle", "tv")).is_true()
+	assert_bool(F.act(w, "open", "bath_door")).is_true()
+	assert_bool(F.act(w, "hide", "bathtub")).is_true()
+	var found := [-1.0]
+	w.events.subscribe(func(e: SimEvent) -> void:
+		if found[0] < 0.0 and e.type == SimEvent.TYPE_INTERACTION \
+				and str(e.meta.get("searched", "")) == "bathtub":
+			found[0] = e.tick)
+	while w.ending.is_empty() and w.time_s() < 300.0:
+		w.step()
+	return found[0] if found[0] >= 0.0 else 9999.0

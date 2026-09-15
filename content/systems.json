@@ -96,6 +96,7 @@
     "enter_s": 2.0,
     "leave_s": 1.0,
     "investigate_s": 1.0,
+    "noise_explained_s": 20.0,
     "idle_s": 1.0,
     "dark_search_multiplier": 2.0,
     "notice_radius": 2,

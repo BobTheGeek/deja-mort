@@ -135,3 +135,26 @@ func _with_hands_full() -> SimWorld:
 	var world := F.world()
 	F.give(world, "glass_jar")
 	return world
+
+
+# --- a thing in the wrong state ----------------------------------------------
+
+## Bob's eleventh playtest: he picked the phone up, found Toggle greyed out with
+## no reason at all, and dropped it in the bath. The phone is flat. The sim knew
+## — `call_help` wants a charged phone — and had no word for it.
+##
+## "This rule is not about this thing" stays silent, as it should: nobody needs
+## to be told that a rug cannot be switched on. "This rule is about this thing,
+## and it is in the wrong state" is a reason, and now it has words.
+func test_a_thing_in_the_wrong_state_says_so() -> void:
+	var world := F.world()
+	F.give(world, "phone")
+	assert_bool(SimVerbs.is_available(world, world.player, "toggle", "phone")).is_false()
+	assert_str(_blocker(world, "toggle", "phone")).override_failure_message(
+		"a flat phone is greyed out with nothing said about it").is_equal("target_state")
+
+
+func test_a_rule_that_is_not_about_this_thing_still_says_nothing() -> void:
+	var world := F.world()
+	assert_str(_blocker(world, "toggle", "rug")).override_failure_message(
+		"an excuse was invented for a verb that simply does not apply to a rug").is_empty()
