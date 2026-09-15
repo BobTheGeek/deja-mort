@@ -47,13 +47,25 @@ static func options_for(world: SimWorld, cell: Vector2i) -> Array:
 	var standing_here := world.player.pos == cell
 	var holding := not world.player.holding.is_empty()
 	var beside: bool = _is_beside(world.player.pos, cell) and bool(world.walkable(cell))
-	if holding and (standing_here or beside):
+	# Somewhere to put a thing down or throw it: your own square and the ones
+	# beside it, and — while holding — any hazard square, wherever it is. The
+	# water you throw the toaster into is across the room, so a ranged throw needs
+	# the wet square itself to be clickable; without it you could only aim from
+	# inside the water, which electrocutes you too.
+	if holding and (standing_here or beside or _has_hazard(world, cell)):
 		options.append(cell)
 	for id in in_the_room(world, cell):
 		options.append(id)
 	if standing_here and not holding:
 		options.append(cell)
 	return options
+
+
+static func _has_hazard(world: SimWorld, cell: Vector2i) -> bool:
+	for present in world.hazards.at(cell).values():
+		if bool(present):
+			return true
+	return false
 
 
 ## The objects on a square that are actually in the room: not inside a shut
@@ -68,17 +80,7 @@ static func in_the_room(world: SimWorld, cell: Vector2i) -> PackedStringArray:
 
 
 func choose(world: SimWorld, cell: Vector2i, picked: String) -> Variant:
-	var options: Array = []
-	var standing_here := world.player.pos == cell
-	var holding := not world.player.holding.is_empty()
-	var beside: bool = _is_beside(world.player.pos, cell) and bool(world.walkable(cell))
-	var within_reach: bool = standing_here or (holding and beside)
-	if holding and within_reach:
-		options.append(cell)
-	for id in in_the_room(world, cell):
-		options.append(id)
-	if standing_here and not holding:
-		options.append(cell)
+	var options := options_for(world, cell)
 	if options.is_empty():
 		return null
 	return _cycle_through(options, cell, picked)
