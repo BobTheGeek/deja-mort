@@ -95,8 +95,7 @@ func test_every_drawn_object_has_somewhere_you_can_click_it() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)
 	var floor_px := GameVisuals.load_table().number("object.min_clickable_px", 400.0)
-	var thin := PackedStringArray()
-	var total := 0
+	var px: Dictionary = {}
 	for obj in world.objects.all():
 		var node := renderer.object_node(obj.id)
 		if node == null or not node.visible:
@@ -104,14 +103,40 @@ func test_every_drawn_object_has_somewhere_you_can_click_it() -> void:
 		var box := renderer.object_bounds(obj.id)
 		if box.size == Vector3.ZERO:
 			continue
-		total += 1
-		var seen := _clickable_px(renderer, obj.id, box)
-		if seen < floor_px:
-			thin.append("%s: %.0f px" % [obj.id, seen])
-	assert_int(total).override_failure_message("nothing was drawn to click").is_greater(20)
+		px[obj.id] = _clickable_px(renderer, obj.id, box)
+	assert_int(px.size()).override_failure_message("nothing was drawn to click").is_greater(20)
+
+	# A real oil bottle is a small target and a real knife is smaller still — the
+	# grey cubes they replaced were bigger to click than the things themselves.
+	# You do not hit them by pixel-hunting; you tap the big thing they sit with —
+	# the knife block, the open drawer — and the wheel's arrows page onto them.
+	# So the pixel floor is a claim about *handles*: every cell you can see has
+	# one thing on it big enough to tap, and everything else on that cell is one
+	# arrow away. An object that meets neither is genuinely unreachable.
+	var thin := PackedStringArray()
+	for id: String in px:
+		if float(px[id]) >= floor_px:
+			continue
+		if _reached_by_paging(world, renderer, id, floor_px, px):
+			continue
+		thin.append("%s: %.0f px, and nothing clickable shares its square" % [id, px[id]])
 	assert_array(Array(thin)).override_failure_message(
 		"objects with almost nowhere to click, at the 1920x1080 canvas:\n  %s"
 		% "\n  ".join(thin)).is_empty()
+
+
+## A small object is reachable when a big enough object shares one of its cells
+## (the handle you tap) and the wheel's page list for that cell includes it.
+func _reached_by_paging(world: SimWorld, renderer: RoomRenderer, id: String,
+		floor_px: float, px: Dictionary) -> bool:
+	var obj := world.objects.by_id(id)
+	for cell in obj.cells:
+		if not ClickTarget.options_for(world, cell).has(id):
+			continue
+		for other in world.objects.at_cell(cell):
+			if other.id != id and float(px.get(other.id, 0.0)) >= floor_px:
+				return true
+	return false
 
 
 ## A thumb is not a pixel. The smallest thing in Room 1 is about 26 canvas px
@@ -452,3 +477,20 @@ func test_with_nothing_under_the_cursor_it_still_cycles() -> void:
 	assert_str(str(second)).override_failure_message(
 		"a blind tap on a stacked square can still only ever reach one of them") \
 		.is_not_equal(str(first))
+
+
+## Bob's fix for the thin knife: show a knife block, and clicking it gets you the
+## knife. The block is the big handle on the counter square; the real knife is a
+## flat blade you would never hit on a phone, and you reach it by paging from the
+## block rather than by hitting its few pixels.
+func test_the_knife_block_is_the_handle_for_the_knife() -> void:
+	var world := F.world()
+	var block := world.objects.by_id("counter_knife")
+	var knife := world.objects.by_id("kitchen_knife")
+	assert_array(block.cells).override_failure_message(
+		"the block and the knife must share a square, or the block is not its handle") \
+		.contains(Array(knife.cells))
+	var options := ClickTarget.options_for(world, block.cells[0])
+	assert_array(options).override_failure_message(
+		"the knife is not on the block's page list, so you cannot arrow to it: %s" % [options]) \
+		.contains(["counter_knife", "kitchen_knife"])
