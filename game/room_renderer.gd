@@ -268,13 +268,16 @@ func _add_switch(obj: SimObject, look: Dictionary) -> Node3D:
 	var plate_w := float(look.get("plate_width", 0.16))
 	var plate_h := float(look.get("plate_height", 0.28))
 	var depth := float(look.get("plate_depth", 0.05))
-	var gap := float(look.get("wall_gap", 0.04))
-	var to_wall := -normal * (0.5 - gap - depth * 0.5)
+	# The room-facing wall face is half a cell toward the room, not at the outer
+	# edge: a wall is drawn as a full cell, so a plate on the outer edge is buried
+	# inside it. Sit the plate flush on that inner face and let the rocker stand
+	# proud into the room.
+	var to_face := normal * (0.5 - depth * 0.5)
 	_add_plate(root, Vector3(depth, plate_h, plate_w) if side \
-		else Vector3(plate_w, plate_h, depth), to_wall, visuals.to_colour(look.get("color", null)))
+		else Vector3(plate_w, plate_h, depth), to_face, visuals.to_colour(look.get("color", null)))
 	var rocker := Vector3(depth * 1.5, plate_h * 0.45, plate_w * 0.5) if side \
 		else Vector3(plate_w * 0.5, plate_h * 0.45, depth * 1.5)
-	_add_plate(root, rocker, to_wall + normal * depth * 0.5,
+	_add_plate(root, rocker, to_face + normal * depth,
 		visuals.to_colour(look.get("toggle_color", null)))
 	_model_nodes[obj.id] = true
 	return root
