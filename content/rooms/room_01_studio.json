@@ -408,7 +408,7 @@
       ],
       "reach": 8,
       "inspect": "Five slots. Four knives.",
-      "mesh": "kenney_food/knife-block",
+      "mesh": "kenney/kitchenCabinet",
       "mesh_yaw": 0
     },
     {
@@ -428,7 +428,7 @@
       ],
       "reach": 8,
       "inspect": "Sharp. So is his.",
-      "mesh": "kenney_food/cooking-knife"
+      "mesh": "kenney_food/knife-block"
     },
     {
       "id": "cabinet",
