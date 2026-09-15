@@ -188,3 +188,36 @@ func test_you_can_still_click_the_switch() -> void:
 	assert_bool(ClickTarget.options_for(world, world.objects.by_id("light_switch").origin()) \
 		.has("light_switch")).override_failure_message(
 		"the switch is drawn but not on its square's click list").is_true()
+
+
+# --- a nested model centres on its cell --------------------------------------
+
+## Bob: "the toilet is literally on top of the tub." It was — not by placement
+## but by a rendering bug. The toilet .glb nests its mesh under an offset node,
+## and the bounds used to measure it read the mesh's local transform instead of
+## its transform relative to the model, so centring left it adrift. Rotated, that
+## drift carried it 0.6 m onto the bathtub.
+func test_a_nested_model_centres_on_its_own_cell() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	var toilet := world.objects.by_id("toilet")
+	var box := renderer.object_bounds("toilet")
+	var cell := toilet.cells[0]
+	assert_float(box.get_center().x).override_failure_message(
+		"the toilet drifts %.2f m east of its cell" % (box.get_center().x - (cell.x + 0.5))) \
+		.is_equal_approx(float(cell.x) + 0.5, 0.2)
+	assert_float(box.get_center().z).override_failure_message(
+		"the toilet drifts %.2f m off its cell in z" % (box.get_center().z - (cell.y + 0.5))) \
+		.is_equal_approx(float(cell.y) + 0.5, 0.2)
+
+
+## And so it no longer sits on the bathtub.
+func test_the_toilet_is_clear_of_the_bathtub() -> void:
+	var renderer := _rendered(F.world())
+	var t := renderer.object_bounds("toilet")
+	var b := renderer.object_bounds("bathtub")
+	var overlap_x := maxf(0.0, minf(t.end.x, b.end.x) - maxf(t.position.x, b.position.x))
+	var overlap_z := maxf(0.0, minf(t.end.z, b.end.z) - maxf(t.position.z, b.position.z))
+	assert_float(overlap_x * overlap_z).override_failure_message(
+		"the toilet and the bathtub overlap by %.2f m2" % (overlap_x * overlap_z)) \
+		.is_equal_approx(0.0, 0.01)
