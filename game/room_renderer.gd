@@ -382,7 +382,11 @@ func _local_bounds(node: Node3D) -> AABB:
 	for child in _descendants(node):
 		if child is MeshInstance3D and (child as MeshInstance3D).mesh != null:
 			var mi := child as MeshInstance3D
-			var box: AABB = mi.transform * mi.mesh.get_aabb()
+			# The mesh's transform relative to `node`, not to its immediate
+			# parent: a model that nests its mesh under an offset node (the toilet
+			# does) measured its centre wrongly, so centring left it adrift — and
+			# a rotated drift is what put the toilet on top of the tub.
+			var box: AABB = _chain_from(mi, node) * mi.mesh.get_aabb()
 			out = box if first else out.merge(box)
 			first = false
 	return out
