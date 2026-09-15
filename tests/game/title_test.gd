@@ -264,3 +264,28 @@ func test_the_room_fades_up_behind_the_door() -> void:
 		"the room is at full brightness while the door is only half open").is_less(1.0)
 	screen.advance(v.number("title.door_through_s") + 0.5)
 	assert_float(screen.room_alpha()).is_equal_approx(1.0, 0.001)
+
+
+## Bob, playing the title: the Continue / New Game / Settings block should be
+## centred under the logo, with equal space between the tagline above and the
+## room strip below — not pinned to the logo's left edge low on the screen.
+func test_the_menu_is_centred_under_the_logo() -> void:
+	var screen := _at(9.0)
+	var axis := screen.lockup_rect().get_center().x
+	for item in screen.menu_items():
+		assert_float(screen.menu_rect(str(item)).get_center().x).override_failure_message(
+			"the %s row is not on the logo's axis" % item).is_equal_approx(axis, 0.5)
+
+
+func test_the_menu_has_equal_air_above_and_below() -> void:
+	var screen := _at(9.0)
+	var titles_bottom := screen.lockup_rect().end.y
+	var strip_top := screen._strip_top()
+	var block := screen.menu_rect("continue")
+	var above := block.position.y - titles_bottom
+	var below := strip_top - (block.position.y + screen._menu_block_height())
+	assert_float(above).override_failure_message(
+		"space above the menu (%.1f) does not match the space below it (%.1f)"
+		% [above, below]).is_equal_approx(below, 1.0)
+	assert_float(above).override_failure_message(
+		"the menu is jammed against the tagline or the room strip").is_greater(10.0)

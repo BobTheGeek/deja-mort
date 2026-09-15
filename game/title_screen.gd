@@ -24,7 +24,7 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"lockup_left", "lockup_top", "mark_solo_size", "mark_solo_center", "mark_in_lockup_center",
 	"mark_in_lockup_diameter", "mark_in_s", "tick_at_s", "tick_scale_min", "tick_duration_s",
 	"wordmark_at_s", "mark_travel_s", "wordmark_fade_s", "tagline_at_s", "tagline_fade_s",
-	"menu_at_s", "menu_fade_s", "menu_rise_px", "skippable", "menu_top", "menu_gap",
+	"menu_at_s", "menu_fade_s", "menu_rise_px", "skippable", "menu_gap",
 	"menu_item_height", "menu_size", "menu_tracking_em", "menu_color", "menu_alpha",
 	"menu_hover_alpha", "menu_focus_color", "menu_focus_marker_size", "menu_focus_marker_gap",
 	"menu_sub_size", "menu_sub_tracking_em", "menu_sub_alpha", "menu_labels", "menu_sub",
@@ -212,12 +212,64 @@ func menu_items() -> PackedStringArray:
 func menu_rect(item: String) -> Rect2:
 	var height := visuals.number("title.menu_item_height", 44.0)
 	var gap := visuals.number("title.menu_gap", 22.0)
-	var top := visuals.number("title.menu_top", 720.0) + visuals.inset("top")
-	var left := lockup_rect().position.x
 	var index := ITEMS.find(item)
 	if index < 0:
 		return Rect2()
-	return Rect2(Vector2(left, top + float(index) * (height + gap)), Vector2(420.0, height))
+	var y := _menu_top() + float(index) * (height + gap)
+	# The tap target is as wide as the wider of the label and its sub, and at
+	# least a square, centred on the same axis as the logo above.
+	var width := maxf(_item_width(item), height)
+	var centre := _menu_centre_x()
+	return Rect2(Vector2(centre - width * 0.5, y), Vector2(width, height))
+
+
+## The axis the logo and tagline sit on, so the menu lines up under them.
+func _menu_centre_x() -> float:
+	return lockup_rect().get_center().x
+
+
+## The menu block sits midway between the bottom of the titles and the top of the
+## room strip, so the space above it equals the space below. Both edges are
+## measured, not fixed: the tagline reaches the bottom of the lockup box, and the
+## strip is placed up from the bottom of the screen.
+func _menu_top() -> float:
+	var above := lockup_rect().end.y
+	var below := _strip_top()
+	return above + ((below - above) - _menu_block_height()) * 0.5
+
+
+func _strip_top() -> float:
+	return frame().y - visuals.inset("bottom") \
+		- visuals.number("title.strip_bottom", 56.0) - visuals.number("title.room_cell_height", 96.0)
+
+
+## First row's top to the last row's sub line — the block the player sees.
+func _menu_block_height() -> float:
+	var height := visuals.number("title.menu_item_height", 44.0)
+	var gap := visuals.number("title.menu_gap", 22.0)
+	var last_top := float(ITEMS.size() - 1) * (height + gap)
+	return last_top + visuals.number("title.menu_size", 24.0) \
+		+ visuals.number("title.menu_sub_size", 14.0) * 1.6
+
+
+## The wider of an item's label and its sub, tracking included.
+func _item_width(item: String) -> float:
+	var size := int(visuals.number("title.menu_size", 24.0))
+	var width := _tracked_width(_font_bold, menu_label(item), size,
+		visuals.number("title.menu_tracking_em", 0.2))
+	var sub := _sub_for(item)
+	if not sub.is_empty():
+		var sub_size := int(visuals.number("title.menu_sub_size", 14.0))
+		width = maxf(width, _tracked_width(_font, sub, sub_size,
+			visuals.number("title.menu_sub_tracking_em", 0.14)))
+	return width
+
+
+## The sub line under an item, or "" — the same for the hit box and the draw.
+func _sub_for(item: String) -> String:
+	if item == "settings":
+		return str(visuals.get_value("title.settings_note", "NOT YET"))
+	return menu_sub(item)
 
 
 func menu_label(item: String) -> String:
@@ -476,24 +528,30 @@ func _draw_menu() -> void:
 		elif not enabled:
 			row_alpha *= 0.5
 		var baseline := box.y + float(size)
-		var left := box.x
+		var centre := _menu_centre_x()
+		var label_font := _font_bold if focused else _font
+		var tracking := visuals.number("title.menu_tracking_em", 0.2)
+		# The label is centred on the axis. A focus marker hangs to its left
+		# without shifting it, so the block stays centred whether or not a row is
+		# hovered.
+		var label_width := _tracked_width(label_font, menu_label(name), size, tracking)
+		var left := centre - label_width * 0.5
 		if focused:
 			var marker := visuals.number("title.menu_focus_marker_size", 8.0)
-			draw_rect(Rect2(Vector2(left, baseline - marker), Vector2(marker, marker)),
-				Color(colour.r, colour.g, colour.b, alpha), true)
-			left += marker + visuals.number("title.menu_focus_marker_gap", 14.0)
-		_tracked(_font_bold if focused else _font, menu_label(name), Vector2(left, baseline), size,
-			visuals.number("title.menu_tracking_em", 0.2),
+			draw_rect(Rect2(Vector2(left - marker - visuals.number(
+				"title.menu_focus_marker_gap", 14.0), baseline - marker),
+				Vector2(marker, marker)), Color(colour.r, colour.g, colour.b, alpha), true)
+		_tracked(label_font, menu_label(name), Vector2(left, baseline), size, tracking,
 			Color(colour.r, colour.g, colour.b, row_alpha * alpha))
-		var sub := menu_sub(name)
-		if name == "settings":
-			sub = str(visuals.get_value("title.settings_note", "NOT YET"))
+		var sub := _sub_for(name)
 		if sub.is_empty():
 			continue
 		var sub_size := int(visuals.number("title.menu_sub_size", 14.0))
-		_tracked(_font, sub, Vector2(left, baseline + float(sub_size) * 1.6), sub_size,
-			visuals.number("title.menu_sub_tracking_em", 0.14),
-			Color(colour.r, colour.g, colour.b, visuals.number("title.menu_sub_alpha", 0.5) * alpha))
+		var sub_tracking := visuals.number("title.menu_sub_tracking_em", 0.14)
+		var sub_left := centre - _tracked_width(_font, sub, sub_size, sub_tracking) * 0.5
+		_tracked(_font, sub, Vector2(sub_left, baseline + float(sub_size) * 1.6), sub_size,
+			sub_tracking, Color(colour.r, colour.g, colour.b,
+				visuals.number("title.menu_sub_alpha", 0.5) * alpha))
 
 
 func _draw_strip() -> void:
@@ -606,6 +664,18 @@ func _tracked(font: Font, text: String, at: Vector2, size: int, tracking_em: flo
 	for i in text.length():
 		draw_string(font, Vector2(x, at.y), text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, size, colour)
 		x += font.get_string_size(text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + extra
+
+
+## The width _tracked draws a line at — every glyph plus a tracking gap, less the
+## trailing gap after the last one — so a line can be centred on an axis.
+func _tracked_width(font: Font, text: String, size: int, tracking_em: float) -> float:
+	if font == null or text.is_empty():
+		return 0.0
+	var extra := tracking_em * float(size)
+	var width := 0.0
+	for i in text.length():
+		width += font.get_string_size(text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + extra
+	return width - extra
 
 
 func _vector(path: String, fallback: Vector2) -> Vector2:

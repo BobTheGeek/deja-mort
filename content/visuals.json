@@ -1189,7 +1189,6 @@
     "menu_fade_s": 0.3,
     "menu_rise_px": 8,
     "skippable": true,
-    "menu_top": 720,
     "menu_gap": 22,
     "menu_item_height": 44,
     "menu_size": 24,
