@@ -271,6 +271,7 @@ func _add_model(obj: SimObject, look: Dictionary) -> Node3D:
 	_object_root.add_child(root)
 	var model: Node3D = (load(path) as PackedScene).instantiate()
 	root.add_child(model)
+	_recolour_model(model, mesh_name)
 
 	var bounds := _local_bounds(model)
 	if bounds.size.x <= 0.0 or bounds.size.z <= 0.0:
@@ -767,6 +768,55 @@ func _sync_object_light(node: Node3D, look: Dictionary) -> void:
 
 
 ## Burning and broken repaint a model; everything else leaves its own materials.
+## Repaints named parts of a model, from `models.recolor` in visuals.json. The
+## Kenney kits ship a lot of one flat colour or none at all — the food props are
+## untextured white — so this is how the knife block becomes walnut while its
+## knives stay as they are, and the toaster goes silver.
+##
+## Two things it must respect:
+## - Surfaces share their material across every object that loads the same model,
+##   so it paints a *duplicate* and never the shared resource.
+## - It paints the surface-override layer, not `material_override`, because
+##   `_override_model` owns that one and wipes it every frame; a recolour there
+##   would flash off. Surface overrides sit under it, so a glowing state (a hot
+##   stove) still shows over the recolour and everything else keeps its colour.
+##
+## A part is matched by its node name or its material name; "*" is every surface.
+## No object is named here — the key is the model, so any room that loads it is
+## painted the same way.
+func _recolour_model(model: Node3D, mesh_name: String) -> void:
+	var table: Dictionary = visuals.get_value("models.recolor", {})
+	var rules: Dictionary = table.get(mesh_name, {})
+	if rules.is_empty():
+		return
+	for node in _descendants(model):
+		if not (node is MeshInstance3D):
+			continue
+		var mi := node as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		for surface in mi.mesh.get_surface_count():
+			var base := mi.get_active_material(surface)
+			var mat_name := base.resource_name if base != null else ""
+			var spec: Variant = rules.get(node.name,
+				rules.get(mat_name, rules.get("*", null)))
+			if spec == null:
+				continue
+			mi.set_surface_override_material(surface, _recolour_material(spec))
+
+
+## The material a recolour spec asks for: a colour, or {color, metallic,
+## roughness} when a part wants to read as metal rather than matte.
+func _recolour_material(spec: Variant) -> StandardMaterial3D:
+	if spec is Array:
+		return _material(visuals.to_colour(spec))
+	var one := spec as Dictionary
+	var mat := _material(visuals.to_colour(one.get("color", null)))
+	mat.metallic = float(one.get("metallic", mat.metallic))
+	mat.roughness = float(one.get("roughness", mat.roughness))
+	return mat
+
+
 func _override_model(node: Node3D, look: Dictionary, emission: float) -> void:
 	var repaint := emission > 0.0
 	for child in _descendants(node):
