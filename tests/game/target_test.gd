@@ -160,3 +160,57 @@ func _all_open() -> SimWorld:
 		if obj.get_state("open", null) != null:
 			obj.state["open"] = true
 	return world
+
+
+# --- aiming a throw across the room ------------------------------------------
+
+## Bob, going for the 3-star kill: "I would click on a wet square and my
+## character would walk there. I never got the option to take an action." And
+## when it did fire, both he and the attacker died — because the only square he
+## could aim from was inside the water.
+##
+## A throw is ranged. The water you throw the toaster into is across the room, so
+## the wet square has to be a target you can click from dry ground.
+func test_a_wet_square_is_a_throw_target_while_you_hold_something() -> void:
+	var world := F.world()
+	F.give(world, "toaster")
+	var wet := _far_empty_floor(world)
+	world.hazards.spawn("wet", wet)
+	assert_array(ClickTarget.options_for(world, wet)).override_failure_message(
+		"holding the toaster, a wet square across the room is not a target: it just walks") \
+		.contains([wet])
+
+
+## Empty handed it is still just floor: you walk onto it. Only something in your
+## hands turns the water into a place to aim.
+func test_empty_handed_you_walk_onto_the_water() -> void:
+	var world := F.world()
+	var wet := _far_empty_floor(world)
+	world.hazards.spawn("wet", wet)
+	assert_array(ClickTarget.options_for(world, wet)).override_failure_message(
+		"empty handed, the water should just be floor you walk onto").not_contains([wet])
+
+
+## A dry square across the room is still nothing to act on — only hazards reach
+## past arm's length, so this did not turn every far tap into a wheel.
+func test_a_far_dry_square_is_still_a_walk() -> void:
+	var world := F.world()
+	F.give(world, "toaster")
+	var dry := _far_empty_floor(world)
+	assert_array(ClickTarget.options_for(world, dry)).override_failure_message(
+		"a dry square out of reach should still just walk you there").not_contains([dry])
+
+
+## A floor cell far from the player, off every object, so "it walks" and "it is a
+## target" are the only two things being told apart.
+func _far_empty_floor(world: SimWorld) -> Vector2i:
+	for y in world.grid.height:
+		for x in world.grid.width:
+			var cell := Vector2i(x, y)
+			if not world.walkable(cell):
+				continue
+			if not world.objects.at_cell(cell).is_empty():
+				continue
+			if world.grid.distance(world.player.pos, cell) >= 3:
+				return cell
+	return Vector2i(-1, -1)
