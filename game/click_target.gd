@@ -88,17 +88,22 @@ static func _is_beside(from: Vector2i, cell: Vector2i) -> bool:
 	return absi(from.x - cell.x) + absi(from.y - cell.y) == 1
 
 
+## What is under the cursor is what you get — every tap, not just the first.
+## Tapping the same square used to cycle, which is how you reached what you could
+## not see; the wheel's arrows do that now, and cycling had started handing Bob
+## the toaster when he clicked the drawer.
+##
+## A tap the ray missed has nothing to prefer, so it still cycles: that is the
+## only way a blind tap reaches more than one of the things on a square.
 func _cycle_through(options: Array, cell: Vector2i, picked: String) -> Variant:
 	var key := "%d,%d" % [cell.x, cell.y]
-	var index := 0
-	var repeat := _last == key
-	if not picked.is_empty() and not repeat:
-		# First tap on this square with something plainly under the cursor.
+	var index := -1
+	if not picked.is_empty():
 		for i in options.size():
 			if str(options[i]) == picked:
 				index = i
 				break
-	else:
+	if index < 0:
 		index = (int(_cycle.get(key, -1)) + 1) % options.size()
 	_cycle[key] = index
 	_last = key

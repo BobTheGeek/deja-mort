@@ -85,7 +85,9 @@ func _report(path: String) -> void:
 		print("  taps that picked nothing and moved nobody:")
 		for raw in records:
 			var record: Dictionary = raw
-			if str(record.get("kind", "")) == "click" and str(record.get("picked", "")).is_empty():
+			if str(record.get("kind", "")) == "click" \
+					and str(record.get("picked", "")).is_empty() \
+					and str(record.get("opened_on", "")).is_empty():
 				print("    t=%.1f loop %d  screen %s -> cell %s" % [
 					float(record.get("t", 0.0)), int(record.get("loop", 0)),
 					record.get("screen", []), record.get("cell", [])])

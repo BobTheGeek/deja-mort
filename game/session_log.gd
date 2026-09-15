@@ -60,12 +60,16 @@ func advance(delta: float) -> void:
 
 # --- what gets written -------------------------------------------------------
 
-func click(screen: Vector2, cell: Vector2i, picked: String) -> void:
+## `picked` is what the ray hit; `opened_on` is what the wheel actually opened
+## on, which can be the square itself or the door behind the wall. Without the
+## second one a tap that worked reads as a tap that did nothing.
+func click(screen: Vector2, cell: Vector2i, picked: String, opened_on: String = "") -> void:
 	_write({
 		"kind": "click",
 		"screen": [int(screen.x), int(screen.y)],
 		"cell": [cell.x, cell.y],
 		"picked": picked,
+		"opened_on": opened_on,
 	})
 
 
@@ -153,7 +157,8 @@ static func summarise(records: Array) -> Dictionary:
 		match str(record.get("kind", "")):
 			"click":
 				taps += 1
-				if str(record.get("picked", "")).is_empty():
+				if str(record.get("picked", "")).is_empty() \
+						and str(record.get("opened_on", "")).is_empty():
 					# Provisional: the walk that follows, if it happened, cancels it.
 					# A tap on bare floor that walks him there is the game working.
 					nothing += 1

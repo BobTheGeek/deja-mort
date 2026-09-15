@@ -395,14 +395,19 @@ func _click_world(screen_point: Vector2) -> void:
 	var cell := on_screen.origin() if on_screen != null else _camera.cell_under(screen_point)
 	if not world.grid.in_bounds(cell):
 		return
-	_log.click(screen_point, cell, picked)
 	var target: Variant = _target.choose(world, cell, picked)
+	_log.click(screen_point, cell, picked, "" if target == null else str(target))
 	if target != null:
 		var options := ClickTarget.options_for(world, cell)
 		var at := _target.position_on(world, cell)
 		_wheel.open_at(world, target, screen_point, int(at[0]), int(at[1]), options)
 		return
-	_log.walk(cell, world.walk_to(cell))
+	var walked := world.walk_to(cell)
+	_log.walk(cell, walked)
+	if not walked:
+		# Nothing to act on and nowhere to go. Saying nothing is what had Bob
+		# tapping the same wall square three times in half a second.
+		_hud.refuse_at(screen_point)
 
 
 ## What is under the tap, and failing that what is beside it. A finger is wider

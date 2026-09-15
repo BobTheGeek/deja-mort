@@ -18,7 +18,7 @@ static func verb_ids(world: SimWorld) -> PackedStringArray:
 const BLOCKERS: PackedStringArray = [
 	"held", "held_missing", "subject", "actor.hands_free", "actor.holding",
 	"actor.hidden", "actor.vulnerable", "actor.has_status", "actor.lacks_status",
-	"target_actor", "container", "hazard", "zone", "range",
+	"target_actor", "container", "hazard", "zone", "range", "unreachable",
 ]
 
 
@@ -35,16 +35,25 @@ static func blocker(world: SimWorld, actor: SimActor, verb: String, target: Vari
 	var ctx := world._context(verb, resolved, actor)
 	var best := ""
 	var furthest := -1
+	var out_of_reach := false
 	for rule in world.rules.rules:
 		if rule.verb != verb or rule.trigger != "verb":
 			continue
 		var why := rule.why_not(ctx)
 		if why.is_empty():
-			return ""
+			# Every gate passed. Whether they can get to it is the last question,
+			# and the one the wheel used to skip.
+			if actor != world.player \
+					or bool((world.route_to_use(rule, resolved) as Dictionary)["possible"]):
+				return ""
+			out_of_reach = true
+			continue
 		var rank := BLOCKERS.find(why)
 		if rank > furthest:
 			furthest = rank
 			best = why
+	if out_of_reach:
+		return "unreachable"
 	return best if furthest >= 0 else ""
 
 
@@ -71,6 +80,24 @@ static func matching_rules(world: SimWorld, actor: SimActor, verb: String, targe
 	return world.rules.choosable(out)
 
 
+## The choosable rules the actor can also get to. A rule you cannot walk to is
+## not an action you have: the wheel promised Hide on a tub behind a shut door
+## because availability never asked.
+static func reachable_rules(world: SimWorld, actor: SimActor, verb: String,
+		target: Variant) -> Array[SimRule]:
+	var found := matching_rules(world, actor, verb, target)
+	if found.is_empty() or actor != world.player:
+		return found
+	var resolved: Dictionary = world._resolve_target(target)
+	if resolved.is_empty():
+		return [] as Array[SimRule]
+	var out: Array[SimRule] = []
+	for rule in found:
+		if bool((world.route_to_use(rule, resolved) as Dictionary)["possible"]):
+			out.append(rule)
+	return out
+
+
 ## Every match for this verb, before shadowing is applied. Only the lint wants
 ## this; everything else wants the choosable set above.
 static func all_matching_rules(world: SimWorld, actor: SimActor, verb: String, target: Variant) -> Array[SimRule]:
@@ -86,7 +113,7 @@ static func all_matching_rules(world: SimWorld, actor: SimActor, verb: String, t
 
 
 static func _for_verb(world: SimWorld, actor: SimActor, verb: String, target: Variant) -> Dictionary:
-	var found := matching_rules(world, actor, verb, target)
+	var found := reachable_rules(world, actor, verb, target)
 	if found.is_empty():
 		return {"available": false, "rule_id": "", "duration_s": 0.0, "rule_ids": PackedStringArray()}
 	var ids := PackedStringArray()

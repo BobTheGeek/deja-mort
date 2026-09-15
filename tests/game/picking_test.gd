@@ -211,17 +211,6 @@ func test_a_picked_object_wins_over_whatever_else_shares_its_square() -> void:
 		"the thing under the cursor lost to the first thing on the square").is_equal("toaster")
 
 
-## Tapping the same square again still cycles, which is how you reach the four
-## things you cannot see.
-func test_tapping_the_same_square_still_cycles() -> void:
-	var world := F.world()
-	var picker := ClickTarget.new()
-	var first: Variant = picker.choose(world, Vector2i(3, 1), "toaster")
-	var second: Variant = picker.choose(world, Vector2i(3, 1), "toaster")
-	assert_str(str(second)).override_failure_message(
-		"the second tap on a stacked square offered the same object").is_not_equal(str(first))
-
-
 func test_with_nothing_picked_it_falls_back_to_the_square() -> void:
 	var world := F.world()
 	var picker := ClickTarget.new()
@@ -436,3 +425,30 @@ func test_the_count_in_the_caption_is_the_length_of_the_list() -> void:
 		assert_str(str(options[int(at[0]) - 1])).override_failure_message(
 			"the caption's position points at a different thing than the wheel opened on") \
 			.is_equal(str(chosen))
+
+
+## Bob's tenth playtest, loop 1: three taps on the drawer, twenty-six seconds,
+## no action. Tapping the same square cycled, so his second tap on the drawer
+## opened the wheel on the toaster — he clicked one thing and got another.
+##
+## Cycling was how you reached what you could not see. The wheel has arrows for
+## that now. What is under the cursor is what you get, every time.
+func test_the_thing_under_the_cursor_wins_every_time() -> void:
+	var world := F.world()
+	var picker := ClickTarget.new()
+	for tap in 3:
+		assert_str(str(picker.choose(world, Vector2i(3, 1), "counter_drawer"))) \
+			.override_failure_message("tap %d on the drawer opened something else" % [tap + 1]) \
+			.is_equal("counter_drawer")
+
+
+## With the ray missing everything — a tap in the gap between two small objects —
+## there is nothing to prefer, so it still walks the square.
+func test_with_nothing_under_the_cursor_it_still_cycles() -> void:
+	var world := F.world()
+	var picker := ClickTarget.new()
+	var first: Variant = picker.choose(world, Vector2i(3, 1), "")
+	var second: Variant = picker.choose(world, Vector2i(3, 1), "")
+	assert_str(str(second)).override_failure_message(
+		"a blind tap on a stacked square can still only ever reach one of them") \
+		.is_not_equal(str(first))

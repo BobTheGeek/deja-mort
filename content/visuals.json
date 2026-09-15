@@ -738,7 +738,8 @@
       "container": "it is shut away",
       "hazard": "not with what is on the floor here",
       "zone": "not in this part of the room",
-      "range": "you are too far from it"
+      "range": "you are too far from it",
+      "unreachable": "you cannot get to it"
     },
     "reason_prefix": "\u2014",
     "arrow_size": 48.0,
@@ -855,6 +856,11 @@
     "paused_label_alpha": 0.55,
     "hover_size": 20.0,
     "hover_alpha": 0.9,
+    "refusal_hold_s": 0.45,
+    "refusal_radius_from": 10.0,
+    "refusal_radius_to": 26.0,
+    "refusal_width": 2.0,
+    "refusal_alpha": 0.75,
     "hover_offset": [
       18.0,
       -14.0

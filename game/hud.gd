@@ -29,7 +29,8 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"tally_stroke_height", "tally_gap", "tally_group_gap", "tally_rotation_jitter_deg",
 	"tally_alpha", "loop_label_size", "loop_label_alpha", "loop_label_gap",
 	"holding_label_size", "holding_label_tracking_em", "holding_label_alpha",
-	"holding_value_size", "holding_rule_height", "holding_rule_alpha",
+	"refusal_hold_s", "refusal_radius_from", "refusal_radius_to", "refusal_width",
+	"refusal_alpha", "holding_value_size", "holding_rule_height", "holding_rule_alpha",
 	"holding_rule_hover_alpha", "holding_rule_gap", "hidden_gap_above", "hidden_padding", "hidden_border_width",
 	"hidden_border_alpha", "hidden_fill", "hidden_fill_alpha", "hidden_radius",
 	"hidden_icon_size", "hidden_text_size", "hidden_breathe_alpha_min",
@@ -68,6 +69,8 @@ var _banner: String = ""
 var _inspect_name: String = ""
 var _inspect_body: String = ""
 var _inspect_left: float = 0.0
+var _refusal_at := Vector2.ZERO
+var _refusal_left: float = 0.0
 var _inspect_alpha: float = 1.0
 var _elapsed: float = 0.0
 var _notebook_hover: bool = false
@@ -140,6 +143,8 @@ func advance(delta: float) -> void:
 		if _inspect_left <= 0.0:
 			_inspect_name = ""
 			_inspect_body = ""
+	if _refusal_left > 0.0:
+		_refusal_left = maxf(_refusal_left - delta, 0.0)
 	queue_redraw()
 
 
@@ -382,6 +387,28 @@ func show_hover(name: String, at: Vector2) -> void:
 	queue_redraw()
 
 
+## A tap that could not do anything: nothing to act on, nowhere to walk. It
+## leaves a ring where the tap landed, opening out as it fades, because silence
+## reads as a game that is not listening.
+func refuse_at(point: Vector2) -> void:
+	_refusal_at = point
+	_refusal_left = visuals.number("hud.refusal_hold_s", 0.45)
+	queue_redraw()
+
+
+func refusal_alpha() -> float:
+	var hold := maxf(visuals.number("hud.refusal_hold_s", 0.45), 0.001)
+	return clampf(_refusal_left / hold, 0.0, 1.0) * visuals.number("hud.refusal_alpha", 0.75)
+
+
+func refusal_rect() -> Rect2:
+	var hold := maxf(visuals.number("hud.refusal_hold_s", 0.45), 0.001)
+	var through := 1.0 - clampf(_refusal_left / hold, 0.0, 1.0)
+	var radius := lerpf(visuals.number("hud.refusal_radius_from", 10.0),
+		visuals.number("hud.refusal_radius_to", 26.0), through)
+	return Rect2(_refusal_at - Vector2(radius, radius), Vector2(radius, radius) * 2.0)
+
+
 func hover_text() -> String:
 	return _hover
 
@@ -441,6 +468,8 @@ func _draw() -> void:
 		_draw_inspect()
 	if not _banner.is_empty():
 		_draw_banner()
+	if _refusal_left > 0.0:
+		_draw_refusal()
 
 
 func _draw_timer() -> void:
@@ -526,6 +555,13 @@ func _draw_hover() -> void:
 	draw_string(_font, box.position + Vector2(float(padding[1]), float(padding[0]) + float(size)),
 		_hover, HORIZONTAL_ALIGNMENT_LEFT, -1, size,
 		_alpha(visuals.colour("hud.timer_color"), visuals.number("hud.hover_alpha", 0.9)))
+
+
+func _draw_refusal() -> void:
+	var box := refusal_rect()
+	draw_arc(box.get_center(), box.size.x * 0.5, 0.0, TAU, 32,
+		_alpha(visuals.colour("hud.timer_color"), refusal_alpha()),
+		visuals.number("hud.refusal_width", 2.0), true)
 
 
 func _chip_style(alpha: float) -> StyleBoxFlat:
