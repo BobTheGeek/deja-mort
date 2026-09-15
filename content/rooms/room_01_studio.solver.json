@@ -57,25 +57,25 @@
         "cause": "explosion@zone_entry",
         "notebook": "Gas, then a flame. Briefly very loud.",
         "scenario": "gas_stove",
-        "time_s": 55.9
+        "time_s": 55.2
       },
       {
         "cause": "shock@electrocuted",
         "notebook": "Turned on the tap, stood in the kitchen, threw the toaster. Physics.",
         "scenario": "electrocute_self_toaster",
-        "time_s": 66.4
+        "time_s": 63.6
       },
       {
         "cause": "stabbed@bathroom",
         "notebook": "Hid in the tub. He had time.",
         "scenario": "hide_in_bathtub",
-        "time_s": 104.6
+        "time_s": 103.8
       },
       {
         "cause": "stabbed@bed",
         "notebook": "Hid under the bed. He knelt down.",
         "scenario": "hide_in_bed",
-        "time_s": 98.4
+        "time_s": 98.0
       },
       {
         "cause": "stabbed@behind_furniture",
@@ -135,7 +135,7 @@
       "disable",
       "kill"
     ],
-    "runs": 2562,
+    "runs": 2623,
     "truncated": false,
     "wins": [
       {
@@ -188,6 +188,14 @@
           {
             "args": [
               "toggle",
+              "light_switch"
+            ],
+            "intent": "verb_on",
+            "t": 0
+          },
+          {
+            "args": [
+              "toggle",
               "sink"
             ],
             "intent": "verb_on",
@@ -196,15 +204,15 @@
           {
             "args": [
               "push",
-              "fridge"
+              "moving_boxes"
             ],
             "intent": "verb_on",
             "t": 0
           },
           {
             "args": [
-              "toggle",
-              "light_switch"
+              "grab",
+              "toaster"
             ],
             "intent": "verb_on",
             "t": 0
@@ -227,12 +235,13 @@
           }
         ],
         "discoveries": [
-          "brace_door",
           "lights_out",
+          "brace_door",
+          "cord_trip",
           "shelf_drop"
         ],
         "ending": "evade",
-        "label": "toggle sink -> push fridge -> toggle light_switch -> push bookshelf -> push bookshelf",
+        "label": "toggle light_switch -> toggle sink -> push moving_boxes -> grab toaster -> push bookshelf -> push bookshelf",
         "matches_authored": false,
         "stars": 1,
         "time_s": 128.9

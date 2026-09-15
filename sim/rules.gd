@@ -75,8 +75,13 @@ func why_not(ctx: SimRuleContext) -> String:
 		return "target_kind"
 	if not _held_ok(ctx):
 		return "held_missing" if ctx.held == null else "held"
-	if not _target_ok(ctx):
+	if not _target_tags_ok(ctx):
+		# Not what this rule is about. Nobody needs telling a rug has no switch.
 		return "target"
+	if not _target_conditions_ok(ctx):
+		# About this thing, and this thing is in the wrong state: a flat phone,
+		# a shut cupboard. That is a reason, and it has words.
+		return "target_state"
 	if not _subject_ok(ctx):
 		return "subject"
 	if not _actor_ok(ctx):
@@ -154,11 +159,21 @@ func _held_ok(ctx: SimRuleContext) -> bool:
 
 
 func _target_ok(ctx: SimRuleContext) -> bool:
+	return _target_tags_ok(ctx) and _target_conditions_ok(ctx)
+
+
+func _target_tags_ok(ctx: SimRuleContext) -> bool:
 	if target_tags.is_empty() and target_conditions.is_empty():
 		return true
 	if ctx.target == null:
 		return false
-	if not ctx.target.has_all_tags(target_tags):
+	return ctx.target.has_all_tags(target_tags)
+
+
+func _target_conditions_ok(ctx: SimRuleContext) -> bool:
+	if target_conditions.is_empty():
+		return true
+	if ctx.target == null:
 		return false
 	return _conditions_ok(ctx.target.state, target_conditions)
 

@@ -685,7 +685,7 @@
         "on": false,
         "broken": false
       },
-      "lure_noise": 3,
+      "lure_noise": 7,
       "inspect": "Left on standby. The remote is gone.",
       "mesh": "kenney/televisionModern",
       "mesh_yaw": 180

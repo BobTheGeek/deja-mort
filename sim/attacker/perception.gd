@@ -14,6 +14,17 @@ var suspicion: float = 0.0
 var known_hazards: Dictionary = {}
 var changed: bool = false   # set when what he knows actually changed this tick
 
+## How far through the event log he has listened. -1 until he arrives: a noise
+## made before he was in the room is not news, or he comes through the door
+## already knowing about every jar you dropped in the first minute.
+var _heard_upto: int = -1
+
+## Cells whose noise he has already walked over to and seen the cause of, and the
+## tick each stops being explained. A television he is standing next to is a
+## television; without this, switching the set on and getting in the bath holds
+## him there for the whole loop.
+var _explained: Dictionary = {}
+
 
 func observe(world: SimWorld, att: SimActor, profile: SimAttackerProfile) -> void:
 	var was_visible := target_visible
@@ -67,14 +78,26 @@ func _look(world: SimWorld, att: SimActor, profile: SimAttackerProfile) -> void:
 
 ## L * sensitivity - distance - mask >= 0, exactly as the spec states it.
 func _listen(world: SimWorld, att: SimActor, profile: SimAttackerProfile) -> void:
+	if _heard_upto < 0:
+		_heard_upto = world.events.count()
+		return
+	var heard := world.events.from_index(_heard_upto)
+	_heard_upto = world.events.count()
 	var mask := float(world.room_state.get("hearing_mask", 0))
-	for e in world.events.since(world.tick):
+	for e in heard:
 		if e.type != SimEvent.TYPE_NOISE or e.actor == att.id:
 			continue
 		if e.cell == SimEvent.NO_CELL:
 			continue
 		var d := float(world.grid.distance(att.pos, e.cell))
 		if e.loudness * profile.hearing_sensitivity - d - mask < 0.0:
+			continue
+		if not e.object.is_empty() and e.actor.is_empty() and d <= 1:
+			# He is standing over it and it is a thing, not a person.
+			_explained[e.cell] = world.tick + world.ticks(
+				float(world.system("attacker.noise_explained_s")))
+			continue
+		if world.tick < int(_explained.get(e.cell, -1)):
 			continue
 		if e.loudness < suspicion and has_investigate:
 			continue
