@@ -29,6 +29,7 @@ var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
 var _highlight_id: String = ""
 var _outline: Node3D = null
 var _shut_away: Dictionary = {}  # ids inside a closed container, this frame
+var _grid_size: Vector2i = Vector2i.ZERO  # room dimensions, for wall-mounting
 var _spread: Array = []          # objects stacked onto furniture this frame
 var _once: Dictionary = {}           # actor id -> {clip, left} one-shot animation
 var _room: Dictionary = {}           # the room block, for the room's own death beat
@@ -56,6 +57,7 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	_hazard_root = _add_root("Hazards")
 	_actor_root = _add_root("Actors")
 
+	_grid_size = Vector2i(world.grid.width, world.grid.height)
 	_build_environment()
 	_build_base(world)
 	_build_bulb(world)
@@ -208,6 +210,8 @@ func _build_objects(world: SimWorld) -> void:
 		var node := _add_model(obj, look)
 		if node == null and str(look.get("shape", "")) == "panels":
 			node = _add_panels(obj, look)
+		if node == null and str(look.get("shape", "")) == "switch":
+			node = _add_switch(obj, look)
 		if node == null:
 			var height := float(look.get("height", 0.5))
 			node = _add_box(
@@ -247,6 +251,57 @@ func _add_panels(obj: SimObject, look: Dictionary) -> Node3D:
 		root.add_child(panel)
 	_model_nodes[obj.id] = true
 	return root
+
+
+## A wall switch: a pale plate proud of the wall with a darker rocker on it, so
+## the one control you cannot find on the floor reads as a switch instead of a
+## grey chip lost in a grey wall. It faces into the room off whichever boundary
+## its cell backs onto.
+##
+## Keyed off the `light-switch` tag; parts are coloured on the surface-override
+## layer so the per-frame state pass (which owns material_override) leaves them.
+func _add_switch(obj: SimObject, look: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	_object_root.add_child(root)
+	var normal := _inward_normal(obj.cells[0])
+	var side := absf(normal.x) > 0.5
+	var plate_w := float(look.get("plate_width", 0.16))
+	var plate_h := float(look.get("plate_height", 0.28))
+	var depth := float(look.get("plate_depth", 0.05))
+	var gap := float(look.get("wall_gap", 0.04))
+	var to_wall := -normal * (0.5 - gap - depth * 0.5)
+	_add_plate(root, Vector3(depth, plate_h, plate_w) if side \
+		else Vector3(plate_w, plate_h, depth), to_wall, visuals.to_colour(look.get("color", null)))
+	var rocker := Vector3(depth * 1.5, plate_h * 0.45, plate_w * 0.5) if side \
+		else Vector3(plate_w * 0.5, plate_h * 0.45, depth * 1.5)
+	_add_plate(root, rocker, to_wall + normal * depth * 0.5,
+		visuals.to_colour(look.get("toggle_color", null)))
+	_model_nodes[obj.id] = true
+	return root
+
+
+func _add_plate(root: Node3D, size: Vector3, offset: Vector3, colour: Color) -> void:
+	var mi := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	mi.mesh = box
+	mi.position = offset
+	mi.set_surface_override_material(0, _material(colour))
+	root.add_child(mi)
+
+
+## The way the room faces from a boundary cell — which wall a wall-mounted thing
+## sits on. Row-major fallback for an interior cell, though nothing mounts there.
+func _inward_normal(cell: Vector2i) -> Vector3:
+	if cell.x <= 0:
+		return Vector3(1.0, 0.0, 0.0)
+	if cell.x >= _grid_size.x - 1:
+		return Vector3(-1.0, 0.0, 0.0)
+	if cell.y <= 0:
+		return Vector3(0.0, 0.0, 1.0)
+	if cell.y >= _grid_size.y - 1:
+		return Vector3(0.0, 0.0, -1.0)
+	return Vector3(0.0, 0.0, 1.0)
 
 
 ## Instantiates the object's model at the size the thing really is. A pack is

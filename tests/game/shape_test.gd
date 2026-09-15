@@ -142,3 +142,42 @@ func test_the_fixtures_are_tagged_as_fixtures() -> void:
 			untagged.append(str(id))
 	assert_array(Array(untagged)).override_failure_message(
 		"these belong against a wall and nothing says so: %s" % [untagged]).is_empty()
+
+
+# --- the light switch --------------------------------------------------------
+
+## Bob, hunting for the 3-star kill: "Where is the light switch? I don't see it
+## in the room." It was there — a small grey chip on a grey wall at (0, 7), with
+## no model, so it read as nothing.
+##
+## A switch is a shape now too: a pale plate up on the wall with a darker rocker,
+## keyed off the `light-switch` tag.
+func test_the_switch_is_a_plate_not_a_grey_chip() -> void:
+	var renderer := _rendered(F.world())
+	var node := renderer.object_node("light_switch")
+	var parts := 0
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			parts += 1
+	assert_int(parts).override_failure_message(
+		"the switch is still a single greybox").is_greater_equal(2)
+
+
+## It hangs on the wall at hand height, not on the floor.
+func test_the_switch_is_up_on_the_wall() -> void:
+	var box := _rendered(F.world()).object_bounds("light_switch")
+	assert_float(box.get_center().y).override_failure_message(
+		"the switch is at %.2f m, not on the wall where a hand reaches" % box.get_center().y) \
+		.is_greater(0.8)
+	assert_float(minf(box.size.x, box.size.z)).override_failure_message(
+		"a switch %.2f m proud of the wall is a cupboard" % minf(box.size.x, box.size.z)) \
+		.is_less(0.15)
+
+
+## And it is still clickable where it hangs — a control you can see but not press
+## is no better than one you cannot find.
+func test_you_can_still_click_the_switch() -> void:
+	var world := F.world()
+	assert_bool(ClickTarget.options_for(world, world.objects.by_id("light_switch").origin()) \
+		.has("light_switch")).override_failure_message(
+		"the switch is drawn but not on its square's click list").is_true()
