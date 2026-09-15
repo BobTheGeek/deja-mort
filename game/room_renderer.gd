@@ -30,6 +30,7 @@ var _highlight_id: String = ""
 var _outline: Node3D = null
 var _shut_away: Dictionary = {}  # ids inside a closed container, this frame
 var _grid_size: Vector2i = Vector2i.ZERO  # room dimensions, for wall-mounting
+var _wall_mounted: Dictionary = {}  # ids hung on a wall/door, never stacked
 var _spread: Array = []          # objects stacked onto furniture this frame
 var _once: Dictionary = {}           # actor id -> {clip, left} one-shot animation
 var _room: Dictionary = {}           # the room block, for the room's own death beat
@@ -49,6 +50,7 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	_outline = null
 	_highlight_id = ""
 	_model_nodes.clear()
+	_wall_mounted.clear()
 	_actor_nodes.clear()
 	_hazard_nodes.clear()
 
@@ -212,6 +214,12 @@ func _build_objects(world: SimWorld) -> void:
 			node = _add_panels(obj, look)
 		if node == null and str(look.get("shape", "")) == "switch":
 			node = _add_switch(obj, look)
+		if node == null and str(look.get("shape", "")) == "slab":
+			node = _add_slab(obj, look)
+		if node == null and str(look.get("shape", "")) == "charger":
+			node = _add_charger(obj, look)
+		if node == null and str(look.get("shape", "")) == "chain":
+			node = _add_chain(obj, look)
 		if node == null:
 			var height := float(look.get("height", 0.5))
 			node = _add_box(
@@ -280,6 +288,63 @@ func _add_switch(obj: SimObject, look: Dictionary) -> Node3D:
 	_add_plate(root, rocker, to_face + normal * depth,
 		visuals.to_colour(look.get("toggle_color", null)))
 	_model_nodes[obj.id] = true
+	_wall_mounted[obj.id] = true
+	return root
+
+
+## A phone: a dark slab lying flat with a pale screen on top, so it reads as a
+## phone in the drawer or the hand rather than a grey pebble. Keyed off `phone`.
+func _add_slab(obj: SimObject, look: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	_object_root.add_child(root)
+	var w := float(look.get("slab_width", 0.075))
+	var l := float(look.get("slab_length", 0.15))
+	var thick := float(look.get("slab_thick", 0.014))
+	_add_plate(root, Vector3(w, thick, l), Vector3(0.0, thick * 0.5, 0.0),
+		visuals.to_colour(look.get("color", null)))
+	_add_plate(root, Vector3(w * 0.82, thick * 0.25, l * 0.86),
+		Vector3(0.0, thick + thick * 0.12, 0.0), visuals.to_colour(look.get("screen_color", null)))
+	_model_nodes[obj.id] = true
+	return root
+
+
+## A phone charger: a small pale brick with a stub of dark cord. Keyed off
+## `charger`.
+func _add_charger(obj: SimObject, look: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	_object_root.add_child(root)
+	var s := float(look.get("body", 0.055))
+	_add_plate(root, Vector3(s, s, s * 0.9), Vector3(0.0, s * 0.5, 0.0),
+		visuals.to_colour(look.get("color", null)))
+	_add_plate(root, Vector3(s * 0.16, s * 0.16, s * 1.5),
+		Vector3(0.0, s * 0.25, s * 0.95), visuals.to_colour(look.get("cord_color", null)))
+	_model_nodes[obj.id] = true
+	return root
+
+
+## The door chain: a short run of links across the door at handle height, facing
+## the room off the wall the door sits in. Keyed off `chainable`.
+func _add_chain(obj: SimObject, look: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	_object_root.add_child(root)
+	var normal := _inward_normal(obj.cells[0])
+	var side := absf(normal.x) > 0.5
+	var height := float(look.get("height", 1.2))
+	var links := maxi(int(look.get("links", 6)), 2)
+	var link := float(look.get("link_size", 0.035))
+	var span := float(look.get("span", 0.34))
+	var depth := float(look.get("link_depth", 0.03))
+	var to_face := normal * (0.5 - depth * 0.5)
+	var size := Vector3(depth, link, link) if side else Vector3(link, link, depth)
+	var colour := visuals.to_colour(look.get("color", null))
+	for i in links:
+		var along := (float(i) / float(links - 1) - 0.5) * span
+		# A slight zigzag in height reads as links rather than a bar.
+		var lift := height + (link * 0.4 if i % 2 == 0 else -link * 0.4)
+		var offset := to_face + (Vector3(0.0, lift, along) if side else Vector3(along, lift, 0.0))
+		_add_plate(root, size, offset, colour)
+	_model_nodes[obj.id] = true
+	_wall_mounted[obj.id] = true
 	return root
 
 
@@ -673,7 +738,7 @@ func _stack_small_objects(world: SimWorld) -> void:
 		if _object_nodes.has(obj.id) and not obj.cells.is_empty() and not _shut_away.has(obj.id):
 			bounds[obj.id] = object_bounds(obj.id)
 	for obj in world.objects.all():
-		if not bounds.has(obj.id):
+		if not bounds.has(obj.id) or _wall_mounted.has(obj.id):
 			continue
 		var mine: AABB = bounds[obj.id]
 		var support := 0.0

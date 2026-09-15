@@ -221,3 +221,68 @@ func test_the_toilet_is_clear_of_the_bathtub() -> void:
 	assert_float(overlap_x * overlap_z).override_failure_message(
 		"the toilet and the bathtub overlap by %.2f m2" % (overlap_x * overlap_z)) \
 		.is_equal_approx(0.0, 0.01)
+
+
+# --- the last greybox props: phone, charger, door chain ----------------------
+
+## Bob: "address the remaining unstyled items — the phone, phone charger, and
+## door chain." Each was a grey pebble. They are shapes now, keyed off their
+## tags, no object named.
+
+func _open_all(world: SimWorld) -> void:
+	for id in ["nightstand", "counter_drawer"]:
+		world.objects.by_id(id).state["open"] = true
+
+
+func test_the_phone_is_a_slab_with_a_screen() -> void:
+	var world := F.world()
+	_open_all(world)
+	var renderer := _rendered(world)
+	var node := renderer.object_node("phone")
+	var parts := 0
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			parts += 1
+	assert_int(parts).override_failure_message("the phone is still one box").is_greater_equal(2)
+	var box := renderer.object_bounds("phone")
+	assert_float(box.size.y).override_failure_message(
+		"a phone %.2f m thick is a brick" % box.size.y).is_less(0.05)
+	assert_float(maxf(box.size.x, box.size.z)).override_failure_message(
+		"a phone needs a long side").is_greater(0.1)
+
+
+func test_the_charger_is_a_small_brick_with_a_cord() -> void:
+	var world := F.world()
+	_open_all(world)
+	var renderer := _rendered(world)
+	var parts := 0
+	for child in renderer.object_node("charger").get_children():
+		if child is MeshInstance3D:
+			parts += 1
+	assert_int(parts).override_failure_message("the charger is one box").is_greater_equal(2)
+
+
+## The chain hangs on the door face at handle height, not stacked on top of the
+## door — it shares the door's square, and the small-object stacker used to lift
+## it two metres into the air.
+func test_the_door_chain_hangs_on_the_door_not_on_top_of_it() -> void:
+	var renderer := _rendered(F.world())
+	var box := renderer.object_bounds("door_chain")
+	assert_float(box.get_center().y).override_failure_message(
+		"the chain is at %.2f m — stacked on top of the door, not on its face" % box.get_center().y) \
+		.is_between(0.8, 1.6)
+	var parts := 0
+	for child in renderer.object_node("door_chain").get_children():
+		if child is MeshInstance3D:
+			parts += 1
+	assert_int(parts).override_failure_message("the chain is a single bar").is_greater_equal(3)
+
+
+## None of the three fell back to a grey box any more.
+func test_none_of_them_are_greyboxes() -> void:
+	var world := F.world()
+	_open_all(world)
+	for id in ["phone", "charger", "door_chain"]:
+		var look := GameVisuals.load_table().object_look(world.objects.by_id(id).tags)
+		assert_str(str(look.get("shape", ""))).override_failure_message(
+			"%s has no shape and is still a greybox" % id).is_not_empty()
