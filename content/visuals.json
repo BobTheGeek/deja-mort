@@ -299,6 +299,46 @@
     "max_overhang_m": 0.6,
     "kenney_food": {
       "metres_per_unit": 0.45
+    },
+    "recolor": {
+      "kenney_food/knife-block": {
+        "knife-block": [
+          0.28,
+          0.17,
+          0.1
+        ]
+      },
+      "kenney_food/frying-pan": {
+        "*": {
+          "color": [
+            0.09,
+            0.09,
+            0.1
+          ],
+          "metallic": 0.3,
+          "roughness": 0.6
+        }
+      },
+      "kenney/toaster": {
+        "metal": {
+          "color": [
+            0.76,
+            0.78,
+            0.81
+          ],
+          "metallic": 0.6,
+          "roughness": 0.35
+        },
+        "metalMedium": {
+          "color": [
+            0.45,
+            0.47,
+            0.5
+          ],
+          "metallic": 0.6,
+          "roughness": 0.4
+        }
+      }
     }
   },
   "state_visual": {
