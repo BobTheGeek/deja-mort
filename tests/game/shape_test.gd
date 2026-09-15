@@ -163,7 +163,9 @@ func test_the_switch_is_a_plate_not_a_grey_chip() -> void:
 		"the switch is still a single greybox").is_greater_equal(2)
 
 
-## It hangs on the wall at hand height, not on the floor.
+## It hangs on the wall at hand height, not on the floor, and on the face of the
+## wall that shows — a plate buried in the outer edge of the wall cell is exactly
+## what Bob could not see.
 func test_the_switch_is_up_on_the_wall() -> void:
 	var box := _rendered(F.world()).object_bounds("light_switch")
 	assert_float(box.get_center().y).override_failure_message(
@@ -172,6 +174,11 @@ func test_the_switch_is_up_on_the_wall() -> void:
 	assert_float(minf(box.size.x, box.size.z)).override_failure_message(
 		"a switch %.2f m proud of the wall is a cupboard" % minf(box.size.x, box.size.z)) \
 		.is_less(0.15)
+	# The switch is on the west wall (0, 7); the face that shows is at x = 1.0.
+	# The plate has to reach it, not sit at the outer edge inside the wall.
+	assert_float(box.end.x).override_failure_message(
+		"the plate's front is at x=%.2f, buried behind the wall face at x=1.0" % box.end.x) \
+		.is_greater_equal(0.98)
 
 
 ## And it is still clickable where it hangs — a control you can see but not press
