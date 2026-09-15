@@ -292,11 +292,14 @@
     "highlight_pixels": 2.0
   },
   "models": {
-    "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's doorway is 1.01 units tall and a door is 2 m.",
+    "_comment": "Metres per pack unit. Measured from the models themselves, not guessed: Kenney's Furniture doorway is 1.01 units tall and a door is 2 m; the Food Kit oil bottle is 0.62 units and a real one is ~0.28 m.",
     "kenney": {
       "metres_per_unit": 2.0
     },
-    "max_overhang_m": 0.6
+    "max_overhang_m": 0.6,
+    "kenney_food": {
+      "metres_per_unit": 0.45
+    }
   },
   "state_visual": {
     "burning": {

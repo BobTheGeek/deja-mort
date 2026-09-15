@@ -78,12 +78,15 @@ Colours live in one place: the `Brand` autoload at `game/theme/brand.gd`. Never 
 | Pack | Source | License | Used for | Location |
 |---|---|---|---|---|
 | Kenney Furniture Kit 2.0 | [kenney.nl/assets/furniture-kit](https://kenney.nl/assets/furniture-kit) | **CC0 1.0** — `assets/models/kenney/LICENSE.txt` | household props | `assets/models/kenney/` |
+| Kenney Food Kit | [kenney.nl/assets/food-kit](https://kenney.nl/assets/food-kit) | **CC0 1.0** — `assets/models/kenney_food/License.txt` | small handheld props | `assets/models/kenney_food/` |
 
 140 `.glb` models, 2.1 MB. The whole kit is committed rather than the subset Room 1 uses, so later rooms do not have to re-download it and the licence covers one intact pack. The previews and texture PNGs from the download are **not** committed — only the models and the licence.
 
+The **Food Kit** fills the gap the Furniture Kit leaves: the things you pick up. The Furniture Kit has sofas and fridges and nothing you can hold, so the oil, the jar, the cans, the pan and the knife each rendered as one grey cube. Unlike the furniture, only the **five models Room 1 uses** are committed — `bottle-oil`, `honey` (a jar shape), `soda-can`, `frying-pan`, `cooking-knife` — not all 200; later rooms add the ones they need from the same CC0 kit. It is a **separate pack prefix** because it is authored at a different scale (below), so it carries its own `metres_per_unit`.
+
 Attribution is not required by CC0. Credited anyway: created and distributed by Kenney (www.kenney.nl).
 
-**Scale:** the kit is authored at **1 unit = 2 m**, consistently across all 140 models — measured, not guessed: the doorway is 1.01 units tall and a door is 2 m; the fridge is 0.92 and a fridge is 1.84. That one number lives in `content/visuals.json` as `models.kenney.metres_per_unit`, and `game/room_renderer.gd` scales every model by it. Origins are already at floor level, which matches the `docs/06` import convention.
+**Scale:** the Furniture Kit is authored at **1 unit = 2 m**, consistently across all 140 models — measured, not guessed: the doorway is 1.01 units tall and a door is 2 m; the fridge is 0.92 and a fridge is 1.84. That one number lives in `content/visuals.json` as `models.kenney.metres_per_unit`, and `game/room_renderer.gd` scales every model by it. Origins are already at floor level, which matches the `docs/06` import convention. The **Food Kit** is smaller stock — **1 unit ≈ 0.45 m** (`models.kenney_food.metres_per_unit`), measured the same way: the oil bottle is 0.62 units and a real one is ~0.28 m. The five props then land at believable sizes: bottle 0.28 m tall, jar 0.14 m, can 0.16 m, pan 0.46 m across, knife 0.32 m long.
 
 Models are **not** fitted to their footprint. They were, until a playtest: a double bed squeezed into its one-by-two cells came out a metre wide next to a 1.7 m figure, and the whole room read as doll furniture. A footprint is what the sim walks around; real furniture overhangs it. `tests/game/scale_test.gd` checks both ends — that each piece measures what the real thing measures, and that nothing hangs more than `models.max_overhang_m` past its cells.
 

@@ -249,7 +249,8 @@
       "on": "stove",
       "weight": 3,
       "reach": 8,
-      "inspect": "Cast iron. Heavier than it looks."
+      "inspect": "Cast iron. Heavier than it looks.",
+      "mesh": "kenney_food/frying-pan"
     },
     {
       "id": "counter_drawer",
@@ -308,7 +309,8 @@
         ]
       ],
       "reach": 8,
-      "inspect": "Half a bottle of vegetable oil."
+      "inspect": "Half a bottle of vegetable oil.",
+      "mesh": "kenney_food/bottle-oil"
     },
     {
       "id": "toaster",
@@ -406,7 +408,7 @@
       ],
       "reach": 8,
       "inspect": "Five slots. Four knives.",
-      "mesh": "kenney/kitchenCabinet",
+      "mesh": "kenney_food/knife-block",
       "mesh_yaw": 0
     },
     {
@@ -425,7 +427,8 @@
         ]
       ],
       "reach": 8,
-      "inspect": "Sharp. So is his."
+      "inspect": "Sharp. So is his.",
+      "mesh": "kenney_food/cooking-knife"
     },
     {
       "id": "cabinet",
@@ -476,7 +479,8 @@
       "break_adds_tags": [
         "sharp"
       ],
-      "inspect": "An empty jar. It would make a lot of noise."
+      "inspect": "An empty jar. It would make a lot of noise.",
+      "mesh": "kenney_food/honey"
     },
     {
       "id": "fridge",
@@ -546,7 +550,8 @@
           1
         ]
       ],
-      "inspect": "Four cans, still in the plastic."
+      "inspect": "Four cans, still in the plastic.",
+      "mesh": "kenney_food/soda-can"
     },
     {
       "id": "rug",
