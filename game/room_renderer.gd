@@ -504,8 +504,52 @@ func _add_actor(actor: SimActor) -> Node3D:
 		mesh.material_override = _material(visuals.colour(key + ".color"))
 		root.add_child(mesh)
 
+	if actor is SimAttacker and not str((actor as SimAttacker).profile.weapon).is_empty():
+		_arm_actor(root, str((actor as SimAttacker).profile.weapon))
+
 	root.position = IsoCamera.cell_to_world(actor.pos, 0.0)
 	return root
+
+
+## Puts the attacker's weapon in his hand — an empty-handed man swinging at you
+## reads as a shove, not a stabbing. The weapon model, the bone it hangs off and
+## how it sits are all data (`actor.weapon`), so a gun or a bat is a table entry,
+## not code. No-op when the rig has no skeleton or the weapon has no model.
+func _arm_actor(root: Node3D, weapon: String) -> void:
+	var skeleton := _find_skeleton(root)
+	if skeleton == null:
+		return
+	var table: Dictionary = visuals.get_value("actor.weapon", {})
+	var spec: Dictionary = table.get(weapon, {})
+	if spec.is_empty():
+		return
+	var path := model_path(str(spec.get("mesh", "")))
+	if path.is_empty():
+		return
+	var bone := int(skeleton.find_bone(str(table.get("bone", "Wrist.R"))))
+	if bone < 0:
+		return
+	var attach := BoneAttachment3D.new()
+	attach.bone_idx = bone
+	skeleton.add_child(attach)
+	var model: Node3D = (load(path) as PackedScene).instantiate()
+	attach.add_child(model)
+	model.scale = Vector3.ONE * float(spec.get("scale", 1.0))
+	model.position = _vector3(spec.get("offset", [0.0, 0.0, 0.0]))
+	model.rotation_degrees = _vector3(spec.get("rotation", [0.0, 0.0, 0.0]))
+
+
+func _find_skeleton(node: Node) -> Skeleton3D:
+	for child in _descendants(node):
+		if child is Skeleton3D:
+			return child as Skeleton3D
+	return null
+
+
+func _vector3(raw: Variant) -> Vector3:
+	if raw is Array and (raw as Array).size() >= 3:
+		return Vector3(float(raw[0]), float(raw[1]), float(raw[2]))
+	return Vector3.ZERO
 
 
 ## Footprint extent in cells, so a two-cell object renders as one long box.
@@ -1032,7 +1076,10 @@ func _sync_actors(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> voi
 			node = _add_actor(actor)
 			_actor_nodes[actor.id] = node
 		var key := "actor.%s" % actor.role
-		node.visible = actor.alive and _actor_is_present(actor)
+		# A dead actor stays on screen — the player was vanishing the instant he
+		# died, before the attacker's swing even landed. He is a body now, playing
+		# the fall, until the loop resets. Only someone who has left the room goes.
+		node.visible = _actor_is_present(actor)
 		node.position = _actor_position(actor, tick_seconds, tick_alpha)
 		_face_travel(node, actor, turn_rate, delta)
 		# No rig in the pack, so being knocked down is the figure laid flat. From an
