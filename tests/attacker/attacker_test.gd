@@ -272,3 +272,41 @@ func _how_long_until_he_reaches_the_tub(tv_on: bool) -> float:
 	while w.ending.is_empty() and w.time_s() < 300.0:
 		w.step()
 	return found[0] if found[0] >= 0.0 else 9999.0
+
+
+# --- how much longer to hold out ---------------------------------------------
+
+## Bob: after the clock reaches zero, the player needs to know how much longer to
+## survive until they are safe. Before he arrives there is nothing to count down
+## to but the door, which the main timer already shows.
+func test_there_is_no_hold_out_before_he_arrives() -> void:
+	var w := F.world()
+	assert_float(w.hold_out_s()).override_failure_message(
+		"a hold-out is being counted before he is even in the room").is_equal(-1.0)
+
+
+## Once he is inside and searching, it is the patience he has left — outlast it
+## and he leaves (evade).
+func test_the_hold_out_is_the_patience_he_has_left() -> void:
+	var w := F.world()
+	_at_arrival(w)
+	w.step_seconds(6.0)
+	assert_bool(w.attacker.inside).is_true()
+	var expected := w.attacker.profile.patience_s - w.attacker.search_elapsed_s
+	assert_float(w.hold_out_s()).override_failure_message(
+		"the hold-out should be his remaining patience").is_equal_approx(expected, 0.2)
+	assert_float(w.hold_out_s()).is_less(w.attacker.profile.patience_s)
+
+
+## Pinned under the bookshelf, it is the seconds you have to keep him down before
+## it counts as a disable.
+func test_pinned_it_is_the_time_left_to_hold_him_down() -> void:
+	var w := F.world()
+	_at_arrival(w)
+	w.step_seconds(4.0)
+	w.attacker.apply_status_until("pinned", w.tick + w.ticks(30.0))
+	w.step()   # the world stamps incapacitated_since
+	var hold := w.hold_out_s()
+	assert_float(hold).override_failure_message(
+		"pinned, the hold-out should be the disable window, not his patience") \
+		.is_equal_approx(float(w.system("disable_hold_s")), 0.3)

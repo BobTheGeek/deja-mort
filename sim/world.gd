@@ -353,6 +353,31 @@ func timer_remaining(name: String) -> float:
 	return -1.0
 
 
+## Once he is in the room the countdown to the door stops meaning anything; what
+## the player wants to know is how much longer to survive on the path they are
+## on. This is that: seconds until safe — how long to keep him pinned (disable),
+## or to outlast his patience or wait for help (evade). Returns -1 when there is
+## nothing to count down to: he has not arrived, he is already gone, or he can
+## see you and the answer is not "hold out", it is "run".
+func hold_out_s() -> float:
+	if attacker == null or phase == PHASE_PRE_ARRIVAL or not attacker.inside:
+		return -1.0
+	if attacker.left or not attacker.alive:
+		return 0.0
+	if attacker.is_incapacitated() and attacker.incapacitated_since >= 0:
+		var held := float(tick - attacker.incapacitated_since) * _dt
+		return maxf(0.0, float(system("disable_hold_s")) - held)
+	if attacker.perception != null and attacker.perception.target_visible:
+		return -1.0
+	var best := -1.0
+	if attacker.profile.patience_s >= 0.0:
+		best = maxf(0.0, attacker.profile.patience_s - attacker.search_elapsed_s)
+	var help := timer_remaining("help_arrives")
+	if help >= 0.0:
+		best = help if best < 0.0 else minf(best, help)
+	return best
+
+
 # --- the intent API ----------------------------------------------------------
 
 func walk_to(cell: Vector2i) -> bool:

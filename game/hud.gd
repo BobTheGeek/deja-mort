@@ -25,7 +25,8 @@ const BRAND := preload("res://game/theme/brand.gd")
 const REQUIRED_KEYS: PackedStringArray = [
 	"margin_x", "margin_top", "margin_bottom", "timer_top", "timer_size", "timer_color",
 	"timer_letter_spacing_em", "urgent_below_s", "urgent_color", "urgent_bar_width_max",
-	"urgent_bar_height", "urgent_bar_gap", "urgent_bar_color", "tally_stroke_width",
+	"urgent_bar_height", "urgent_bar_gap", "urgent_bar_color", "hold_color", "hold_label",
+	"hold_label_size", "hold_label_tracking_em", "hold_label_alpha", "hold_label_gap", "tally_stroke_width",
 	"tally_stroke_height", "tally_gap", "tally_group_gap", "tally_rotation_jitter_deg",
 	"tally_alpha", "loop_label_size", "loop_label_alpha", "loop_label_gap",
 	"holding_label_size", "holding_label_tracking_em", "holding_label_alpha",
@@ -59,6 +60,7 @@ var _notebook_icon: Texture2D = null
 var _hide_icon: Texture2D = null
 
 var _remaining: float = 0.0
+var _hold_out: float = -1.0
 var _deaths: int = 0
 var _holding: String = ""
 var _holding_hover := false
@@ -110,6 +112,7 @@ func frame() -> Vector2:
 
 func sync(world: SimWorld, loop_index: int, panel_open: bool = false) -> void:
 	_remaining = world.timer_remaining_s()
+	_hold_out = world.hold_out_s()
 	_deaths = maxi(loop_index - 1, 0)
 	_paused = panel_open
 	_ending = world.ending
@@ -151,7 +154,24 @@ func advance(delta: float) -> void:
 # --- the timer ---------------------------------------------------------------
 
 func timer_colour() -> Color:
+	if showing_hold_out():
+		return visuals.colour("hud.hold_color")
 	return visuals.colour("hud.urgent_color") if _is_urgent() else visuals.colour("hud.timer_color")
+
+
+## He is in the room and the door countdown is spent: the big number is now how
+## long to survive on the path you are on, not how long until he arrives.
+func showing_hold_out() -> bool:
+	return _remaining <= 0.0 and _hold_out >= 0.0
+
+
+func hold_out_value() -> float:
+	return _hold_out
+
+
+## What the big number reads: the door countdown, or the hold-out once it starts.
+func timer_display() -> float:
+	return _hold_out if showing_hold_out() else _remaining
 
 
 func timer_alpha() -> float:
@@ -474,8 +494,17 @@ func _draw() -> void:
 
 func _draw_timer() -> void:
 	var text_size := int(visuals.number("hud.timer_size", 84.0))
-	_draw_tracked(_font_bold, "%0.1f" % _remaining,
-		Vector2(frame().x * 0.5, _timer_rect().position.y + float(text_size)), text_size,
+	var top := _timer_rect().position.y
+	# "HOLD OUT" over the number once the door countdown is spent, so the meaning
+	# of the number — survive this long — is not a silent change from a clock.
+	if showing_hold_out():
+		var label_size := int(visuals.number("hud.hold_label_size", 20.0))
+		_draw_tracked(_font, str(visuals.get_value("hud.hold_label", "HOLD OUT")),
+			Vector2(frame().x * 0.5, top - visuals.number("hud.hold_label_gap", 6.0)), label_size,
+			visuals.number("hud.hold_label_tracking_em", 0.24),
+			_alpha(visuals.colour("hud.hold_color"), visuals.number("hud.hold_label_alpha", 0.8)), true)
+	_draw_tracked(_font_bold, "%0.1f" % timer_display(),
+		Vector2(frame().x * 0.5, top + float(text_size)), text_size,
 		visuals.number("hud.timer_letter_spacing_em", -0.02),
 		_alpha(timer_colour(), timer_alpha()), true)
 	var bar := urgent_bar_rect()
