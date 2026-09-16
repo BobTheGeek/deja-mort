@@ -205,3 +205,52 @@ func _all(node: Node) -> Array:
 	for c in node.get_children():
 		out.append_array(_all(c))
 	return out
+
+
+# --- the attack, made to read ------------------------------------------------
+
+## Bob: "the player's character disappears before the attacker starts swiping."
+## He did — a dead actor was set invisible on the frame he died, so the fall
+## never showed. He stays on screen as a body now, playing the death, until the
+## loop resets.
+func test_a_dead_figure_stays_on_screen_to_fall() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	world.kill_actor(world.player, "test", "stabbed")
+	renderer.sync(world, 0.1)
+	var node: Node3D = renderer.actor_node(world.player.id)
+	assert_bool(node.visible).override_failure_message(
+		"the body vanished instead of falling").is_true()
+
+
+## Bob: "the attacker is not holding anything. He needs a weapon." The knife
+## hangs off his wrist now, from the `actor.weapon` table.
+func test_the_attacker_carries_his_weapon() -> void:
+	var world := F.world()
+	var node: Node3D = _rendered(world).actor_node(world.attacker.id)
+	var armed := false
+	for child in _all(node):
+		if child is BoneAttachment3D:
+			for under in _all(child):
+				if under is MeshInstance3D and (under as MeshInstance3D).mesh != null:
+					armed = true
+	assert_bool(armed).override_failure_message(
+		"the attacker swings empty-handed; no weapon is on his wrist").is_true()
+
+
+## The player has empty hands to start, so no weapon hangs off him.
+func test_the_player_is_not_armed() -> void:
+	var world := F.world()
+	var node: Node3D = _rendered(world).actor_node(world.player.id)
+	for child in _all(node):
+		assert_bool(child is BoneAttachment3D).override_failure_message(
+			"the player has a weapon bolted to his wrist").is_false()
+
+
+## The stabbing beat carries a stagger before the fall, so the body reacts to the
+## blow rather than dropping on the frame the swing begins.
+func test_the_death_beat_staggers_before_the_fall() -> void:
+	var beat := DeathBeat.resolve(_visuals(), {}, "stabbed")
+	assert_str(str(beat.get("victim_stagger", ""))).override_failure_message(
+		"the stabbing has no stagger, so the fall is instant").is_not_empty()
+	assert_float(float(beat.get("victim_stagger_s", 0.0))).is_greater(0.0)

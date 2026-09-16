@@ -265,6 +265,11 @@ func _on_sim_event(event: SimEvent) -> void:
 	if event.type == SimEvent.TYPE_DEATH and event.actor == world.player.id:
 		var death := DeathBeat.resolve(visuals, world.room, str(event.meta.get("cause", "")))
 		_renderer.flicker(float(death.get("light_flicker", 0.0)))
+		# A stagger before the fall, so he reacts to the blow instead of dropping
+		# on the frame the swing starts. The fall clip takes over when it expires.
+		var stagger := str(death.get("victim_stagger", ""))
+		if not stagger.is_empty():
+			_renderer.play_once(world.player.id, stagger, float(death.get("victim_stagger_s", 0.5)))
 		_hud.flash("DEAD")
 	elif event.type == SimEvent.TYPE_ENDING:
 		_finish_loop(str(event.meta.get("ending", "")))

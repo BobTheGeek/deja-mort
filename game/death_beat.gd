@@ -18,6 +18,8 @@ static func resolve(visuals: GameVisuals, room: Dictionary, cause: String) -> Di
 	var beat: Dictionary = {
 		"attacker_clip": "",
 		"victim_clip": str(visuals.get_value("death.victim_clip", "Death")),
+		"victim_stagger": str(visuals.get_value("death.victim_stagger", "")),
+		"victim_stagger_s": visuals.number("death.victim_stagger_s", 0.0),
 		"hold_s": visuals.number("death.hold_s", 2.0),
 		"light_flicker": visuals.number("death.light_flicker", 0.0),
 	}
