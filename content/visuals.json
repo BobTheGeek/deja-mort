@@ -290,6 +290,49 @@
         "shape": "panels",
         "panel_depth": 0.1,
         "panel_gap": 0.12
+      },
+      "phone": {
+        "shape": "slab",
+        "color": [
+          0.1,
+          0.1,
+          0.12
+        ],
+        "screen_color": [
+          0.36,
+          0.44,
+          0.58
+        ],
+        "slab_width": 0.075,
+        "slab_length": 0.15,
+        "slab_thick": 0.014
+      },
+      "charger": {
+        "shape": "charger",
+        "color": [
+          0.88,
+          0.88,
+          0.85
+        ],
+        "cord_color": [
+          0.14,
+          0.14,
+          0.16
+        ],
+        "body": 0.055
+      },
+      "chainable": {
+        "shape": "chain",
+        "color": [
+          0.56,
+          0.58,
+          0.61
+        ],
+        "height": 1.2,
+        "links": 6,
+        "link_size": 0.035,
+        "span": 0.34,
+        "link_depth": 0.03
       }
     },
     "stack_spread": 0.22,
