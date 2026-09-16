@@ -357,3 +357,31 @@ func test_the_mark_opens_out() -> void:
 	hud.advance(hud.visuals.number("hud.refusal_hold_s", 0.45) * 0.5)
 	assert_float(hud.refusal_rect().size.x).override_failure_message(
 		"the mark is the same size the whole way through").is_greater(early)
+
+
+# --- the hold-out timer ------------------------------------------------------
+
+## Bob: after the countdown hits zero we need to show how much longer to hold on.
+## Before he arrives the big number is the door countdown; once it is spent and
+## he is searching, the same number becomes the seconds until you are safe, with
+## a HOLD OUT label so the change of meaning is said out loud.
+func test_the_timer_becomes_a_hold_out_once_he_is_in() -> void:
+	var world := F.world()
+	world.step_seconds(world.timer_remaining_s())   # to arrival
+	world.step_seconds(6.0)                          # let him be inside, searching
+	var hud := _hud()
+	hud.sync(world, 1, false)
+	assert_bool(hud.showing_hold_out()).override_failure_message(
+		"he is in the room and the HUD is still counting down to the door").is_true()
+	assert_float(hud.timer_display()).override_failure_message(
+		"the big number is not the hold-out").is_equal_approx(world.hold_out_s(), 0.05)
+	assert_float(hud.hold_out_value()).is_greater(0.0)
+
+
+func test_before_he_arrives_it_is_just_the_countdown() -> void:
+	var world := F.world()
+	var hud := _hud()
+	hud.sync(world, 1, false)
+	assert_bool(hud.showing_hold_out()).override_failure_message(
+		"a hold-out is showing before he has arrived").is_false()
+	assert_float(hud.timer_display()).is_equal_approx(world.timer_remaining_s(), 0.05)
