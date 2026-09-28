@@ -220,3 +220,41 @@ func test_the_game_waits_for_a_press_instead_of_restarting() -> void:
 	assert_int(gate).is_greater(-1)
 	assert_int(gate).override_failure_message(
 		"the loop counter advances before anything waits for a press").is_less(restart)
+
+
+## The flicker is 1-D noise now (FastNoiseLite), not a repeating sine product, so
+## a failing bulb reads as organic rather than a metronome. What code can check:
+## while it flickers the bulb dips below full, and the value keeps changing.
+func test_the_flicker_dims_the_bulb_and_keeps_moving() -> void:
+	var world := F.world()
+	var renderer: RoomRenderer = auto_free(RoomRenderer.new())
+	renderer.build(world, _visuals())
+	var full := renderer.bulb_energy()
+	renderer.flicker(1.0)
+	var readings: Array = []
+	var dipped := false
+	for _i in 20:
+		renderer.sync(world, 0.03, 0.0)
+		var e := renderer.bulb_energy()
+		readings.append(e)
+		if e < full - 0.01:
+			dipped = true
+	assert_bool(dipped).override_failure_message(
+		"the bulb never dimmed during the flicker").is_true()
+	var distinct := {}
+	for e in readings:
+		distinct[snappedf(e, 0.001)] = true
+	assert_int(distinct.size()).override_failure_message(
+		"the bulb energy never changed — the flicker is frozen").is_greater(3)
+
+
+## And it returns to full when the beat is over.
+func test_the_bulb_returns_to_full_after_the_flicker() -> void:
+	var world := F.world()
+	var renderer: RoomRenderer = auto_free(RoomRenderer.new())
+	renderer.build(world, _visuals())
+	var full := renderer.bulb_energy()
+	renderer.flicker(0.4)
+	renderer.sync(world, 0.6, 0.0)
+	assert_float(renderer.bulb_energy()).override_failure_message(
+		"the bulb did not come back to full after the flicker").is_equal_approx(full, 0.001)

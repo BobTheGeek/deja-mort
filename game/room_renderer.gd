@@ -733,10 +733,30 @@ func _sync_flicker(delta: float) -> void:
 	_flicker_t += delta
 	var rate := visuals.number("death.flicker_hz", 11.0)
 	var depth := visuals.number("death.flicker_depth", 0.75)
-	var wave := absf(sin(_flicker_t * rate)) * absf(cos(_flicker_t * rate * 0.37))
+	# 1-D noise, not a sine product: a failing bulb stutters unevenly, it does not
+	# keep a beat. Biased upward so the light is mostly on and dips, rather than
+	# hovering grey. `_flicker_noise` is seeded, so the same death looks the same.
+	var raw := (_flicker_noise().get_noise_1d(_flicker_t * rate) + 1.0) * 0.5
+	var wave := pow(clampf(raw, 0.0, 1.0), visuals.number("death.flicker_bias", 0.5))
 	_bulb.light_energy = _lit_energy * (1.0 - depth + depth * wave)
 	if _flicker_left <= 0.0:
 		_bulb.light_energy = _lit_energy
+
+
+## The bulb's current energy, for tests and anyone reading the light state.
+func bulb_energy() -> float:
+	return _bulb.light_energy if _bulb != null else 0.0
+
+
+var _flicker_noise_cached: FastNoiseLite = null
+
+func _flicker_noise() -> FastNoiseLite:
+	if _flicker_noise_cached == null:
+		_flicker_noise_cached = FastNoiseLite.new()
+		_flicker_noise_cached.noise_type = FastNoiseLite.TYPE_SIMPLEX
+		_flicker_noise_cached.seed = int(visuals.number("death.flicker_seed", 1))
+		_flicker_noise_cached.frequency = 1.0
+	return _flicker_noise_cached
 
 
 func _sync_lighting(world: SimWorld) -> void:
