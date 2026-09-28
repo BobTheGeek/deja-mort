@@ -490,3 +490,46 @@ func test_behind_a_shut_door_it_says_you_cannot_get_there() -> void:
 	assert_str(wheel.reason_for("drop")).override_failure_message(
 		"the tub is behind a shut door and the wheel will not say so").is_equal(
 		str((GameVisuals.load_table().get_value("wheel.reasons", {}) as Dictionary)["unreachable"]))
+
+
+# --- the wheel springs in ----------------------------------------------------
+
+## The wheel's scale is a damped spring now, not a fixed cubic ease: it grows in
+## from smaller, overshoots a hair, and settles — natural, physical motion for
+## the game's one and only action UI. (Alpha and open_progress are unchanged, so
+## the "opens over time" contract still holds.)
+func test_the_wheel_scales_up_from_smaller_and_settles() -> void:
+	var world := F.world()
+	var wheel := _wheel(world)
+	wheel.open_at(world, "fridge", Vector2(960, 540))
+	var start := wheel.wheel_scale()
+	assert_float(start).override_failure_message(
+		"the wheel is full size on the frame it opens").is_less(1.0)
+	wheel.advance(1.0)
+	assert_float(wheel.wheel_scale()).override_failure_message(
+		"the wheel never settles at full size").is_equal_approx(1.0, 0.001)
+
+
+func test_the_scale_overshoots_like_a_spring_not_an_ease() -> void:
+	var world := F.world()
+	var wheel := _wheel(world)
+	wheel.open_at(world, "fridge", Vector2(960, 540))
+	var peak := 0.0
+	for _i in 120:
+		wheel.advance(1.0 / 120.0)
+		peak = maxf(peak, wheel.wheel_scale())
+	assert_float(peak).override_failure_message(
+		"the scale never crossed 1.0 — that is an ease, not a spring: peak %.4f" % peak) \
+		.is_greater(1.0)
+
+
+## Re-opening on a new object while the wheel is already up must not restart the
+## pop — that is the interruptibility a spring buys over a fixed tween.
+func test_retargeting_while_open_does_not_re_pop() -> void:
+	var world := F.world()
+	var wheel := _wheel(world)
+	wheel.open_at(world, "fridge", Vector2(960, 540))
+	wheel.advance(1.0)   # settle
+	wheel.open_at(world, "stove", Vector2(700, 400))   # a new object, still open
+	assert_float(wheel.wheel_scale()).override_failure_message(
+		"re-targeting shrank the wheel and re-popped it").is_greater(0.95)
