@@ -115,16 +115,16 @@
       "bone": "Wrist.R",
       "knife": {
         "mesh": "kenney_food/cooking-knife",
-        "scale": 0.6,
+        "scale": 0.42,
         "offset": [
-          0.02,
+          0.0,
           0.03,
-          0.06
+          0.0
         ],
         "rotation": [
           0.0,
           0.0,
-          90.0
+          0.0
         ]
       }
     }
