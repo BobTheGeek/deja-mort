@@ -306,7 +306,8 @@ func _lint_room(path: String, known_tags: Dictionary) -> void:
 		if tags is Array:
 			for t in tags:
 				if not known_tags.is_empty() and not known_tags.has(t):
-					_errors.append("%s: object '%s' uses unknown tag '%s'" % [path, oid, t])
+					_errors.append("%s: object '%s' uses unknown tag '%s'%s" % [path, oid, t,
+						Fuzzy.hint(str(t), known_tags.keys())])
 		else:
 			_errors.append("%s: object '%s' has non-array 'tags'" % [path, oid])
 
@@ -315,4 +316,5 @@ func _lint_room(path: String, known_tags: Dictionary) -> void:
 			if refs is Array:
 				for r in refs:
 					if not ids.has(str(r)):
-						_errors.append("%s: object '%s'.%s references unknown id '%s'" % [path, oid, ref_key, r])
+						_errors.append("%s: object '%s'.%s references unknown id '%s'%s" % [path, oid, ref_key, r,
+							Fuzzy.hint(str(r), ids.keys())])
