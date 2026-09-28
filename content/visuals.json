@@ -727,6 +727,8 @@
     "open_scale_from": 0.9,
     "open_alpha_from": 0,
     "open_duration_s": 0.12,
+    "open_stiffness": 320.0,
+    "open_damping": 26.0,
     "open_ease": "ease_out_cubic",
     "close_duration_s": 0.08,
     "cost_scale_max_s": 3,

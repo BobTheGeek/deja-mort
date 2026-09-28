@@ -37,7 +37,7 @@ const REQUIRED_KEYS: PackedStringArray = [
 	"leader_line_width", "leader_line_color", "leader_line_alpha", "tap_dot_size",
 	"tap_dot_color", "backdrop_color", "backdrop_alpha", "backdrop_flat_radius",
 	"backdrop_fade_radius", "backdrop_texture", "open_scale_from", "open_alpha_from",
-	"open_duration_s", "close_duration_s", "cost_scale_max_s", "cost_arc_width",
+	"open_duration_s", "open_stiffness", "open_damping", "close_duration_s", "cost_scale_max_s", "cost_arc_width",
 	"cost_arc_inset", "cost_number_size", "min_touch_target", "caption_width",
 	"caption_padding", "caption_radius", "caption_color", "caption_alpha",
 	"caption_gap_above", "caption_name_size", "caption_sub_size", "caption_sub_color",
@@ -64,6 +64,11 @@ var _pressed := ""
 var _refused_verb := ""
 var _refused_left := 0.0
 var _open_t := 0.0
+# The wheel's scale is a damped spring toward 1.0, not a fixed tween: it arrives
+# with a natural settle and, because re-opening on a new object keeps its state,
+# it does not re-pop when you tap from one thing to the next.
+var _scale := 1.0
+var _scale_v := 0.0
 var _vignette: Texture2D = null
 var _backdrop: Backdrop = null
 var _font: Font = null
@@ -156,6 +161,11 @@ func open_at(world: SimWorld, target: Variant, screen_point: Vector2,
 	_refused_verb = ""
 	_refused_left = 0.0
 	_open_t = 0.0
+	# A fresh open pops in from smaller; re-targeting while already up keeps the
+	# spring where it is, so tapping object to object does not restart the motion.
+	if not visible:
+		_scale = visuals.number("wheel.open_scale_from", 0.9)
+		_scale_v = 0.0
 	_fit_viewport()
 	_centre = _clamped_centre(screen_point)
 	_compose_caption(world, target, index, count)
@@ -169,6 +179,8 @@ func open_at(world: SimWorld, target: Variant, screen_point: Vector2,
 func close() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scale = visuals.number("wheel.open_scale_from", 0.9)
+	_scale_v = 0.0
 	_target = null
 	_hover = ""
 	_refused_verb = ""
@@ -241,6 +253,9 @@ func advance(delta: float) -> void:
 	if _open_t < 1.0:
 		_open_t = clampf(_open_t + delta / maxf(duration, 0.001), 0.0, 1.0)
 		_sync_backdrop()
+		queue_redraw()
+	if not _spring_settled():
+		_advance_spring(delta)
 		queue_redraw()
 	if _refused_left > 0.0:
 		_refused_left -= delta
@@ -700,9 +715,36 @@ func _eased() -> float:
 
 
 func _grow() -> float:
-	var from := visuals.number("wheel.open_scale_from", 0.9)
-	var t := 1.0 - pow(1.0 - _open_t, 3.0)
-	return from + (1.0 - from) * t
+	return _scale
+
+
+## The wheel's scale, for tests and anyone reading the animation state.
+func wheel_scale() -> float:
+	return _scale
+
+
+## A damped spring toward 1.0, sub-stepped so a large frame delta (or a test's
+## one-second advance) stays stable instead of exploding. Slightly underdamped,
+## so it arrives with a small overshoot and settles — the physical read a fixed
+## ease cannot give.
+func _advance_spring(delta: float) -> void:
+	var stiffness := visuals.number("wheel.open_stiffness", 320.0)
+	var damping := visuals.number("wheel.open_damping", 26.0)
+	var step := 1.0 / 120.0
+	var remaining := delta
+	while remaining > 0.0:
+		var dt := minf(step, remaining)
+		remaining -= dt
+		_scale_v += (1.0 - _scale) * stiffness * dt
+		_scale_v -= _scale_v * damping * dt
+		_scale += _scale_v * dt
+	if _spring_settled():
+		_scale = 1.0
+		_scale_v = 0.0
+
+
+func _spring_settled() -> bool:
+	return absf(_scale - 1.0) < 0.001 and absf(_scale_v) < 0.001
 
 
 func _faded(colour: Variant) -> Color:
