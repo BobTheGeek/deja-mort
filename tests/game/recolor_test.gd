@@ -82,3 +82,44 @@ func test_an_unlisted_prop_keeps_its_own_look() -> void:
 	assert_object(_surface_albedo(renderer.object_node("cooking_oil"), "bottle-oil")) \
 		.override_failure_message("the oil was tinted by a recolour meant for other props") \
 		.is_null()
+
+
+## Every rule must land on something. A rule keyed to a material that no longer
+## exists paints nothing and looks like a design choice.
+func test_every_recolour_rule_lands_on_a_rendered_surface() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	var table: Dictionary = GameVisuals.load_table().get_value("models.recolor", {})
+	for mesh_name in table:
+		var id := ""
+		for obj in world.objects.all():
+			if str(obj.prop("mesh", "")) == mesh_name:
+				id = obj.id
+				break
+		assert_str(id).override_failure_message(
+			"%s is recoloured but no room object uses it" % mesh_name).is_not_empty()
+		var painted := false
+		for child in _descendants(renderer.object_node(id)):
+			if child is MeshInstance3D:
+				var mi := child as MeshInstance3D
+				for i in mi.mesh.get_surface_count():
+					if mi.get_surface_override_material(i) != null:
+						painted = true
+		assert_bool(painted).override_failure_message(
+			"%s recolour matched no surface" % mesh_name).is_true()
+
+
+func test_the_bed_cover_is_wool() -> void:
+	var bed := _rendered(F.world()).object_node("bed")
+	var cover: Variant = _surface_albedo(bed, "cover")
+	assert_bool(cover is Color and (cover as Color).b > (cover as Color).r) \
+		.override_failure_message("the cover is not cool wool: %s" % [cover]).is_true()
+
+
+## The bed frame node carries several materials, so the walnut proof lives on
+## the coffee table — one node, one `wood` material, no ambiguity.
+func test_the_coffee_table_is_walnut() -> void:
+	var table := _rendered(F.world()).object_node("coffee_table")
+	var wood: Variant = _surface_albedo(table, "tableCoffee(Clone)")
+	assert_bool(wood is Color and (wood as Color).r > (wood as Color).b) \
+		.override_failure_message("the table is not warm walnut: %s" % [wood]).is_true()

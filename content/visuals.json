@@ -418,6 +418,51 @@
           "metallic": 0.6,
           "roughness": 0.4
         }
+      },
+      "kenney/bedDouble": {
+        "wood": { "color": [0.45, 0.34, 0.22] },
+        "carpet": { "color": [0.36, 0.37, 0.40] },
+        "carpetWhite": { "color": [0.36, 0.37, 0.40] }
+      },
+      "kenney/loungeSofaLong": {
+        "carpet": { "color": [0.36, 0.37, 0.40] },
+        "wood": { "color": [0.45, 0.34, 0.22] }
+      },
+      "kenney/bookcaseClosedWide": {
+        "wood": { "color": [0.45, 0.34, 0.22] }
+      },
+      "kenney/tableCoffee": {
+        "wood": { "color": [0.45, 0.34, 0.22] }
+      },
+      "kenney/televisionModern": {
+        "metalDark": { "color": [0.30, 0.31, 0.33], "metallic": 0.4, "roughness": 0.45 },
+        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 }
+      },
+      "kenney/kitchenFridge": {
+        "metalLight": { "color": [0.60, 0.61, 0.60] },
+        "metalDark": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
+        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 }
+      },
+      "kenney/kitchenStove": {
+        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
+        "metalDark": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
+        "wood": { "color": [0.45, 0.34, 0.22] }
+      },
+      "kenney/kitchenSink": {
+        "wood": { "color": [0.45, 0.34, 0.22] },
+        "woodDark": { "color": [0.45, 0.34, 0.22] },
+        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
+        "metalDark": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
+        "metalLight": { "color": [0.60, 0.61, 0.60] },
+        "_defaultMat": { "color": [0.60, 0.61, 0.60] }
+      },
+      "kenney/sideTableDrawers": {
+        "wood": { "color": [0.45, 0.34, 0.22] },
+        "_defaultMat": { "color": [0.60, 0.61, 0.60] },
+        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 }
+      },
+      "kenney/lampRoundFloor": {
+        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 }
       }
     }
   },
