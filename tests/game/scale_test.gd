@@ -38,6 +38,12 @@ func test_the_pack_scale_is_data_not_a_number_in_the_renderer() -> void:
 		"visuals.json must declare how many metres one Kenney unit is").is_greater(0.0)
 
 
+func test_the_studio_pack_declares_its_scale() -> void:
+	var per_unit := GameVisuals.load_table().number("models.studio.metres_per_unit", 0.0)
+	assert_float(per_unit).override_failure_message(
+		"agent-built models must declare 1 unit = 1 m, or they shrink to fit").is_equal(1.0)
+
+
 func test_the_furniture_is_the_size_furniture_is() -> void:
 	var world := F.world()
 	var renderer := _rendered(world)

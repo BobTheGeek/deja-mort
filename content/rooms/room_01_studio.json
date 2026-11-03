@@ -363,7 +363,8 @@
         ]
       ],
       "reach": 8,
-      "inspect": "A small glass bubble. It should not be in a toaster."
+      "inspect": "A small glass bubble. It should not be in a toaster.",
+      "mesh": "studio/bubble_token"
     },
     {
       "id": "sink",

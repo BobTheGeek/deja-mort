@@ -376,6 +376,9 @@
     "kenney": {
       "metres_per_unit": 2.0
     },
+    "studio": {
+      "metres_per_unit": 1.0
+    },
     "max_overhang_m": 0.6,
     "kenney_food": {
       "metres_per_unit": 0.45

@@ -74,9 +74,16 @@ func test_a_meshed_object_renders_its_model_not_a_box() -> void:
 
 func test_an_unmeshed_object_still_gets_its_greybox() -> void:
 	var world := F.world()
-	var bare := world.objects.by_id("bubble_token")
+	var bare := world.objects.by_id("umbrella")
 	assert_str(str(bare.prop("mesh", ""))).is_empty()
-	assert_object(_rendered(world).object_node("bubble_token")).is_not_null()
+	assert_object(_rendered(world).object_node("umbrella")).is_not_null()
+
+
+## First Light: the collectible stopped being an amber greybox.
+func test_the_collectible_is_a_model_now() -> void:
+	var bare := F.world().objects.by_id("bubble_token")
+	assert_str(str(bare.prop("mesh", ""))).is_equal("studio/bubble_token")
+	assert_int(_mesh_instances(_rendered(F.world()).object_node("bubble_token"))).is_greater(0)
 
 
 ## Superseded by tests/game/scale_test.gd. A model is the size the real thing
