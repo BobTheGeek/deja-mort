@@ -29,6 +29,17 @@ func _surface_albedo(node: Node3D, want_node: String) -> Variant:
 	return null
 
 
+## The shipped material of an authored model — no override layer involved.
+func _base_albedo(node: Node3D, want_node: String, surface: int = 0) -> Variant:
+	for child in _descendants(node):
+		if not (child is MeshInstance3D) or child.name != want_node:
+			continue
+		var mi := child as MeshInstance3D
+		var mat := mi.mesh.surface_get_material(surface)
+		return (mat as StandardMaterial3D).albedo_color if mat is StandardMaterial3D else null
+	return null
+
+
 func _descendants(node: Node) -> Array:
 	var out: Array = [node]
 	for c in node.get_children():
@@ -49,29 +60,27 @@ func test_the_block_is_walnut_and_the_knives_are_left_alone() -> void:
 
 
 func test_the_pan_is_near_black() -> void:
-	var albedo: Variant = _surface_albedo(_rendered(F.world()).object_node("frying_pan"), "frying-pan")
-	assert_object(albedo).is_not_null()
-	assert_bool((albedo as Color).v < 0.2).override_failure_message(
+	var albedo: Variant = _base_albedo(_rendered(F.world()).object_node("frying_pan"), "frying_pan")
+	assert_bool(albedo is Color and (albedo as Color).v < 0.2).override_failure_message(
 		"the pan is not carbon dark: %s" % [albedo]).is_true()
 
 
 func test_the_toaster_reads_as_silver_with_a_darker_side() -> void:
-	var renderer := _rendered(F.world())
-	var mi: MeshInstance3D = null
-	for child in _descendants(renderer.object_node("toaster")):
-		if child is MeshInstance3D:
-			mi = child as MeshInstance3D
-	assert_object(mi).is_not_null()
 	var shades: Array = []
-	for i in mi.mesh.get_surface_count():
-		var mat := mi.get_surface_override_material(i)
-		assert_object(mat).override_failure_message("a toaster surface was not recoloured").is_not_null()
-		shades.append((mat as StandardMaterial3D).albedo_color.v)
+	for child in _descendants(_rendered(F.world()).object_node("toaster")):
+		if not (child is MeshInstance3D):
+			continue
+		var mi := child as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			var mat := mi.mesh.surface_get_material(i)
+			if mat is StandardMaterial3D:
+				shades.append((mat as StandardMaterial3D).albedo_color.v)
 	shades.sort()
-	assert_bool(shades[shades.size() - 1] > 0.7).override_failure_message(
-		"nothing on the toaster is bright silver: %s" % [shades]).is_true()
-	assert_bool(shades[0] < shades[shades.size() - 1]).override_failure_message(
-		"the toaster is one flat silver, so it has lost its shape").is_true()
+	assert_bool(shades.size() > 0 and float(shades[shades.size() - 1]) > 0.7) \
+		.override_failure_message("nothing on the toaster is bright silver: %s" % [shades]).is_true()
+	assert_bool(shades.size() > 1 and float(shades[0]) < float(shades[shades.size() - 1])) \
+		.override_failure_message(
+			"the toaster is one flat silver, so it has lost its shape").is_true()
 
 
 ## The proof it did not repaint the shared material: the oil bottle uses the same

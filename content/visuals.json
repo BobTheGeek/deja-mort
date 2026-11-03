@@ -391,37 +391,6 @@
           0.1
         ]
       },
-      "kenney_food/frying-pan": {
-        "*": {
-          "color": [
-            0.09,
-            0.09,
-            0.1
-          ],
-          "metallic": 0.3,
-          "roughness": 0.6
-        }
-      },
-      "kenney/toaster": {
-        "metal": {
-          "color": [
-            0.76,
-            0.78,
-            0.81
-          ],
-          "metallic": 0.6,
-          "roughness": 0.35
-        },
-        "metalMedium": {
-          "color": [
-            0.45,
-            0.47,
-            0.5
-          ],
-          "metallic": 0.6,
-          "roughness": 0.4
-        }
-      },
       "kenney/bedDouble": {
         "wood": { "color": [0.45, 0.34, 0.22] },
         "carpet": { "color": [0.36, 0.37, 0.40] },
@@ -445,19 +414,6 @@
         "metalLight": { "color": [0.60, 0.61, 0.60] },
         "metalDark": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
         "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 }
-      },
-      "kenney/kitchenStove": {
-        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
-        "metalDark": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
-        "wood": { "color": [0.45, 0.34, 0.22] }
-      },
-      "kenney/kitchenSink": {
-        "wood": { "color": [0.45, 0.34, 0.22] },
-        "woodDark": { "color": [0.45, 0.34, 0.22] },
-        "metal": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
-        "metalDark": { "color": [0.62, 0.63, 0.64], "metallic": 0.4, "roughness": 0.5 },
-        "metalLight": { "color": [0.60, 0.61, 0.60] },
-        "_defaultMat": { "color": [0.60, 0.61, 0.60] }
       },
       "kenney/sideTableDrawers": {
         "wood": { "color": [0.45, 0.34, 0.22] },
