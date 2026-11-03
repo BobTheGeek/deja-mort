@@ -2,7 +2,7 @@
 
 **Decision document, 3 Nov 2026.** Three committed directions for leveling up DÉJÀ MORT's look, each specified to the point of approval. Nothing in this document is implemented; no file outside it has changed. Bob picks one (or an order); a direction is approved only against a style frame before any code moves, and against the acceptance shots after.
 
-**Status, 3 Nov 2026: Direction A — First Light is chosen.** Bob approved the feel against the style frame generated from A's §8 prompt (v2, kept at `docs/reference/first-light-frame-v2.webp`). No code or content has moved yet; the next gate is the build plan, and the final gate remains the acceptance-shot set after the build.
+**Status, 3 Nov 2026: Direction A — First Light is chosen and built.** Bob approved the feel against the style frame generated from A's §8 prompt (v2, kept at `docs/reference/first-light-frame-v2.webp`). The build is on branch `first-light` — the data pass, the studio `counter*`/`toaster`/`bookshelf`/`bubble_token` models, and the dust puff. One scope ruling: the build also fixed a latent M4 defect (**hazard particles were invisible — CPUParticles3D renders nothing without a mesh**), so water, fire, shock and gas particles finally render too. The acceptance shot set is regenerated and **awaiting Bob's sign-off**.
 
 Derived from the repo, the studio's own peers (`docs/06-art-and-audio-requirements.md:7` — Hitman GO, Monument Valley, Lara Croft GO; "keep the bones, change the mood") and `docs/reference/style-target.png`. Bob has no references of his own, so every proposal below is grounded in a value or a rule that already exists.
 
