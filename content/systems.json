@@ -1,7 +1,7 @@
 {
   "tick_hz": 10,
   "forever_s": 9999,
-  "dust_s": 0.8,
+  "dust_s": 1.0,
   "player": {
     "walk_speed": 3.0,
     "durability": 1

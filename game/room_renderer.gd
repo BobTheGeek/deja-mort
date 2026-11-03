@@ -1070,7 +1070,27 @@ func _make_particles(spec: Dictionary) -> CPUParticles3D:
 	particles.emission_box_extents = Vector3(CELL * 0.45, 0.02, CELL * 0.45)
 	particles.local_coords = false
 	particles.emitting = true
+	particles.mesh = _particle_mesh()
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return particles
+
+
+## CPUParticles3D draws nothing without a mesh — the property has no default,
+## which is why every hazard particle since M4 was invisible. A tiny unshaded
+## sphere reads from any camera angle and takes the per-particle colour
+## (CPUParticles3D writes it into vertex colours).
+func _particle_mesh() -> SphereMesh:
+	var mesh := SphereMesh.new()
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	mesh.radius = 0.5
+	mesh.height = 1.0
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.disable_receive_shadows = true
+	mesh.material = material
+	return mesh
 
 
 ## A thing in the room glowing. The room still has exactly one bulb.

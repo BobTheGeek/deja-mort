@@ -98,6 +98,23 @@ func test_a_dust_cell_puffs_on_screen() -> void:
 		"a dust cell produced no puff").is_greater(0)
 
 
+## Found by the First Light acceptance shots: CPUParticles3D draws nothing
+## without a mesh (`mesh` has no default), so every hazard particle since M4 —
+## water, fire, shock, gas — was invisible. Nodes were counted; pixels were not.
+func test_particles_have_a_mesh_to_draw_with() -> void:
+	var world := F.world()
+	world.hazards.spawn("burning", Vector2i(5, 5), SimHazardField.FOREVER)
+	var renderer := _rendered(world)
+	renderer.sync(world, 0.1)
+	var counted := 0
+	for node in _all(renderer):
+		if node is CPUParticles3D:
+			counted += 1
+			assert_object((node as CPUParticles3D).mesh).override_failure_message(
+				"a CPUParticles3D with no mesh draws nothing").is_not_null()
+	assert_int(counted).override_failure_message("no particle system to inspect").is_greater(0)
+
+
 # --- light that comes from the room, not the rig -------------------------------
 
 ## docs/06: `on` gets a light child, `burning` gets an orange point light. The
