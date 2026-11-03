@@ -51,7 +51,7 @@ func test_covering_a_hazard_removes_its_marker() -> void:
 
 func test_the_lively_hazards_declare_particles() -> void:
 	var layers: Dictionary = _visuals().get_value("hazard.layers", {})
-	for layer in ["burning", "shock", "wet"]:
+	for layer in ["burning", "shock", "wet", "dust"]:
 		assert_bool((layers.get(layer, {}) as Dictionary).has("particles")) \
 			.override_failure_message("%s has no particles" % layer).is_true()
 
@@ -85,6 +85,17 @@ func test_a_hazard_that_goes_out_takes_its_particles_with_it() -> void:
 	renderer.sync(world, 0.1)
 	assert_int(_particle_systems(renderer)).override_failure_message(
 		"the fire went out but the flames stayed").is_equal(0)
+
+
+## First Light §4: the shelf landing puffs dust through the hazard layer —
+## visual only, no gameplay effect (not in HAZARD_LAYERS, not in hazard_effects).
+func test_a_dust_cell_puffs_on_screen() -> void:
+	var world := F.world()
+	world.hazards.spawn("dust", Vector2i(1, 3), SimHazardField.FOREVER)
+	var renderer := _rendered(world)
+	renderer.sync(world, 0.1)
+	assert_int(_particle_systems(renderer)).override_failure_message(
+		"a dust cell produced no puff").is_greater(0)
 
 
 # --- light that comes from the room, not the rig -------------------------------

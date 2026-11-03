@@ -751,6 +751,27 @@
         ],
         "alpha": 0.5,
         "emission": 0.6
+      },
+      "dust": {
+        "color": [
+          0.58,
+          0.54,
+          0.48
+        ],
+        "alpha": 0.08,
+        "particles": {
+          "amount": 10,
+          "lifetime": 0.8,
+          "velocity": 0.6,
+          "spread": 18.0,
+          "scale": 0.12,
+          "gravity": 0.25,
+          "color": [
+            0.62,
+            0.58,
+            0.52
+          ]
+        }
       }
     }
   },
