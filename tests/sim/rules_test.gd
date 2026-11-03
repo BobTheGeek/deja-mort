@@ -87,6 +87,22 @@ func test_rule_tip_second() -> void:
 	assert_array(shelf.cells).contains([Vector2i(1, 3)])
 
 
+## First Light: dust is spawned by tip_second but is not in the hazard field's
+## core layer list. The field must still expire it on its own clock, or the
+## puff becomes a permanent emitter (found in whole-branch review).
+func test_a_rule_spawned_layer_expires_on_its_own_clock() -> void:
+	var w := F.world()
+	assert_bool(F.goto(w, Vector2i(1, 7))).is_true()
+	F.act(w, "push", "bookshelf", "tip_first")
+	F.act(w, "push", "bookshelf", "tip_second")
+	assert_int(w.hazards.count("dust")).override_failure_message(
+		"the shelf landing spawned no dust").is_greater(0)
+	for i in 14:
+		w.step()
+	assert_int(w.hazards.count("dust")).override_failure_message(
+		"dust never expires - the puff is a permanent emitter").is_equal(0)
+
+
 func test_tipped_shelf_pins_whoever_is_under_it() -> void:
 	var w := F.world()
 	var victim := F.target_actor(w, Vector2i(1, 3))
