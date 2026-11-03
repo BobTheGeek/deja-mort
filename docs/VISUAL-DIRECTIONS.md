@@ -2,6 +2,8 @@
 
 **Decision document, 3 Nov 2026.** Three committed directions for leveling up DÉJÀ MORT's look, each specified to the point of approval. Nothing in this document is implemented; no file outside it has changed. Bob picks one (or an order); a direction is approved only against a style frame before any code moves, and against the acceptance shots after.
 
+**Status, 3 Nov 2026: Direction A — First Light is chosen.** Bob approved the feel against the style frame generated from A's §8 prompt (v2). No code or content has moved yet; the next gate is the build plan, and the final gate remains the acceptance-shot set after the build.
+
 Derived from the repo, the studio's own peers (`docs/06-art-and-audio-requirements.md:7` — Hitman GO, Monument Valley, Lara Croft GO; "keep the bones, change the mood") and `docs/reference/style-target.png`. Bob has no references of his own, so every proposal below is grounded in a value or a rule that already exists.
 
 **Where the look lives today** (each delta below lands on one of these):
