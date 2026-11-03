@@ -25,15 +25,15 @@
     "energy": 3.0,
     "range": 19.0,
     "shadow": true,
-    "attenuation": 1.1,
+    "attenuation": 1.4,
     "shadow_bias": 0.04
   },
   "ambient": {
-    "energy": 0.85,
+    "energy": 0.60,
     "color": [
-      0.4,
-      0.46,
-      0.58
+      0.34,
+      0.40,
+      0.56
     ]
   },
   "dark": {
@@ -47,23 +47,23 @@
   "floor": {
     "height": 0.08,
     "color": [
-      0.52,
-      0.4,
-      0.3
+      0.56,
+      0.42,
+      0.30
     ]
   },
   "wall": {
     "height": 3.0,
     "near_height": 0.0,
     "color_far_x": [
-      0.62,
-      0.63,
-      0.66
+      0.58,
+      0.60,
+      0.64
     ],
     "color_far_z": [
-      0.4,
-      0.42,
-      0.4
+      0.33,
+      0.36,
+      0.38
     ],
     "color": [
       0.45,
@@ -354,6 +354,13 @@
         "link_size": 0.035,
         "span": 0.34,
         "link_depth": 0.03
+      },
+      "aerosol": {
+        "color": [
+          0.7,
+          0.7,
+          0.72
+        ]
       }
     },
     "stack_spread": 0.22,
@@ -998,9 +1005,9 @@
     "hover_fill_alpha": 0.85
   },
   "vignette": {
-    "strength": 0.55,
+    "strength": 0.62,
     "softness": 0.6,
-    "grain": 0.03
+    "grain": 0.035
   },
   "panel": {
     "color": [
@@ -1033,8 +1040,8 @@
     "specular": 0.0
   },
   "post": {
-    "saturation": 0.62,
-    "contrast": 1.06,
+    "saturation": 0.55,
+    "contrast": 1.10,
     "brightness": 1.0
   },
   "notebook": {
