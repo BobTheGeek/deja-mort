@@ -124,7 +124,13 @@ func gas_level(zone: String) -> float:
 ## Returns the newly created cells as { layer: Array[Vector2i] }.
 func step(tick: int, dt: float, walkable: Callable) -> Dictionary:
 	var created := {}
-	for layer in LAYERS:
+	# Every layer that has cells, not only the core list: short-lived layers
+	# spawned by rules (dust) must expire on their own clock. Sorted so the
+	# order is deterministic; LAYERS stays the list `at()` and the state hash
+	# speak.
+	var names: Array = _layers.keys()
+	names.sort()
+	for layer in names:
 		var live: Dictionary = _layers[layer]
 		for cell in live.keys():
 			var until: int = int(live[cell])

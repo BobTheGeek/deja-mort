@@ -228,7 +228,7 @@
       },
       "reach": 8,
       "inspect": "Four burners. The clicker still works.",
-      "mesh": "kenney/kitchenStove",
+      "mesh": "studio/counter_stove",
       "mesh_yaw": 0
     },
     {
@@ -250,7 +250,8 @@
       "weight": 3,
       "reach": 8,
       "inspect": "Cast iron. Heavier than it looks.",
-      "mesh": "kenney_food/frying-pan"
+      "mesh": "studio/frying_pan",
+      "mesh_yaw": 0
     },
     {
       "id": "counter_drawer",
@@ -275,7 +276,7 @@
       ],
       "reach": 8,
       "inspect": "The drawer everything ends up in.",
-      "mesh": "kenney/kitchenCabinetDrawer",
+      "mesh": "studio/counter_drawer",
       "mesh_yaw": 0
     },
     {
@@ -346,7 +347,7 @@
       "cord_range": 3,
       "reach": 8,
       "inspect": "A cheap two-slot toaster. The cord is fraying.",
-      "mesh": "kenney/toaster",
+      "mesh": "studio/toaster",
       "mesh_yaw": 0
     },
     {
@@ -363,7 +364,8 @@
         ]
       ],
       "reach": 8,
-      "inspect": "A small glass bubble. It should not be in a toaster."
+      "inspect": "A small glass bubble. It should not be in a toaster.",
+      "mesh": "studio/bubble_token"
     },
     {
       "id": "sink",
@@ -384,7 +386,7 @@
       },
       "reach": 8,
       "inspect": "The tap drips even when it is off.",
-      "mesh": "kenney/kitchenSink",
+      "mesh": "studio/counter_sink",
       "mesh_yaw": 0
     },
     {
@@ -408,7 +410,7 @@
       ],
       "reach": 8,
       "inspect": "Five slots. Four knives.",
-      "mesh": "kenney/kitchenCabinet",
+      "mesh": "studio/counter_block",
       "mesh_yaw": 0
     },
     {
@@ -609,7 +611,7 @@
         ]
       },
       "inspect": "Overloaded and not fixed to the wall.",
-      "mesh": "kenney/bookcaseClosedWide",
+      "mesh": "studio/bookshelf",
       "mesh_yaw": 90
     },
     {
@@ -1468,8 +1470,8 @@
         4
       ],
       "height": 2.35,
-      "energy": 5.5,
-      "range": 17.0
+      "energy": 6.0,
+      "range": 14.0
     }
   }
 }
