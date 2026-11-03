@@ -611,7 +611,7 @@
         ]
       },
       "inspect": "Overloaded and not fixed to the wall.",
-      "mesh": "kenney/bookcaseClosedWide",
+      "mesh": "studio/bookshelf",
       "mesh_yaw": 90
     },
     {
