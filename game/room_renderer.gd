@@ -26,6 +26,8 @@ var _object_nodes: Dictionary = {}   # object id -> Node3D (a model root, or a g
 var _model_nodes: Dictionary = {}    # object ids drawn from a .glb rather than a box
 var _actor_nodes: Dictionary = {}    # actor id -> Node3D
 var _hazard_nodes: Dictionary = {}   # "layer@x,y" -> MeshInstance3D
+var _outline_regions: Dictionary = {}  # layer -> {"signature": String, "nodes": Array}
+var _pour_time: Dictionary = {}      # object id -> seconds since its source started pouring
 var _highlight_id: String = ""
 var _outline: Node3D = null
 var _shut_away: Dictionary = {}  # ids inside a closed container, this frame
@@ -53,6 +55,8 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	_wall_mounted.clear()
 	_actor_nodes.clear()
 	_hazard_nodes.clear()
+	_outline_regions.clear()
+	_pour_time.clear()
 
 	_floor_root = _add_root("Floor")
 	_object_root = _add_root("Objects")
@@ -704,7 +708,7 @@ func sync(world: SimWorld, delta: float, tick_alpha: float = 0.0) -> void:
 	_sync_lighting(world)
 	_sync_highlight(world)
 	_sync_flicker(delta)
-	_sync_objects(world)
+	_sync_objects(world, delta)
 	_sync_hazards(world)
 	_sync_actors(world, delta, tick_alpha)
 
@@ -775,9 +779,9 @@ func _apply_lighting(lit: bool) -> void:
 		else visuals.number("dark.ambient_energy", 0.035)
 
 
-func _sync_objects(world: SimWorld) -> void:
+func _sync_objects(world: SimWorld, delta: float = 0.0) -> void:
 	_hide_what_is_shut_away(world)
-	_place_objects(world)
+	_place_objects(world, delta)
 	_stack_small_objects(world)
 
 
@@ -853,7 +857,7 @@ func _shares_a_cell(a: SimObject, b: SimObject) -> bool:
 	return false
 
 
-func _place_objects(world: SimWorld) -> void:
+func _place_objects(world: SimWorld, delta: float = 0.0) -> void:
 	for obj in world.objects.all():
 		var node: Node3D = _object_nodes.get(obj.id, null)
 		if node == null:
@@ -874,6 +878,7 @@ func _place_objects(world: SimWorld) -> void:
 			_override_model(node, look, emission)
 			_sync_object_light(node, look)
 			_sync_object_marker(node, look)
+			_sync_stream(node, obj, look, delta)
 			continue
 		node.position = Vector3(
 			float(obj.cells[0].x) + float(extent.x) * 0.5,
@@ -888,6 +893,7 @@ func _place_objects(world: SimWorld) -> void:
 		)
 		_sync_object_light(node, look)
 		_sync_object_marker(node, look)
+		_sync_stream(node, obj, look, delta)
 
 
 ## Some states are facts the player acts on and cannot otherwise see: a door
@@ -916,6 +922,134 @@ func _sync_object_marker(node: Node3D, look: Dictionary) -> void:
 	marker.rotation_degrees = Vector3(0.0, 0.0, float(shape.get("roll_deg", 0.0)))
 	marker.material_override = _material(visuals.to_colour(shape.get("color", null)),
 		visuals.number("object.marker_emission", 0.35))
+
+
+const POUR_STREAM := "PourStream"
+
+
+## A wet source that is running pours, in stages: the faucet jet runs into the
+## basin, the basin surface climbs while it fills, and once full a delimited
+## overflow sheet runs over the front lip, down the cabinet face and onto the
+## floor, with a splash at its foot. All keyed off the `stream` block in the
+## object's tag look and the object's own `on` state — no object is named.
+func _sync_stream(node: Node3D, obj: SimObject, look: Dictionary, delta: float = 0.0) -> void:
+	var spec: Variant = look.get("stream", null)
+	var existing: Node3D = node.get_node_or_null(NodePath(POUR_STREAM))
+	var wanted := spec is Dictionary and bool(obj.state.get("on", false))
+	if not wanted:
+		_pour_time.erase(obj.id)
+		if existing != null:
+			existing.free()
+		return
+	var shape: Dictionary = spec
+	if existing == null:
+		existing = _build_pour(shape)
+		existing.name = POUR_STREAM
+		node.add_child(existing)
+	_pour_time[obj.id] = float(_pour_time.get(obj.id, 0.0)) + delta
+	_update_pour(existing, shape, float(_pour_time[obj.id]))
+
+
+func _build_pour(shape: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var faucet: Array = shape.get("faucet", [0.0, 0.9, 0.0])
+	var basin: Dictionary = shape.get("basin", {})
+	var ov: Dictionary = shape.get("overflow", {})
+	var basin_floor := float(basin.get("floor_y", 0.8))
+	var jet := MeshInstance3D.new()
+	jet.name = "FaucetStream"
+	var tube := CylinderMesh.new()
+	tube.top_radius = float(shape.get("radius", 0.012))
+	tube.bottom_radius = tube.top_radius
+	tube.height = maxf(float(faucet[1]) - basin_floor, 0.05)
+	tube.radial_segments = 10
+	jet.mesh = tube
+	jet.material_override = _pour_material(shape.get("color", null),
+		float(shape.get("alpha", 0.6)))
+	jet.position = Vector3(float(faucet[0]),
+		(float(faucet[1]) + basin_floor) * 0.5, float(faucet[2]))
+	jet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(jet)
+
+	var centre: Array = basin.get("centre", [0.0, 0.0])
+	var span: Array = basin.get("size", [0.4, 0.3])
+	var fill := MeshInstance3D.new()
+	fill.name = "BasinFill"
+	var slab := BoxMesh.new()
+	slab.size = Vector3(float(span[0]), 0.008, float(span[1]))
+	fill.mesh = slab
+	fill.material_override = _pour_material(
+		basin.get("color", ov.get("color", null)),
+		float(basin.get("alpha", ov.get("alpha", 0.5))))
+	fill.position = Vector3(float(centre[0]), basin_floor, float(centre[1]))
+	fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(fill)
+
+	var overflow := Node3D.new()
+	overflow.name = "Overflow"
+	overflow.visible = false
+	var cx := float(ov.get("centre_x", 0.0))
+	var width := float(ov.get("width", 0.26))
+	var top_y := float(ov.get("top_y", 0.9))
+	var floor_y := float(ov.get("floor_y", 0.02))
+	var lip_z := float(ov.get("lip_z", 0.15))
+	var front_z := float(ov.get("front_z", 0.302))
+	var sheet := _pour_material(ov.get("color", null), float(ov.get("alpha", 0.5)))
+	_add_pour_box(overflow, "OverflowRun", Vector3(width, 0.006, front_z - lip_z + 0.01),
+		Vector3(cx, top_y + 0.004, (lip_z + front_z) * 0.5), sheet)
+	_add_pour_box(overflow, "OverflowFront", Vector3(width, top_y - floor_y, 0.014),
+		Vector3(cx, (top_y + floor_y) * 0.5, front_z + 0.013), sheet)
+	# Rills: pale running-water edges over the one water tone, so the sheet
+	# reads without becoming a second colour — foam is water too.
+	var foam := _pour_material(shape.get("color", null),
+		clampf(float(shape.get("alpha", 0.9)) * 0.7, 0.0, 1.0))
+	_add_pour_box(overflow, "OverflowLip", Vector3(width, 0.022, 0.016),
+		Vector3(cx, top_y, front_z + 0.015), foam)
+	for side in [-1.0, 1.0]:
+		_add_pour_box(overflow, "OverflowRill", Vector3(0.028, top_y - floor_y, 0.016),
+			Vector3(cx + side * (width * 0.5 - 0.03), (top_y + floor_y) * 0.5,
+				front_z + 0.015), foam)
+	_add_pour_box(overflow, "OverflowFoot", Vector3(width * 0.8, 0.008, 0.16),
+		Vector3(cx, floor_y, front_z + 0.10), sheet)
+	if shape.has("splash"):
+		var splash := _make_particles(shape["splash"], Vector3(0.06, 0.01, 0.06))
+		splash.position = Vector3(cx, 0.03, front_z + 0.08)
+		overflow.add_child(splash)
+	root.add_child(overflow)
+	return root
+
+
+func _update_pour(root: Node3D, shape: Dictionary, elapsed: float) -> void:
+	var basin: Dictionary = shape.get("basin", {})
+	var fill: Node3D = root.get_node_or_null("BasinFill")
+	if fill == null:
+		return
+	var fill_s := maxf(float(basin.get("fill_s", 2.5)), 0.1)
+	var progress := clampf(elapsed / fill_s, 0.0, 1.0)
+	fill.position.y = lerpf(float(basin.get("floor_y", 0.8)),
+		float(basin.get("full_y", 0.89)), progress)
+	var overflow: Node3D = root.get_node_or_null("Overflow")
+	if overflow != null:
+		overflow.visible = progress >= 1.0
+
+
+func _pour_material(colour: Variant, alpha: float) -> StandardMaterial3D:
+	var material := _material(visuals.to_colour(colour), 0.0, alpha)
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
+
+
+func _add_pour_box(parent: Node3D, part_name: String, size: Vector3, pos: Vector3,
+		material: StandardMaterial3D) -> void:
+	var mesh := MeshInstance3D.new()
+	mesh.name = part_name
+	var box := BoxMesh.new()
+	box.size = size
+	mesh.mesh = box
+	mesh.material_override = material
+	mesh.position = pos
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mesh)
 
 
 ## A wall cabinet is on the wall and a light switch is at hand height. Drawn on
@@ -1021,6 +1155,10 @@ func _sync_hazards(world: SimWorld) -> void:
 	var height := visuals.number("hazard.height", 0.02)
 	var live := {}
 	for layer in layers:
+		var layer_spec: Dictionary = layers[layer]
+		if str(layer_spec.get("shape", "")) == "outline":
+			_sync_outline_layer(world, str(layer), layer_spec)
+			continue
 		for cell in world.hazards.cells(str(layer)):
 			var key := "%s@%d,%d" % [layer, cell.x, cell.y]
 			live[key] = true
@@ -1052,9 +1190,197 @@ func _sync_hazards(world: SimWorld) -> void:
 		_hazard_nodes.erase(key)
 
 
+## Outline layers (water): a whole connected region draws as ONE smoothed
+## polygon with a waterline band along its edge, never a grid of tiles. The
+## mesh rebuilds whenever the region's cell set changes.
+func _sync_outline_layer(world: SimWorld, layer: String, spec: Dictionary) -> void:
+	var cells := world.hazards.cells(layer)
+	var signature := ""
+	for cell in cells:
+		signature += "%d,%d;" % [cell.x, cell.y]
+	var entry: Dictionary = _outline_regions.get(layer, {})
+	if str(entry.get("signature", "~")) == signature:
+		return
+	for node in entry.get("nodes", []):
+		(node as Node).free()
+	var nodes: Array = []
+	var seen := {}
+	for cell in cells:
+		if seen.has(cell):
+			continue
+		var region := world.hazards.connected(layer, cell)
+		for member in region:
+			seen[member] = true
+		nodes.append_array(_build_water_region(region, spec))
+	_outline_regions[layer] = {"signature": signature, "nodes": nodes}
+
+
+## One region: walk its cell boundary into loops, smooth them, triangulate the
+## body, and ring it with an outward-offset waterline. Holes (an object standing
+## in the water) are skipped — the object occludes that ground anyway.
+func _build_water_region(region: Array, spec: Dictionary) -> Array:
+	var height := visuals.number("hazard.height", 0.02)
+	var first: Vector2i = region[0]
+	var group := Node3D.new()
+	# One container per region, named by its first cell: the children can then
+	# keep plain names ("WaterBody") without sibling collisions renaming them.
+	group.name = "WaterRegion_%d,%d" % [first.x, first.y]
+	_hazard_root.add_child(group)
+	for loop in _outline_loops(region):
+		if _polygon_area(loop) <= 0.0:
+			continue
+		var smooth := _chaikin(loop, int(spec.get("smooth_iterations", 2)))
+		var expanded := Geometry2D.offset_polygon(smooth, float(spec.get("rim_width", 0.07)))
+		if not expanded.is_empty():
+			var ring: PackedVector2Array = expanded[0]
+			for candidate in expanded:
+				if _polygon_area(candidate) > _polygon_area(ring):
+					ring = candidate
+			var line := _polygon_mesh(ring, Vector3(0.0, height * 0.72, 0.0),
+				visuals.to_colour(spec.get("rim_color", null)),
+				float(spec.get("rim_alpha", 0.8)))
+			line.name = "Waterline"
+			group.add_child(line)
+		var body := _polygon_mesh(smooth, Vector3(0.0, height * 1.05, 0.0),
+			visuals.to_colour(spec.get("color", null)), float(spec.get("alpha", 0.55)))
+		body.name = "WaterBody"
+		group.add_child(body)
+	if spec.has("particles"):
+		var bounds := _region_bounds(region)
+		var holder := Node3D.new()
+		holder.name = "WaterDrops"
+		holder.position = Vector3(bounds.position.x + bounds.size.x * 0.5, 0.0,
+			bounds.position.y + bounds.size.y * 0.5)
+		holder.add_child(_make_particles(spec["particles"],
+			Vector3(bounds.size.x * 0.38, 0.02, bounds.size.y * 0.38)))
+		group.add_child(holder)
+	return [group]
+
+
+## A cell union's boundary loops as stair-step polylines: outer edges wind
+## counter-clockwise (positive area), holes clockwise. Unit segments chain by
+## their endpoints, which is exact for a union of grid cells.
+func _outline_loops(region: Array) -> Array:
+	var has := {}
+	for cell in region:
+		has[cell] = true
+	var starts: Array = []
+	var by_start := {}
+	for cell in region:
+		var x: int = cell.x
+		var y: int = cell.y
+		var edges: Array = []
+		if not has.has(Vector2i(x, y - 1)):
+			edges.append([Vector2i(x, y), Vector2i(x + 1, y)])
+		if not has.has(Vector2i(x + 1, y)):
+			edges.append([Vector2i(x + 1, y), Vector2i(x + 1, y + 1)])
+		if not has.has(Vector2i(x, y + 1)):
+			edges.append([Vector2i(x + 1, y + 1), Vector2i(x, y + 1)])
+		if not has.has(Vector2i(x - 1, y)):
+			edges.append([Vector2i(x, y + 1), Vector2i(x, y)])
+		for edge in edges:
+			starts.append(edge)
+			if not by_start.has(edge[0]):
+				by_start[edge[0]] = []
+			(by_start[edge[0]] as Array).append(edge[1])
+	var used := {}
+	var loops: Array = []
+	for start in starts:
+		if used.has(_edge_key(start[0], start[1])):
+			continue
+		var loop := PackedVector2Array()
+		var first: Vector2i = start[0]
+		var current: Vector2i = start[0]
+		var next_point: Vector2i = start[1]
+		for guard in 8192:
+			used[_edge_key(current, next_point)] = true
+			loop.append(Vector2(current))
+			current = next_point
+			if current == first:
+				break
+			var advanced := false
+			for candidate in by_start.get(current, []):
+				if not used.has(_edge_key(current, candidate)):
+					next_point = candidate
+					advanced = true
+					break
+			if not advanced:
+				break
+		if loop.size() >= 3:
+			loops.append(loop)
+	return loops
+
+
+func _edge_key(a: Vector2i, b: Vector2i) -> String:
+	return "%d,%d>%d,%d" % [a.x, a.y, b.x, b.y]
+
+
+## Corner-cutting on a closed loop: every edge becomes two, at the quarter
+## points. Deterministic, and turns the stair-step boundary into a puddle.
+func _chaikin(points: PackedVector2Array, iterations: int) -> PackedVector2Array:
+	var loop := points
+	for step in maxi(iterations, 0):
+		var next := PackedVector2Array()
+		var n := loop.size()
+		for i in n:
+			var p := loop[i]
+			var q := loop[(i + 1) % n]
+			next.append(p.lerp(q, 0.25))
+			next.append(p.lerp(q, 0.75))
+		loop = next
+	return loop
+
+
+func _polygon_area(points: PackedVector2Array) -> float:
+	var area := 0.0
+	var n := points.size()
+	for i in n:
+		var a := points[i]
+		var b := points[(i + 1) % n]
+		area += a.x * b.y - b.x * a.y
+	return area * 0.5
+
+
+func _region_bounds(region: Array) -> Rect2:
+	var lo: Vector2i = region[0]
+	var hi: Vector2i = region[0]
+	for cell in region:
+		lo = Vector2i(mini(lo.x, cell.x), mini(lo.y, cell.y))
+		hi = Vector2i(maxi(hi.x, cell.x), maxi(hi.y, cell.y))
+	return Rect2(Vector2(lo), Vector2(hi - lo + Vector2i.ONE))
+
+
+## A flat polygon in the floor plane from a loop in cell coordinates. Both
+## sides of the sheet draw, so winding cannot hide the water.
+func _polygon_mesh(points: PackedVector2Array, offset: Vector3, colour: Color,
+		alpha: float) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	var indices := Geometry2D.triangulate_polygon(points)
+	if not indices.is_empty():
+		var vertices := PackedVector3Array()
+		var normals := PackedVector3Array()
+		for p in points:
+			vertices.append(Vector3(p.x, 0.0, p.y))
+			normals.append(Vector3.UP)
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = vertices
+		arrays[Mesh.ARRAY_NORMAL] = normals
+		arrays[Mesh.ARRAY_INDEX] = indices
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		node.mesh = mesh
+	var material := _material(colour, 0.0, alpha)
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	node.material_override = material
+	node.position = offset
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return node
+
+
 ## CPU particles on purpose: the project falls back to GL Compatibility on mobile,
 ## where GPU particles are not dependable.
-func _make_particles(spec: Dictionary) -> CPUParticles3D:
+func _make_particles(spec: Dictionary, box_extents := Vector3.ZERO) -> CPUParticles3D:
 	var particles := CPUParticles3D.new()
 	particles.amount = int(spec.get("amount", 8))
 	particles.lifetime = float(spec.get("lifetime", 1.0))
@@ -1067,7 +1393,8 @@ func _make_particles(spec: Dictionary) -> CPUParticles3D:
 	particles.scale_amount_max = float(spec.get("scale", 0.1))
 	particles.color = visuals.to_colour(spec.get("color", null))
 	particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	particles.emission_box_extents = Vector3(CELL * 0.45, 0.02, CELL * 0.45)
+	particles.emission_box_extents = box_extents if box_extents != Vector3.ZERO \
+		else Vector3(CELL * 0.45, 0.02, CELL * 0.45)
 	particles.local_coords = false
 	particles.emitting = true
 	particles.mesh = _particle_mesh()

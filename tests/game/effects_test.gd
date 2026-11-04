@@ -143,12 +143,12 @@ func test_particle_materials_follow_the_spec() -> void:
 ## room, not a fresh pair for every hazard cell.
 func test_particle_resources_are_shared_across_cells() -> void:
 	var world := F.world()
-	world.hazards.spawn("wet", Vector2i(1, 1), SimHazardField.FOREVER)
-	world.hazards.spawn("wet", Vector2i(2, 1), SimHazardField.FOREVER)
+	world.hazards.spawn("dust", Vector2i(1, 3), SimHazardField.FOREVER)
+	world.hazards.spawn("dust", Vector2i(2, 3), SimHazardField.FOREVER)
 	var renderer := _rendered(world)
 	renderer.sync(world, 0.1)
-	var a := _hazard_particles(renderer, "wet", Vector2i(1, 1))
-	var b := _hazard_particles(renderer, "wet", Vector2i(2, 1))
+	var a := _hazard_particles(renderer, "dust", Vector2i(1, 3))
+	var b := _hazard_particles(renderer, "dust", Vector2i(2, 3))
 	assert_object(a).is_not_null()
 	assert_object(b).is_not_null()
 	assert_bool(a.mesh == b.mesh).override_failure_message(
