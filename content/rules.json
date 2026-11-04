@@ -119,6 +119,12 @@
         "where": "tips_onto",
         "effect": "pinned",
         "for_system": "status_s.pinned"
+      },
+      {
+        "op": "hazard",
+        "layer": "dust",
+        "where": "tips_onto",
+        "for_system": "dust_s"
       }
     ],
     "shadows": [

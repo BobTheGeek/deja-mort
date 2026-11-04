@@ -1070,7 +1070,51 @@ func _make_particles(spec: Dictionary) -> CPUParticles3D:
 	particles.emission_box_extents = Vector3(CELL * 0.45, 0.02, CELL * 0.45)
 	particles.local_coords = false
 	particles.emitting = true
+	particles.mesh = _particle_mesh()
+	particles.material_override = _particle_material(
+		bool(spec.get("unshaded", true)), float(spec.get("alpha", 1.0)))
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return particles
+
+
+var _particle_mesh_cached: SphereMesh = null
+var _particle_material_cached: Dictionary = {}
+
+
+## CPUParticles3D draws nothing without a mesh — the property has no default,
+## which is why every hazard particle since M4 was invisible. One tiny sphere
+## is shared by every cell; the material per (shading, alpha) carries colour.
+func _particle_mesh() -> SphereMesh:
+	if _particle_mesh_cached != null:
+		return _particle_mesh_cached
+	var mesh := SphereMesh.new()
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	mesh.radius = 0.5
+	mesh.height = 1.0
+	_particle_mesh_cached = mesh
+	return mesh
+
+
+## One material per (unshaded, alpha) pair, shared across every cell.
+## CPUParticles3D writes the per-particle colour into vertex colours, so albedo
+## here is white times that colour; alpha comes from the layer spec. Fire and
+## sparks stay unshaded (they glow); dust and water take the room light, so
+## they dim when the bulb is off.
+func _particle_material(unshaded: bool, alpha: float) -> StandardMaterial3D:
+	var key := "%s|%.3f" % [unshaded, alpha]
+	if _particle_material_cached.has(key):
+		return _particle_material_cached[key] as StandardMaterial3D
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED if unshaded \
+		else BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	material.albedo_color = Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0))
+	if alpha < 1.0:
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.disable_receive_shadows = true
+	_particle_material_cached[key] = material
+	return material
 
 
 ## A thing in the room glowing. The room still has exactly one bulb.

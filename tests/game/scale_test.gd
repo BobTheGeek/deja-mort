@@ -28,6 +28,13 @@ const REAL_SIZES := {
 	"bathtub": {"axis": "floor", "min": 1.50, "max": 2.50},
 	"toilet": {"axis": "floor", "min": 0.60, "max": 1.10},
 	"toaster": {"axis": "floor", "min": 0.15, "max": 0.60},
+	"stove": {"axis": "height", "min": 0.80, "max": 1.00},
+	"sink": {"axis": "height", "min": 0.75, "max": 0.95},
+	"counter_drawer": {"axis": "height", "min": 0.80, "max": 1.00},
+	"frying_pan": {"axis": "floor", "min": 0.35, "max": 0.55},
+	"bookshelf": {"axis": "floor", "min": 1.30, "max": 1.80},
+	"bubble_token": {"axis": "floor", "min": 0.10, "max": 0.20},
+	"counter_knife": {"axis": "height", "min": 0.80, "max": 1.00},
 	"tv": {"axis": "floor", "min": 0.90, "max": 1.60},
 }
 
@@ -36,6 +43,12 @@ func test_the_pack_scale_is_data_not_a_number_in_the_renderer() -> void:
 	var per_unit := GameVisuals.load_table().number("models.kenney.metres_per_unit", 0.0)
 	assert_float(per_unit).override_failure_message(
 		"visuals.json must declare how many metres one Kenney unit is").is_greater(0.0)
+
+
+func test_the_studio_pack_declares_its_scale() -> void:
+	var per_unit := GameVisuals.load_table().number("models.studio.metres_per_unit", 0.0)
+	assert_float(per_unit).override_failure_message(
+		"agent-built models must declare 1 unit = 1 m, or they shrink to fit").is_equal(1.0)
 
 
 func test_the_furniture_is_the_size_furniture_is() -> void:
