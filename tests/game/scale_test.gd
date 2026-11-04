@@ -29,7 +29,7 @@ const REAL_SIZES := {
 	"toilet": {"axis": "floor", "min": 0.60, "max": 1.10},
 	"toaster": {"axis": "floor", "min": 0.15, "max": 0.60},
 	"stove": {"axis": "height", "min": 0.80, "max": 1.00},
-	"sink": {"axis": "height", "min": 0.75, "max": 0.95},
+	"sink": {"axis": "height", "min": 0.75, "max": 1.15},
 	"counter_drawer": {"axis": "height", "min": 0.80, "max": 1.00},
 	"frying_pan": {"axis": "floor", "min": 0.35, "max": 0.55},
 	"bookshelf": {"axis": "floor", "min": 1.30, "max": 1.80},

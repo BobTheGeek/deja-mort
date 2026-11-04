@@ -107,6 +107,24 @@ func test_the_sink_fills_then_overflows() -> void:
 	renderer.sync(world, 5.0, 0.0)
 	assert_bool(overflow.visible).override_failure_message(
 		"the sink never overflows").is_true()
+	assert_object(overflow.get_node_or_null("SplashRing")).override_failure_message(
+		"the spill lands with no ripple rings").is_not_null()
+
+
+## Water pools against furniture bases: the sim cannot mark an occupied cell
+## wet, but the drawn region creeps one cell under it, or the puddle visibly
+## stops short of the cabinet it just ran down.
+func test_water_pools_against_furniture_bases() -> void:
+	var world := F.world()
+	world.hazards.spawn("wet", Vector2i(4, 2), SimHazardField.FOREVER)
+	var renderer := _rendered(world)
+	var bodies := _named(renderer, "WaterBody")
+	assert_int(bodies.size()).is_equal(1)
+	if bodies.size() != 1:
+		return
+	var box: AABB = (bodies[0] as MeshInstance3D).mesh.get_aabb()
+	assert_float(box.size.z).override_failure_message(
+		"the puddle stops short of the sink instead of pooling under it: %s" % [box]).is_greater(1.4)
 
 
 func test_a_running_wet_source_pours() -> void:

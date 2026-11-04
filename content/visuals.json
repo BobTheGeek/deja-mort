@@ -257,8 +257,8 @@
         "stream": {
           "faucet": [
             0.05,
-            0.93,
-            -0.19
+            1.02,
+            -0.12
           ],
           "radius": 0.016,
           "color": [
@@ -280,31 +280,48 @@
             "full_y": 0.895,
             "fill_s": 2.5,
             "color": [
-              0.3,
-              0.48,
-              0.66
+              0.25,
+              0.5,
+              0.85
             ],
-            "alpha": 0.75
+            "alpha": 0.65,
+            "emission": 0.04
           },
           "overflow": {
             "centre_x": -0.05,
             "width": 0.4,
+            "spread": 1.5,
             "lip_z": 0.15,
             "front_z": 0.302,
             "top_y": 0.9,
             "floor_y": 0.02,
             "color": [
-              0.3,
-              0.48,
-              0.66
+              0.25,
+              0.5,
+              0.85
             ],
-            "alpha": 0.7
+            "alpha": 0.62,
+            "emission": 0.04,
+            "rings": {
+              "radii": [
+                0.3,
+                0.47,
+                0.66
+              ],
+              "width": 0.025,
+              "alpha": 0.45,
+              "color": [
+                0.78,
+                0.9,
+                0.98
+              ]
+            }
           },
           "splash": {
             "amount": 14,
             "lifetime": 0.5,
-            "velocity": 1.0,
-            "spread": 40.0,
+            "velocity": 1.3,
+            "spread": 55.0,
             "scale": 0.055,
             "gravity": 1.2,
             "unshaded": false,
@@ -643,20 +660,22 @@
     "layers": {
       "wet": {
         "color": [
-          0.30,
-          0.48,
-          0.66
+          0.25,
+          0.5,
+          0.85
         ],
-        "alpha": 0.40,
+        "alpha": 0.45,
+        "emission": 0.04,
         "shape": "outline",
-        "smooth_iterations": 2,
-        "rim_width": 0.07,
+        "smooth_iterations": 3,
+        "wobble": 0.02,
+        "rim_width": 0.05,
         "rim_color": [
-          0.15,
-          0.28,
-          0.44
+          0.72,
+          0.86,
+          0.96
         ],
-        "rim_alpha": 0.8,
+        "rim_alpha": 0.55,
         "particles": {
           "amount": 10,
           "lifetime": 2.4,

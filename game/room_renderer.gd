@@ -980,7 +980,8 @@ func _build_pour(shape: Dictionary) -> Node3D:
 	fill.mesh = slab
 	fill.material_override = _pour_material(
 		basin.get("color", ov.get("color", null)),
-		float(basin.get("alpha", ov.get("alpha", 0.5))))
+		float(basin.get("alpha", ov.get("alpha", 0.5))),
+		float(basin.get("emission", ov.get("emission", 0.0))))
 	fill.position = Vector3(float(centre[0]), basin_floor, float(centre[1]))
 	fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(fill)
@@ -994,26 +995,52 @@ func _build_pour(shape: Dictionary) -> Node3D:
 	var floor_y := float(ov.get("floor_y", 0.02))
 	var lip_z := float(ov.get("lip_z", 0.15))
 	var front_z := float(ov.get("front_z", 0.302))
-	var sheet := _pour_material(ov.get("color", null), float(ov.get("alpha", 0.5)))
-	_add_pour_box(overflow, "OverflowRun", Vector3(width, 0.006, front_z - lip_z + 0.01),
+	var top_width := width
+	var bottom_width := width * float(ov.get("spread", 1.5))
+	var mid_y := (top_y + floor_y) * 0.5
+	var sheet := _pour_material(ov.get("color", null), float(ov.get("alpha", 0.78)),
+		float(ov.get("emission", 0.0)))
+	_add_pour_box(overflow, "OverflowRun", Vector3(top_width, 0.006, front_z - lip_z + 0.01),
 		Vector3(cx, top_y + 0.004, (lip_z + front_z) * 0.5), sheet)
-	_add_pour_box(overflow, "OverflowFront", Vector3(width, top_y - floor_y, 0.014),
-		Vector3(cx, (top_y + floor_y) * 0.5, front_z + 0.013), sheet)
+	# The tongue: narrower at the lip, widening as it falls — falling water
+	# spreads, and the taper reads as flow rather than a pasted rectangle.
+	_add_pour_box(overflow, "OverflowUpper", Vector3(top_width, top_y - mid_y, 0.014),
+		Vector3(cx, (top_y + mid_y) * 0.5, front_z + 0.013), sheet)
+	_add_pour_box(overflow, "OverflowLower", Vector3(bottom_width, mid_y - floor_y, 0.014),
+		Vector3(cx, (mid_y + floor_y) * 0.5, front_z + 0.013), sheet)
 	# Rills: pale running-water edges over the one water tone, so the sheet
 	# reads without becoming a second colour — foam is water too.
 	var foam := _pour_material(shape.get("color", null),
 		clampf(float(shape.get("alpha", 0.9)) * 0.7, 0.0, 1.0))
-	_add_pour_box(overflow, "OverflowLip", Vector3(width, 0.022, 0.016),
+	_add_pour_box(overflow, "OverflowLip", Vector3(top_width, 0.022, 0.016),
 		Vector3(cx, top_y, front_z + 0.015), foam)
 	for side in [-1.0, 1.0]:
-		_add_pour_box(overflow, "OverflowRill", Vector3(0.028, top_y - floor_y, 0.016),
-			Vector3(cx + side * (width * 0.5 - 0.03), (top_y + floor_y) * 0.5,
+		_add_pour_box(overflow, "OverflowRillTop", Vector3(0.028, top_y - mid_y, 0.016),
+			Vector3(cx + side * (top_width * 0.5 - 0.03), (top_y + mid_y) * 0.5,
 				front_z + 0.015), foam)
-	_add_pour_box(overflow, "OverflowFoot", Vector3(width * 0.8, 0.008, 0.16),
-		Vector3(cx, floor_y, front_z + 0.10), sheet)
+		_add_pour_box(overflow, "OverflowRillLow", Vector3(0.028, mid_y - floor_y, 0.016),
+			Vector3(cx + side * (bottom_width * 0.5 - 0.03), (mid_y + floor_y) * 0.5,
+				front_z + 0.015), foam)
+	_add_pour_box(overflow, "OverflowFoot", Vector3(width * 0.42, 0.008, 0.10),
+		Vector3(cx, floor_y, front_z + 0.09), foam)
+
+	if ov.has("rings"):
+		var rings: Dictionary = ov["rings"]
+		var ring_colour := visuals.to_colour(rings.get("color", null))
+		var ring_width := float(rings.get("width", 0.025))
+		var ring_alpha := float(rings.get("alpha", 0.45))
+		var ring_index := 0
+		for radius in rings.get("radii", []):
+			var band := _ring_band(Vector2(cx, front_z + 0.14), float(radius), ring_width,
+				floor_y + 0.006, ring_colour, ring_alpha * pow(0.72, ring_index))
+			band.name = "SplashRing"
+			overflow.add_child(band)
+			ring_index += 1
 	if shape.has("splash"):
 		var splash := _make_particles(shape["splash"], Vector3(0.06, 0.01, 0.06))
-		splash.position = Vector3(cx, 0.03, front_z + 0.08)
+		# Land the splash at the floor puddle's own edge: falling water leaves
+		# the wall with momentum, and the join is then droplets, not a seam.
+		splash.position = Vector3(cx, 0.03, front_z + 0.14)
 		overflow.add_child(splash)
 	root.add_child(overflow)
 	return root
@@ -1033,10 +1060,94 @@ func _update_pour(root: Node3D, shape: Dictionary, elapsed: float) -> void:
 		overflow.visible = progress >= 1.0
 
 
-func _pour_material(colour: Variant, alpha: float) -> StandardMaterial3D:
-	var material := _material(visuals.to_colour(colour), 0.0, alpha)
+func _pour_material(colour: Variant, alpha: float, emission: float = 0.0) -> StandardMaterial3D:
+	var material := _material(visuals.to_colour(colour), emission, alpha)
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material
+
+
+## A band hugging a closed loop's outward edge — foam along a puddle. It lies
+## OUTSIDE the body, so nothing double-blends beneath the translucent sheet.
+func _edge_band(points: PackedVector2Array, width: float, y: float,
+		colour: Color, alpha: float) -> MeshInstance3D:
+	var n := points.size()
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var indices := PackedInt32Array()
+	for i in n:
+		var prev := points[(i - 1 + n) % n]
+		var next := points[(i + 1) % n]
+		var edge := (next - prev).normalized()
+		var outward := Vector2(edge.y, -edge.x)
+		var p := points[i]
+		vertices.append(Vector3(p.x, 0.0, p.y))
+		vertices.append(Vector3(p.x + outward.x * width, 0.0, p.y + outward.y * width))
+		normals.append(Vector3.UP)
+		normals.append(Vector3.UP)
+	for i in n:
+		var j := (i + 1) % n
+		var a := i * 2
+		var b := j * 2
+		indices.append(a)
+		indices.append(a + 1)
+		indices.append(b)
+		indices.append(a + 1)
+		indices.append(b + 1)
+		indices.append(b)
+	var mesh := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	var material := _material(colour, 0.0, alpha)
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	node.material_override = material
+	node.position = Vector3(0.0, y, 0.0)
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return node
+
+
+## A thin annular band on the floor: the ripple rings around a spill. A band,
+## not a disc — the water shows through the middle.
+func _ring_band(centre: Vector2, radius: float, width: float, y: float,
+		colour: Color, alpha: float) -> MeshInstance3D:
+	var segments := 40
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var indices := PackedInt32Array()
+	for i in segments + 1:
+		var theta := TAU * float(i) / float(segments)
+		var dir := Vector2(sin(theta), cos(theta))
+		vertices.append(Vector3(centre.x + dir.x * radius, 0.0, centre.y + dir.y * radius))
+		vertices.append(Vector3(centre.x + dir.x * (radius + width), 0.0,
+			centre.y + dir.y * (radius + width)))
+		normals.append(Vector3.UP)
+		normals.append(Vector3.UP)
+	for i in segments:
+		var a := i * 2
+		indices.append(a)
+		indices.append(a + 1)
+		indices.append(a + 2)
+		indices.append(a + 1)
+		indices.append(a + 3)
+		indices.append(a + 2)
+	var mesh := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	node.material_override = _pour_material(colour, alpha)
+	node.position = Vector3(0.0, y, 0.0)
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return node
 
 
 func _add_pour_box(parent: Node3D, part_name: String, size: Vector3, pos: Vector3,
@@ -1211,15 +1322,32 @@ func _sync_outline_layer(world: SimWorld, layer: String, spec: Dictionary) -> vo
 		var region := world.hazards.connected(layer, cell)
 		for member in region:
 			seen[member] = true
-		nodes.append_array(_build_water_region(region, spec))
+		nodes.append_array(_build_water_region(world, region, spec))
 	_outline_regions[layer] = {"signature": signature, "nodes": nodes}
 
 
 ## One region: walk its cell boundary into loops, smooth them, triangulate the
-## body, and ring it with an outward-offset waterline. Holes (an object standing
-## in the water) are skipped — the object occludes that ground anyway.
-func _build_water_region(region: Array, spec: Dictionary) -> Array:
+## body, and ring it with an outward-offset waterline. The boundary is first
+## dilated one cell under furniture: the sim cannot mark an occupied cell wet,
+## but water pools against plinths, and without this the puddle visibly stops
+## short of the cabinet it ran down. Walls are never entered.
+func _build_water_region(world: SimWorld, region: Array, spec: Dictionary) -> Array:
 	var height := visuals.number("hazard.height", 0.02)
+	var flooded := {}
+	for member in region:
+		flooded[member] = true
+	for member in region:
+		for offset in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = member + offset
+			if flooded.has(n):
+				continue
+			if n.x < 0 or n.y < 0 or n.x >= world.grid.width or n.y >= world.grid.height:
+				continue
+			if world.grid.cell_type(n) == SimGrid.WALL:
+				continue
+			if not world.walkable(n):
+				flooded[n] = true
+	region = flooded.keys()
 	var first: Vector2i = region[0]
 	var group := Node3D.new()
 	# One container per region, named by its first cell: the children can then
@@ -1230,19 +1358,18 @@ func _build_water_region(region: Array, spec: Dictionary) -> Array:
 		if _polygon_area(loop) <= 0.0:
 			continue
 		var smooth := _chaikin(loop, int(spec.get("smooth_iterations", 2)))
-		var expanded := Geometry2D.offset_polygon(smooth, float(spec.get("rim_width", 0.07)))
-		if not expanded.is_empty():
-			var ring: PackedVector2Array = expanded[0]
-			for candidate in expanded:
-				if _polygon_area(candidate) > _polygon_area(ring):
-					ring = candidate
-			var line := _polygon_mesh(ring, Vector3(0.0, height * 0.72, 0.0),
-				visuals.to_colour(spec.get("rim_color", null)),
-				float(spec.get("rim_alpha", 0.8)))
-			line.name = "Waterline"
-			group.add_child(line)
+		smooth = _wobble(smooth, float(spec.get("wobble", 0.0)))
+		# The waterline is an outward BAND along the edge, never a filled
+		# polygon under the body: a pale fill under a translucent sheet glows
+		# straight through it and turns the whole puddle milk.
+		var line := _edge_band(smooth, float(spec.get("rim_width", 0.05)),
+			height * 0.8, visuals.to_colour(spec.get("rim_color", null)),
+			float(spec.get("rim_alpha", 0.55)))
+		line.name = "Waterline"
+		group.add_child(line)
 		var body := _polygon_mesh(smooth, Vector3(0.0, height * 1.05, 0.0),
-			visuals.to_colour(spec.get("color", null)), float(spec.get("alpha", 0.55)))
+			visuals.to_colour(spec.get("color", null)), float(spec.get("alpha", 0.55)),
+			float(spec.get("emission", 0.0)))
 		body.name = "WaterBody"
 		group.add_child(body)
 	if spec.has("particles"):
@@ -1315,6 +1442,22 @@ func _edge_key(a: Vector2i, b: Vector2i) -> String:
 	return "%d,%d>%d,%d" % [a.x, a.y, b.x, b.y]
 
 
+## A deterministic lap along the outward normal: water edges are not smooth
+## arcs, they wobble. Index-based, so the same region always laps the same way.
+func _wobble(loop: PackedVector2Array, amplitude: float) -> PackedVector2Array:
+	if amplitude <= 0.0:
+		return loop
+	var out := PackedVector2Array()
+	var n := loop.size()
+	for i in n:
+		var prev := loop[(i - 1 + n) % n]
+		var next := loop[(i + 1) % n]
+		var edge := (next - prev).normalized()
+		var outward := Vector2(edge.y, -edge.x)
+		out.append(loop[i] + outward * sin(float(i) * 2.7) * amplitude)
+	return out
+
+
 ## Corner-cutting on a closed loop: every edge becomes two, at the quarter
 ## points. Deterministic, and turns the stair-step boundary into a puddle.
 func _chaikin(points: PackedVector2Array, iterations: int) -> PackedVector2Array:
@@ -1353,7 +1496,7 @@ func _region_bounds(region: Array) -> Rect2:
 ## A flat polygon in the floor plane from a loop in cell coordinates. Both
 ## sides of the sheet draw, so winding cannot hide the water.
 func _polygon_mesh(points: PackedVector2Array, offset: Vector3, colour: Color,
-		alpha: float) -> MeshInstance3D:
+		alpha: float, emission: float = 0.0) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
 	var indices := Geometry2D.triangulate_polygon(points)
 	if not indices.is_empty():
@@ -1370,7 +1513,7 @@ func _polygon_mesh(points: PackedVector2Array, offset: Vector3, colour: Color,
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		node.mesh = mesh
-	var material := _material(colour, 0.0, alpha)
+	var material := _material(colour, emission, alpha)
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	node.material_override = material
 	node.position = offset
