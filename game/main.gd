@@ -59,9 +59,11 @@ func _ready() -> void:
 
 ## The UI is drawn at 1920x1080 and stretched to the window, so a small window
 ## renders all of it small. Desktop only, and only the window it opens with —
-## resizing after that is the player's business.
+## resizing after that is the player's business. The capture tool owns the
+## window when it runs (it sets `capture` before the scene loads and sizes the
+## window itself — see tools/capture.gd --window), so the game stays out of it.
 func _size_window() -> void:
-	if OS.has_feature("mobile"):
+	if OS.has_feature("mobile") or bool(Engine.get_meta("capture", false)):
 		return
 	var window := get_window()
 	if window == null:
