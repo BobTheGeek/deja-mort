@@ -32,7 +32,9 @@ const REAL_SIZES := {
 	"sink": {"axis": "height", "min": 0.75, "max": 0.95},
 	"counter_drawer": {"axis": "height", "min": 0.80, "max": 1.00},
 	"frying_pan": {"axis": "floor", "min": 0.35, "max": 0.55},
-	"bookshelf": {"axis": "floor", "min": 0.60, "max": 1.20},
+	"bookshelf": {"axis": "floor", "min": 1.30, "max": 1.80},
+	"bubble_token": {"axis": "floor", "min": 0.10, "max": 0.20},
+	"counter_knife": {"axis": "height", "min": 0.80, "max": 1.00},
 	"tv": {"axis": "floor", "min": 0.90, "max": 1.60},
 }
 

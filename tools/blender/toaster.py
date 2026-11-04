@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from studio_kit import box, export, join, material, reset
 
 reset()
-silver = material("silver", (0.70, 0.71, 0.73), metallic=0.4, roughness=0.5)
+silver = material("silver", (0.72, 0.73, 0.75), metallic=0.4, roughness=0.5)
 carbon = material("carbon", (0.12, 0.12, 0.13))
 
 parts = [

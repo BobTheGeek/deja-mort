@@ -22,14 +22,16 @@ var _solution := ""
 var _scene := SCENE
 var _pending: Array = []
 var _next := 0
+var _window := Vector2i(1920, 1080)  # the documented shot size; --window overrides
 var _elapsed := 0.0
 var _done := false
 
 
 func _initialize() -> void:
-	# The capture tool owns the window: the game sizes its own window on start,
-	# and resizing under a --resolution given on the command line hands back an
-	# empty framebuffer.
+	# The capture tool owns the window: setting `capture` keeps the game from
+	# sizing it (game/main.gd), and --window WxH sizes it here — that is how
+	# the aspect-ratio set is made. Do not pass --resolution on the command
+	# line: the engine's own resize under it hands back an empty framebuffer.
 	Engine.set_meta("capture", true)
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
@@ -81,6 +83,13 @@ func _initialize() -> void:
 		elif str(args[i]) == "--scene" and i + 1 < args.size():
 			_scene = str(args[i + 1])
 			i += 2
+		elif str(args[i]) == "--window" and i + 1 < args.size():
+			var dims := str(args[i + 1]).split("x")
+			if dims.size() == 2:
+				_window = Vector2i(int(dims[0]), int(dims[1]))
+			else:
+				printerr("capture: --window wants WxH")
+			i += 2
 		elif str(args[i]) == "--speed" and i + 1 < args.size():
 			# Run the clock fast so a whole 75-second loop fits in a short capture.
 			Engine.time_scale = float(args[i + 1])
@@ -109,6 +118,10 @@ func _initialize() -> void:
 func _process(delta: float) -> bool:
 	if _done:
 		return true
+	# The window is resized on the first frames, once the engine's own boot
+	# sizing has settled; an early resize in _initialize does not stick.
+	if _window != Vector2i.ZERO and get_root().size != _window:
+		DisplayServer.window_set_size(_window)
 	_elapsed += delta
 
 	for click in _clicks:
