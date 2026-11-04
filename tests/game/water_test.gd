@@ -237,3 +237,36 @@ func test_the_pour_keeps_its_water_materials() -> void:
 	assert_bool(ring_mat != null and ring_mat.albedo_texture != null) \
 		.override_failure_message(
 			"the rings lost their brush texture to the sink's repaint").is_true()
+
+
+## A pour built while the room is already dark must arrive dimmed: the sheet's
+## light level is only corrected on a lighting transition, and there is none
+## while the room stays dark — so it must be set at birth.
+func test_a_pour_born_in_the_dark_is_dimmed() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	F.goto(world, Vector2i(1, 7))
+	F.act(world, "toggle", "light_switch", "toggle_light_switch")
+	renderer.sync(world, 0.1, 0.0)
+	F.goto(world, Vector2i(3, 2))
+	F.act(world, "toggle", "sink", "toggle_wet_source")
+	renderer.sync(world, 0.1, 0.0)
+	var pour: Node = renderer.object_node("sink").get_node_or_null("PourStream")
+	assert_object(pour).is_not_null()
+	if pour == null:
+		return
+	var overflow: Node3D = pour.get_node_or_null("Overflow")
+	assert_object(overflow).is_not_null()
+	if overflow == null:
+		return
+	var run := overflow.get_node_or_null("OverflowRun") as MeshInstance3D
+	assert_object(run).is_not_null()
+	if run == null:
+		return
+	var sheet := run.material_override as ShaderMaterial
+	assert_object(sheet).is_not_null()
+	if sheet == null:
+		return
+	var level: Variant = sheet.get_shader_parameter("light_level")
+	assert_bool(level != null and float(level) < 1.0).override_failure_message(
+		"a pour born in the dark runs at full brightness: %s" % [level]).is_true()

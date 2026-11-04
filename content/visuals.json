@@ -267,7 +267,6 @@
             0.94
           ],
           "alpha": 0.92,
-          "shading": "unshaded",
           "water": {
             "shader": "res://game/shaders/water_fall.gdshader",
             "color": [
@@ -728,7 +727,7 @@
           "lifetime": 2.8,
           "velocity": 0.06,
           "spread": 8.0,
-          "scale": 0.08,
+          "scale": 0.1,
           "gravity": -0.06,
           "unshaded": true,
           "color": [

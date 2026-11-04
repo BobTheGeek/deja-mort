@@ -40,8 +40,7 @@ var _flicker_left: float = 0.0
 var _flicker_t: float = 0.0
 var _lit_state: bool = true
 var _lit_energy: float = 1.0
-var _water_materials: Dictionary = {}  # water StandardMaterial3D -> its base colour
-var _water_shaders: Array = []         # water ShaderMaterials (the cascade sheet)
+var _water_nodes: Array = []  # water MeshInstance3Ds; node validity is liveness
 
 
 func build(world: SimWorld, table: GameVisuals) -> void:
@@ -59,8 +58,7 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	_hazard_nodes.clear()
 	_outline_regions.clear()
 	_pour_time.clear()
-	_water_materials.clear()
-	_water_shaders.clear()
+	_water_nodes.clear()
 
 	_floor_root = _add_root("Floor")
 	_object_root = _add_root("Objects")
@@ -623,7 +621,7 @@ func _water_material(colour: Color, alpha: float, unshaded: bool,
 	var scale := _water_scale()
 	material.albedo_color = Color(colour.r * scale, colour.g * scale,
 		colour.b * scale, alpha)
-	_water_materials[material] = colour
+	material.set_meta("water_base", colour)
 	return material
 
 
@@ -634,22 +632,27 @@ func _water_scale() -> float:
 		visuals.number("hazard.layers.wet.dark_scale", 1.0), 1.0)
 
 
+## Dims every piece of water with the bulb. Registered by NODE, not material:
+## the node's validity is what tells us the water is still in the scene, so a
+## region rebuild or a stopped pour actually gets released instead of pinning
+## its materials for the rest of the loop.
 func _dim_water() -> void:
 	var scale := _water_scale()
-	for entry in _water_materials.keys():
-		if not is_instance_valid(entry):
-			_water_materials.erase(entry)
-			continue
-		var base: Color = _water_materials[entry]
-		var material := entry as StandardMaterial3D
-		material.albedo_color = Color(base.r * scale, base.g * scale,
-			base.b * scale, material.albedo_color.a)
 	var live: Array = []
-	for sheet in _water_shaders:
-		if is_instance_valid(sheet):
-			live.append(sheet)
-			(sheet as ShaderMaterial).set_shader_parameter("light_level", scale)
-	_water_shaders = live
+	for node in _water_nodes:
+		if not is_instance_valid(node):
+			continue
+		live.append(node)
+		var mesh := node as MeshInstance3D
+		var material: Material = mesh.material_override if mesh != null else null
+		if material is ShaderMaterial:
+			(material as ShaderMaterial).set_shader_parameter("light_level", scale)
+		elif material is StandardMaterial3D:
+			var base: Color = material.get_meta("water_base", Color.WHITE)
+			(material as StandardMaterial3D).albedo_color = Color(
+				base.r * scale, base.g * scale, base.b * scale,
+				(material as StandardMaterial3D).albedo_color.a)
+	_water_nodes = live
 
 
 # --- per-frame sync ----------------------------------------------------------
@@ -1023,6 +1026,7 @@ func _build_pour(shape: Dictionary) -> Node3D:
 	jet_material.set_shader_parameter("alpha",
 		float(shape.get("alpha", water.get("alpha", 0.85))))
 	jet.material_override = jet_material
+	_water_nodes.append(jet)
 	jet.position = Vector3(float(faucet[0]),
 		(float(faucet[1]) + basin_floor) * 0.5, float(faucet[2]))
 	jet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1066,7 +1070,8 @@ func _build_pour(shape: Dictionary) -> Node3D:
 		Vector3(cx, (mid_y + floor_y) * 0.5, front_z + 0.013), sheet)
 	# Rills: white, unshaded, drawn over the sheet — the foam hugging the
 	# cabinet face, continuous with the rings below it.
-	var foam := _water_material(visuals.to_colour(ov.get("foam_color", null)),
+	var foam := _water_material(
+		visuals.to_colour(ov.get("foam_color", shape.get("color", null))),
 		float(ov.get("foam_alpha", 0.9)), true, "", 2)
 	_add_pour_box(overflow, "OverflowLip", Vector3(top_width, 0.022, 0.016),
 		Vector3(cx, top_y, front_z + 0.015), foam)
@@ -1138,15 +1143,16 @@ func _water_sheet_material(water: Dictionary, fallback: Dictionary) -> ShaderMat
 	material.set_shader_parameter("water_color",
 		visuals.to_colour(water.get("color", fallback.get("color", null))))
 	material.set_shader_parameter("foam_color",
-		visuals.to_colour(water.get("foam_color", null)))
+		visuals.to_colour(water.get("foam_color",
+			fallback.get("foam_color", fallback.get("color", null)))))
 	material.set_shader_parameter("alpha",
 		float(water.get("alpha", fallback.get("alpha", 0.85))))
 	material.set_shader_parameter("speed", float(water.get("speed", 1.4)))
 	material.set_shader_parameter("streak_scale", float(water.get("streak_scale", 3.0)))
 	material.set_shader_parameter("foam_amount", float(water.get("foam_amount", 0.55)))
 	material.set_shader_parameter("edge_fade", float(water.get("edge_fade", 0.12)))
+	material.set_shader_parameter("light_level", _water_scale())
 	material.render_priority = 1
-	_water_shaders.append(material)
 	return material
 
 
@@ -1201,6 +1207,7 @@ func _edge_band(points: PackedVector2Array, width: float, y: float,
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	node.material_override = _water_material(colour, alpha, true, texture_path, 2)
+	_water_nodes.append(node)
 	node.position = Vector3(0.0, y, 0.0)
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
@@ -1252,6 +1259,7 @@ func _ring_band(centre: Vector2, radius: float, width: float, y: float,
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	node.material_override = _water_material(colour, alpha, true, texture_path, 1)
+	_water_nodes.append(node)
 	node.position = Vector3(0.0, y, 0.0)
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
@@ -1266,6 +1274,7 @@ func _add_pour_box(parent: Node3D, part_name: String, size: Vector3, pos: Vector
 	box.size = size
 	mesh.mesh = box
 	mesh.material_override = material
+	_water_nodes.append(mesh)
 	mesh.position = pos
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(mesh)
@@ -1654,6 +1663,7 @@ func _polygon_mesh(points: PackedVector2Array, offset: Vector3, colour: Color,
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		node.mesh = mesh
 	node.material_override = _water_material(colour, alpha, unshaded, "", 0, emission)
+	_water_nodes.append(node)
 	node.position = offset
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node

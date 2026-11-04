@@ -83,9 +83,9 @@ func _write_foam_strip() -> void:
 func _write_drop_mark() -> void:
 	var image := Image.create_empty(MARK, MARK, false, Image.FORMAT_RGBA8)
 	image.fill(Color(1.0, 1.0, 1.0, 0.0))
-	var centre := Vector2(32.0, 40.0)
-	var radius := 15.0
-	var taper := 30.0
+	var centre := Vector2(32.0, 37.0)
+	var radius := 19.0
+	var taper := 40.0
 	for y in MARK:
 		for x in MARK:
 			var p := Vector2(float(x) + 0.5, float(y) + 0.5)
