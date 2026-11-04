@@ -10,7 +10,9 @@
 
 - **One light source** per room (bare bulb, desk lamp, streetlight through blinds) with real shadows. Minimal ambient. Dark corners are gameplay (they affect his sight) and they're the look.
 - **Palette:** desaturated — grays, cold blues, muted wood — with one warm accent from the light. The warm accent is the brand amber `#D9A05B` (see `brand/BRAND.md`); the void is `#0B0C0F`. No mint greens, no patterned rugs, no showroom brightness.
-- **Flat shading, no textures.** Vertex color or a single material with a color ramp.
+- **Flat shading; textures where they earn their keep.** The default stays one flat
+  material per model, but a texture is allowed where it serves the look — the water's
+  foam edge, droplet marks and cascade are the first use.
 - **Post:** vignette and slight grain so it reads as a diorama, not a render. Optional tilt-shift if it's cheap.
 - **Sparse dressing.** Every visible object is interactable. Decorative clutter thins out or becomes an object with tags.
 - **Characters:** simple faceless figures, capsule-and-limbs, silhouette-readable. The room is the star.
@@ -32,7 +34,7 @@
 | `tipped/leaning` | rotate on pivot |
 | `on` | emissive material + light child |
 | `burning` | fire particle + orange point light |
-| `wet` (cell) | darker floor tint + specular |
+| `wet` (cell) | one smoothed puddle body: a foam-edged outline with ripple rings and spray (`hazard.layers.wet`) |
 | `slippery` (cell) | glossy tint |
 | `concealed` (cell) | none (that's the point) |
 | `moved` | none |

@@ -116,7 +116,8 @@ func test_particles_have_a_mesh_to_draw_with() -> void:
 
 
 ## Review minor: particle materials must follow the layer spec — translucent
-## for dust and water, unshaded only where something glows.
+## for dust and water, unshaded where something glows or where the thing is the
+## painted water's flat marks.
 func test_particle_materials_follow_the_spec() -> void:
 	var world := F.world()
 	world.hazards.spawn("burning", Vector2i(5, 5), SimHazardField.FOREVER)

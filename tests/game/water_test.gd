@@ -137,3 +137,103 @@ func test_a_running_wet_source_pours() -> void:
 	renderer.sync(world, 0.1, 0.0)
 	assert_int(_named(renderer.object_node("sink"), "PourStream").size()) \
 		.override_failure_message("a running sink draws no stream").is_equal(1)
+
+
+## COLD PAINT: the water is painted, not lit. A lit blue under the amber bulb
+## and the 0.55 saturation grade is exactly the mauve the target is not; an
+## unshaded sheet at 0.85 opacity keeps the floor from showing through.
+func test_the_water_is_painted_not_lit() -> void:
+	var world := F.world()
+	world.hazards.spawn("wet", Vector2i(1, 1), SimHazardField.FOREVER)
+	var renderer := _rendered(world)
+	var bodies := _named(renderer, "WaterBody")
+	assert_int(bodies.size()).is_equal(1)
+	if bodies.size() != 1:
+		return
+	var material := (bodies[0] as MeshInstance3D).material_override as StandardMaterial3D
+	assert_object(material).is_not_null()
+	if material == null:
+		return
+	assert_int(material.shading_mode).override_failure_message(
+		"the puddle takes the room light, so the amber bulb tints it").is_equal(
+			BaseMaterial3D.SHADING_MODE_UNSHADED)
+	assert_float(material.albedo_color.a).override_failure_message(
+		"the floor shows through the paint: alpha %f" % material.albedo_color.a) \
+		.is_greater_equal(0.8)
+
+
+## The foam edge is a brush stroke: the strip texture carries the bright core,
+## the soft halo and the broken dashes the target's waterline has.
+func test_the_foam_edge_carries_the_brush_texture() -> void:
+	var world := F.world()
+	world.hazards.spawn("wet", Vector2i(1, 1), SimHazardField.FOREVER)
+	var renderer := _rendered(world)
+	var lines := _named(renderer, "Waterline")
+	assert_int(lines.size()).is_equal(1)
+	if lines.size() != 1:
+		return
+	var material := (lines[0] as MeshInstance3D).material_override as StandardMaterial3D
+	assert_object(material).is_not_null()
+	if material == null:
+		return
+	assert_object(material.albedo_texture).override_failure_message(
+		"the foam edge is bare geometry with no brush texture").is_not_null()
+
+
+## Darkness is gameplay: painted or not, the water still lives in the room and
+## must dip with the bulb instead of glowing like a lamp in the dark.
+func test_the_water_dims_with_the_room() -> void:
+	var world := F.world()
+	world.hazards.spawn("wet", Vector2i(1, 1), SimHazardField.FOREVER)
+	var renderer := _rendered(world)
+	var bodies := _named(renderer, "WaterBody")
+	assert_int(bodies.size()).is_equal(1)
+	if bodies.size() != 1:
+		return
+	var material := (bodies[0] as MeshInstance3D).material_override as StandardMaterial3D
+	assert_object(material).is_not_null()
+	if material == null:
+		return
+	var lit := material.albedo_color.r
+	renderer._apply_lighting(false)
+	var dark := material.albedo_color.r
+	assert_float(dark).override_failure_message(
+		"the puddle is a lamp: it stays bright when the room goes dark").is_less(lit)
+	renderer._apply_lighting(true)
+	assert_float(material.albedo_color.r).override_failure_message(
+		"the water does not come back with the light").is_greater(dark)
+
+
+## The pour hangs under the sink but is not part of its model: the sink's own
+## `on` state repaint must not reach the water, or the cascade and the rings
+## come out painted in the sink's colour with no whites at all — which is
+## exactly what the capture comparison against the network found.
+func test_the_pour_keeps_its_water_materials() -> void:
+	var world := F.world()
+	var renderer := _rendered(world)
+	F.goto(world, Vector2i(3, 2))
+	F.act(world, "toggle", "sink", "toggle_wet_source")
+	renderer.sync(world, 0.1, 0.0)
+	renderer.sync(world, 3.0, 0.0)
+	var pour: Node = renderer.object_node("sink").get_node_or_null("PourStream")
+	assert_object(pour).is_not_null()
+	if pour == null:
+		return
+	var overflow: Node3D = pour.get_node_or_null("Overflow")
+	assert_object(overflow).is_not_null()
+	if overflow == null:
+		return
+	var run := overflow.get_node_or_null("OverflowRun") as MeshInstance3D
+	assert_object(run).is_not_null()
+	if run == null:
+		return
+	assert_bool(run.material_override is ShaderMaterial).override_failure_message(
+		"the sink's state repaint swallowed the cascade's own shader material").is_true()
+	var ring := overflow.get_node_or_null("SplashRing") as MeshInstance3D
+	assert_object(ring).is_not_null()
+	if ring == null:
+		return
+	var ring_mat := ring.material_override as StandardMaterial3D
+	assert_bool(ring_mat != null and ring_mat.albedo_texture != null) \
+		.override_failure_message(
+			"the rings lost their brush texture to the sink's repaint").is_true()

@@ -40,6 +40,8 @@ var _flicker_left: float = 0.0
 var _flicker_t: float = 0.0
 var _lit_state: bool = true
 var _lit_energy: float = 1.0
+var _water_materials: Dictionary = {}  # water StandardMaterial3D -> its base colour
+var _water_shaders: Array = []         # water ShaderMaterials (the cascade sheet)
 
 
 func build(world: SimWorld, table: GameVisuals) -> void:
@@ -57,6 +59,8 @@ func build(world: SimWorld, table: GameVisuals) -> void:
 	_hazard_nodes.clear()
 	_outline_regions.clear()
 	_pour_time.clear()
+	_water_materials.clear()
+	_water_shaders.clear()
 
 	_floor_root = _add_root("Floor")
 	_object_root = _add_root("Objects")
@@ -602,6 +606,52 @@ func _material(colour: Color, emission: float = 0.0, alpha: float = 1.0) -> Stan
 	return material
 
 
+## A water material: optionally unshaded (painted water is not lit), optionally
+## textured, and registered so one pass can dim every piece of water with the
+## bulb. `priority` orders the near-coplanar layers: body 0, rings 1, foam 2.
+func _water_material(colour: Color, alpha: float, unshaded: bool,
+		texture_path: String = "", priority: int = 0,
+		emission: float = 0.0) -> StandardMaterial3D:
+	var material := _material(colour, emission, alpha)
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	if unshaded:
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if not texture_path.is_empty():
+		material.albedo_texture = load(texture_path)
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	material.render_priority = priority
+	var scale := _water_scale()
+	material.albedo_color = Color(colour.r * scale, colour.g * scale,
+		colour.b * scale, alpha)
+	_water_materials[material] = colour
+	return material
+
+
+## Painted water is still water in a dark room: its value follows the bulb, so
+## the darkness pillar holds and the death-beat flicker reaches it for free.
+func _water_scale() -> float:
+	return clampf(bulb_energy() / maxf(_lit_energy, 0.001),
+		visuals.number("hazard.layers.wet.dark_scale", 1.0), 1.0)
+
+
+func _dim_water() -> void:
+	var scale := _water_scale()
+	for entry in _water_materials.keys():
+		if not is_instance_valid(entry):
+			_water_materials.erase(entry)
+			continue
+		var base: Color = _water_materials[entry]
+		var material := entry as StandardMaterial3D
+		material.albedo_color = Color(base.r * scale, base.g * scale,
+			base.b * scale, material.albedo_color.a)
+	var live: Array = []
+	for sheet in _water_shaders:
+		if is_instance_valid(sheet):
+			live.append(sheet)
+			(sheet as ShaderMaterial).set_shader_parameter("light_level", scale)
+	_water_shaders = live
+
+
 # --- per-frame sync ----------------------------------------------------------
 
 ## `tick_alpha` is how far through the current sim tick we are, 0 to 1. The sim
@@ -732,6 +782,7 @@ func _sync_flicker(delta: float) -> void:
 	if _flicker_left <= 0.0:
 		if not is_zero_approx(_bulb.light_energy - _lit_energy) and _lit_state:
 			_bulb.light_energy = _lit_energy
+			_dim_water()
 		return
 	_flicker_left -= delta
 	_flicker_t += delta
@@ -745,6 +796,7 @@ func _sync_flicker(delta: float) -> void:
 	_bulb.light_energy = _lit_energy * (1.0 - depth + depth * wave)
 	if _flicker_left <= 0.0:
 		_bulb.light_energy = _lit_energy
+	_dim_water()
 
 
 ## The bulb's current energy, for tests and anyone reading the light state.
@@ -777,6 +829,7 @@ func _apply_lighting(lit: bool) -> void:
 	_bulb.light_energy = _lit_energy if lit else visuals.number("dark.light_energy", 0.5)
 	_environment.environment.ambient_light_energy = visuals.number("ambient.energy", 0.1) if lit \
 		else visuals.number("dark.ambient_energy", 0.035)
+	_dim_water()
 
 
 func _sync_objects(world: SimWorld, delta: float = 0.0) -> void:
@@ -955,6 +1008,7 @@ func _build_pour(shape: Dictionary) -> Node3D:
 	var faucet: Array = shape.get("faucet", [0.0, 0.9, 0.0])
 	var basin: Dictionary = shape.get("basin", {})
 	var ov: Dictionary = shape.get("overflow", {})
+	var water: Dictionary = shape.get("water", {})
 	var basin_floor := float(basin.get("floor_y", 0.8))
 	var jet := MeshInstance3D.new()
 	jet.name = "FaucetStream"
@@ -964,8 +1018,11 @@ func _build_pour(shape: Dictionary) -> Node3D:
 	tube.height = maxf(float(faucet[1]) - basin_floor, 0.05)
 	tube.radial_segments = 10
 	jet.mesh = tube
-	jet.material_override = _pour_material(shape.get("color", null),
-		float(shape.get("alpha", 0.6)))
+	var jet_material := _water_sheet_material(water, shape)
+	# The stream's own alpha drives the jet; the sheet keeps the water block's.
+	jet_material.set_shader_parameter("alpha",
+		float(shape.get("alpha", water.get("alpha", 0.85))))
+	jet.material_override = jet_material
 	jet.position = Vector3(float(faucet[0]),
 		(float(faucet[1]) + basin_floor) * 0.5, float(faucet[2]))
 	jet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -998,8 +1055,7 @@ func _build_pour(shape: Dictionary) -> Node3D:
 	var top_width := width
 	var bottom_width := width * float(ov.get("spread", 1.5))
 	var mid_y := (top_y + floor_y) * 0.5
-	var sheet := _pour_material(ov.get("color", null), float(ov.get("alpha", 0.78)),
-		float(ov.get("emission", 0.0)))
+	var sheet := _water_sheet_material(water, ov)
 	_add_pour_box(overflow, "OverflowRun", Vector3(top_width, 0.006, front_z - lip_z + 0.01),
 		Vector3(cx, top_y + 0.004, (lip_z + front_z) * 0.5), sheet)
 	# The tongue: narrower at the lip, widening as it falls — falling water
@@ -1008,10 +1064,10 @@ func _build_pour(shape: Dictionary) -> Node3D:
 		Vector3(cx, (top_y + mid_y) * 0.5, front_z + 0.013), sheet)
 	_add_pour_box(overflow, "OverflowLower", Vector3(bottom_width, mid_y - floor_y, 0.014),
 		Vector3(cx, (mid_y + floor_y) * 0.5, front_z + 0.013), sheet)
-	# Rills: pale running-water edges over the one water tone, so the sheet
-	# reads without becoming a second colour — foam is water too.
-	var foam := _pour_material(shape.get("color", null),
-		clampf(float(shape.get("alpha", 0.9)) * 0.7, 0.0, 1.0))
+	# Rills: white, unshaded, drawn over the sheet — the foam hugging the
+	# cabinet face, continuous with the rings below it.
+	var foam := _water_material(visuals.to_colour(ov.get("foam_color", null)),
+		float(ov.get("foam_alpha", 0.9)), true, "", 2)
 	_add_pour_box(overflow, "OverflowLip", Vector3(top_width, 0.022, 0.016),
 		Vector3(cx, top_y, front_z + 0.015), foam)
 	for side in [-1.0, 1.0]:
@@ -1029,10 +1085,17 @@ func _build_pour(shape: Dictionary) -> Node3D:
 		var ring_colour := visuals.to_colour(rings.get("color", null))
 		var ring_width := float(rings.get("width", 0.025))
 		var ring_alpha := float(rings.get("alpha", 0.45))
+		var ring_falloff := float(rings.get("falloff", 0.88))
+		var ring_centre := Vector2(cx, float(rings.get("centre_z", front_z + 0.14)))
+		var ring_yaws: Array = rings.get("yaw_deg", [0.0])
 		var ring_index := 0
 		for radius in rings.get("radii", []):
-			var band := _ring_band(Vector2(cx, front_z + 0.14), float(radius), ring_width,
-				floor_y + 0.006, ring_colour, ring_alpha * pow(0.72, ring_index))
+			var band := _ring_band(ring_centre, float(radius), ring_width,
+				floor_y + 0.006, ring_colour,
+				ring_alpha * pow(ring_falloff, ring_index),
+				float(rings.get("wobble", 0.0)),
+				float(ring_yaws[ring_index % ring_yaws.size()]),
+				str(rings.get("texture", "")), float(rings.get("uv_per_metre", 1.0)))
 			band.name = "SplashRing"
 			overflow.add_child(band)
 			ring_index += 1
@@ -1066,24 +1129,57 @@ func _pour_material(colour: Variant, alpha: float, emission: float = 0.0) -> Sta
 	return material
 
 
+## The cascade sheet's own little shader: pale falling water with white foam
+## streaks and soft side fades, so the boxes stop reading as rectangles.
+## Registered, so the room's light dips reach it like every other piece of water.
+func _water_sheet_material(water: Dictionary, fallback: Dictionary) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = load(str(water.get("shader", "res://game/shaders/water_fall.gdshader")))
+	material.set_shader_parameter("water_color",
+		visuals.to_colour(water.get("color", fallback.get("color", null))))
+	material.set_shader_parameter("foam_color",
+		visuals.to_colour(water.get("foam_color", null)))
+	material.set_shader_parameter("alpha",
+		float(water.get("alpha", fallback.get("alpha", 0.85))))
+	material.set_shader_parameter("speed", float(water.get("speed", 1.4)))
+	material.set_shader_parameter("streak_scale", float(water.get("streak_scale", 3.0)))
+	material.set_shader_parameter("foam_amount", float(water.get("foam_amount", 0.55)))
+	material.set_shader_parameter("edge_fade", float(water.get("edge_fade", 0.12)))
+	material.render_priority = 1
+	_water_shaders.append(material)
+	return material
+
+
 ## A band hugging a closed loop's outward edge — foam along a puddle. It lies
 ## OUTSIDE the body, so nothing double-blends beneath the translucent sheet.
+## `straddle` is the fraction of the band that stays inside the loop; the UVs
+## run u = metres of arc, v = inner edge 0 to outer edge 1, so the strip
+## texture reads as one continuous brush stroke along the waterline.
 func _edge_band(points: PackedVector2Array, width: float, y: float,
-		colour: Color, alpha: float) -> MeshInstance3D:
+		colour: Color, alpha: float, texture_path: String = "",
+		straddle: float = 0.0, uv_per_metre: float = 1.0) -> MeshInstance3D:
 	var n := points.size()
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
 	var indices := PackedInt32Array()
+	var travelled := 0.0
 	for i in n:
 		var prev := points[(i - 1 + n) % n]
 		var next := points[(i + 1) % n]
 		var edge := (next - prev).normalized()
 		var outward := Vector2(edge.y, -edge.x)
 		var p := points[i]
-		vertices.append(Vector3(p.x, 0.0, p.y))
-		vertices.append(Vector3(p.x + outward.x * width, 0.0, p.y + outward.y * width))
+		vertices.append(Vector3(p.x - outward.x * width * straddle, 0.0,
+			p.y - outward.y * width * straddle))
+		vertices.append(Vector3(p.x + outward.x * width * (1.0 - straddle), 0.0,
+			p.y + outward.y * width * (1.0 - straddle)))
 		normals.append(Vector3.UP)
 		normals.append(Vector3.UP)
+		var u := travelled * uv_per_metre
+		uvs.append(Vector2(u, 0.0))
+		uvs.append(Vector2(u, 1.0))
+		travelled += points[i].distance_to(points[(i + 1) % n])
 	for i in n:
 		var j := (i + 1) % n
 		var a := i * 2
@@ -1099,34 +1195,44 @@ func _edge_band(points: PackedVector2Array, width: float, y: float,
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	arrays[Mesh.ARRAY_INDEX] = indices
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
-	var material := _material(colour, 0.0, alpha)
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	node.material_override = material
+	node.material_override = _water_material(colour, alpha, true, texture_path, 2)
 	node.position = Vector3(0.0, y, 0.0)
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
 
 
+
 ## A thin annular band on the floor: the ripple rings around a spill. A band,
-## not a disc — the water shows through the middle.
+## not a disc — the water shows through the middle. The radius wobbles with two
+## fixed harmonics and a per-ring yaw, so stacked rings stagger like broken
+## arcs instead of reading as perfect circles.
 func _ring_band(centre: Vector2, radius: float, width: float, y: float,
-		colour: Color, alpha: float) -> MeshInstance3D:
-	var segments := 40
+		colour: Color, alpha: float, wobble: float = 0.0, yaw_deg: float = 0.0,
+		texture_path: String = "", uv_per_metre: float = 1.0) -> MeshInstance3D:
+	var segments := 64
+	var yaw := deg_to_rad(yaw_deg)
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
 	var indices := PackedInt32Array()
 	for i in segments + 1:
 		var theta := TAU * float(i) / float(segments)
 		var dir := Vector2(sin(theta), cos(theta))
-		vertices.append(Vector3(centre.x + dir.x * radius, 0.0, centre.y + dir.y * radius))
-		vertices.append(Vector3(centre.x + dir.x * (radius + width), 0.0,
-			centre.y + dir.y * (radius + width)))
+		var r := radius * (1.0 + wobble * sin(3.0 * theta + yaw)
+			+ 0.5 * wobble * sin(7.0 * theta + yaw * 0.5))
+		vertices.append(Vector3(centre.x + dir.x * r, 0.0, centre.y + dir.y * r))
+		vertices.append(Vector3(centre.x + dir.x * (r + width), 0.0,
+			centre.y + dir.y * (r + width)))
 		normals.append(Vector3.UP)
 		normals.append(Vector3.UP)
+		var u := theta * radius * uv_per_metre
+		uvs.append(Vector2(u, 0.0))
+		uvs.append(Vector2(u, 1.0))
 	for i in segments:
 		var a := i * 2
 		indices.append(a)
@@ -1140,18 +1246,20 @@ func _ring_band(centre: Vector2, radius: float, width: float, y: float,
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	arrays[Mesh.ARRAY_INDEX] = indices
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
-	node.material_override = _pour_material(colour, alpha)
+	node.material_override = _water_material(colour, alpha, true, texture_path, 1)
 	node.position = Vector3(0.0, y, 0.0)
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
 
 
+
 func _add_pour_box(parent: Node3D, part_name: String, size: Vector3, pos: Vector3,
-		material: StandardMaterial3D) -> void:
+		material: Material) -> void:
 	var mesh := MeshInstance3D.new()
 	mesh.name = part_name
 	var box := BoxMesh.new()
@@ -1256,9 +1364,26 @@ func _recolour_material(spec: Variant) -> StandardMaterial3D:
 func _override_model(node: Node3D, look: Dictionary, emission: float) -> void:
 	var repaint := emission > 0.0
 	for child in _descendants(node):
-		if child is MeshInstance3D:
-			(child as MeshInstance3D).material_override = _material(
-				visuals.to_colour(look.get("color", null)), emission) if repaint else null
+		if not (child is MeshInstance3D):
+			continue
+		# The pour is not part of the model: it hangs under its source object
+		# and carries its own water materials. Repainting it here wiped the
+		# cascade, the rills and the rings to the source's own colour every
+		# frame — the water ran down the cabinet in the cabinet's own colour.
+		if _inside_pour(child, node):
+			continue
+		(child as MeshInstance3D).material_override = _material(
+			visuals.to_colour(look.get("color", null)), emission) if repaint else null
+
+
+## True when `child` sits inside the pour stream hanging under `root`.
+func _inside_pour(child: Node, root: Node) -> bool:
+	var current := child
+	while current != null and current != root:
+		if current.name == POUR_STREAM:
+			return true
+		current = current.get_parent()
+	return false
 
 
 func _sync_hazards(world: SimWorld) -> void:
@@ -1358,28 +1483,33 @@ func _build_water_region(world: SimWorld, region: Array, spec: Dictionary) -> Ar
 		if _polygon_area(loop) <= 0.0:
 			continue
 		var smooth := _chaikin(loop, int(spec.get("smooth_iterations", 2)))
-		smooth = _wobble(smooth, float(spec.get("wobble", 0.0)))
+		smooth = _wobble(smooth, float(spec.get("wobble", 0.0)),
+			float(spec.get("wobble_long", 0.9)), float(spec.get("wobble_detail", 0.5)))
 		# The waterline is an outward BAND along the edge, never a filled
 		# polygon under the body: a pale fill under a translucent sheet glows
 		# straight through it and turns the whole puddle milk.
 		var line := _edge_band(smooth, float(spec.get("rim_width", 0.05)),
 			height * 0.8, visuals.to_colour(spec.get("rim_color", null)),
-			float(spec.get("rim_alpha", 0.55)))
+			float(spec.get("rim_alpha", 0.55)), str(spec.get("rim_texture", "")),
+			float(spec.get("rim_straddle", 0.0)), float(spec.get("uv_per_metre", 1.0)))
 		line.name = "Waterline"
 		group.add_child(line)
 		var body := _polygon_mesh(smooth, Vector3(0.0, height * 1.05, 0.0),
 			visuals.to_colour(spec.get("color", null)), float(spec.get("alpha", 0.55)),
-			float(spec.get("emission", 0.0)))
+			float(spec.get("emission", 0.0)),
+			str(spec.get("shading", "")) == "unshaded")
 		body.name = "WaterBody"
 		group.add_child(body)
 	if spec.has("particles"):
 		var bounds := _region_bounds(region)
 		var holder := Node3D.new()
 		holder.name = "WaterDrops"
-		holder.position = Vector3(bounds.position.x + bounds.size.x * 0.5, 0.0,
+		# The marks hover just above the sheet: extents centred lower than the
+		# body hid every droplet inside the floor it was meant to sit on.
+		holder.position = Vector3(bounds.position.x + bounds.size.x * 0.5, 0.035,
 			bounds.position.y + bounds.size.y * 0.5)
 		holder.add_child(_make_particles(spec["particles"],
-			Vector3(bounds.size.x * 0.38, 0.02, bounds.size.y * 0.38)))
+			Vector3(bounds.size.x * 0.38, 0.008, bounds.size.y * 0.38)))
 		group.add_child(holder)
 	return [group]
 
@@ -1443,19 +1573,28 @@ func _edge_key(a: Vector2i, b: Vector2i) -> String:
 
 
 ## A deterministic lap along the outward normal: water edges are not smooth
-## arcs, they wobble. Index-based, so the same region always laps the same way.
-func _wobble(loop: PackedVector2Array, amplitude: float) -> PackedVector2Array:
+## arcs, they wobble. Driven by arc length, so the lobes are tens of centimetres
+## wide — index-based noise at this sampling is near-Nyquist and reads as fur at
+## any amplitude. Two fixed sine waves, no RNG: a region always laps the same.
+func _wobble(loop: PackedVector2Array, amplitude: float, long_wave: float = 0.9,
+		detail_wave: float = 0.5) -> PackedVector2Array:
 	if amplitude <= 0.0:
 		return loop
 	var out := PackedVector2Array()
 	var n := loop.size()
+	var travelled := 0.0
 	for i in n:
 		var prev := loop[(i - 1 + n) % n]
 		var next := loop[(i + 1) % n]
 		var edge := (next - prev).normalized()
 		var outward := Vector2(edge.y, -edge.x)
-		out.append(loop[i] + outward * sin(float(i) * 2.7) * amplitude)
+		var phase := travelled
+		travelled += loop[i].distance_to(loop[(i + 1) % n])
+		var offset := amplitude * (0.7 * sin(TAU * phase / maxf(long_wave, 0.01))
+			+ 0.3 * sin(TAU * phase / maxf(detail_wave, 0.01)))
+		out.append(loop[i] + outward * offset)
 	return out
+
 
 
 ## Corner-cutting on a closed loop: every edge becomes two, at the quarter
@@ -1494,9 +1633,10 @@ func _region_bounds(region: Array) -> Rect2:
 
 
 ## A flat polygon in the floor plane from a loop in cell coordinates. Both
-## sides of the sheet draw, so winding cannot hide the water.
+## sides of the sheet draw, so winding cannot hide the water. `unshaded` is the
+## painted-water switch: a self-lit sheet no bulb and no grade can tint.
 func _polygon_mesh(points: PackedVector2Array, offset: Vector3, colour: Color,
-		alpha: float, emission: float = 0.0) -> MeshInstance3D:
+		alpha: float, emission: float = 0.0, unshaded: bool = false) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
 	var indices := Geometry2D.triangulate_polygon(points)
 	if not indices.is_empty():
@@ -1513,12 +1653,11 @@ func _polygon_mesh(points: PackedVector2Array, offset: Vector3, colour: Color,
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		node.mesh = mesh
-	var material := _material(colour, emission, alpha)
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	node.material_override = material
+	node.material_override = _water_material(colour, alpha, unshaded, "", 0, emission)
 	node.position = offset
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
+
 
 
 ## CPU particles on purpose: the project falls back to GL Compatibility on mobile,
@@ -1540,14 +1679,17 @@ func _make_particles(spec: Dictionary, box_extents := Vector3.ZERO) -> CPUPartic
 		else Vector3(CELL * 0.45, 0.02, CELL * 0.45)
 	particles.local_coords = false
 	particles.emitting = true
-	particles.mesh = _particle_mesh()
+	var mesh_kind := str(spec.get("mesh", "sphere"))
+	particles.mesh = _mark_mesh() if mesh_kind == "mark" else _particle_mesh()
 	particles.material_override = _particle_material(
-		bool(spec.get("unshaded", true)), float(spec.get("alpha", 1.0)))
+		bool(spec.get("unshaded", true)), float(spec.get("alpha", 1.0)),
+		mesh_kind, str(spec.get("texture", "")))
 	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return particles
 
 
 var _particle_mesh_cached: SphereMesh = null
+var _mark_mesh_cached: PlaneMesh = null
 var _particle_material_cached: Dictionary = {}
 
 
@@ -1566,25 +1708,41 @@ func _particle_mesh() -> SphereMesh:
 	return mesh
 
 
-## One material per (unshaded, alpha) pair, shared across every cell.
-## CPUParticles3D writes the per-particle colour into vertex colours, so albedo
-## here is white times that colour; alpha comes from the layer spec. Fire and
-## sparks stay unshaded (they glow); dust and water take the room light, so
-## they dim when the bulb is off.
-func _particle_material(unshaded: bool, alpha: float) -> StandardMaterial3D:
-	var key := "%s|%.3f" % [unshaded, alpha]
+## One material per (unshaded, alpha, mesh, texture) set, shared across every
+## cell. CPUParticles3D writes the per-particle colour into vertex colours, so
+## albedo here is white times that colour; alpha comes from the layer spec.
+## Fire and sparks stay unshaded (they glow); the painted water's marks are
+## unshaded too — flat by design — while dust takes the room light and dims
+## when the bulb is off.
+func _particle_material(unshaded: bool, alpha: float, mesh_kind: String = "sphere",
+		texture_path: String = "") -> StandardMaterial3D:
+	var key := "%s|%.3f|%s|%s" % [unshaded, alpha, mesh_kind, texture_path]
 	if _particle_material_cached.has(key):
 		return _particle_material_cached[key] as StandardMaterial3D
 	var material := StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED if unshaded \
 		else BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	if not texture_path.is_empty():
+		material.albedo_texture = load(texture_path)
 	material.albedo_color = Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0))
 	if alpha < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.disable_receive_shadows = true
 	_particle_material_cached[key] = material
 	return material
+
+
+## The flat water mark: a lying quad, not a billboard — painted water flecks sit
+## on the surface, and a plane in XZ has no billboard question on GL.
+func _mark_mesh() -> PlaneMesh:
+	if _mark_mesh_cached != null:
+		return _mark_mesh_cached
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2.ONE
+	_mark_mesh_cached = mesh
+	return mesh
+
 
 
 ## A thing in the room glowing. The room still has exactly one bulb.
